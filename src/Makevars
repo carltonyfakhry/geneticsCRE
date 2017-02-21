@@ -1,0 +1,2 @@
+PKG_CXXFLAGS += -fopenmp
+CXX_STD = CXX11

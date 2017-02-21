@@ -1,0 +1,19 @@
+Package: geneticsCRE
+Type: Package
+Title: geneticsCRE computes a statistic on causal graphs to identify rare
+       and significant pathways.
+Version: 0.1.0
+Author: Carl Tony Fakhry
+Maintainer: Carl Tony Fakhry <cfakhry@cs.umb.edu>
+Description: geneticsCRE computes a statistic on causal graphs to identify rare
+       and significant pathways.
+License: GPL (>=3)
+Depends:
+    R ,
+    Rcpp ,
+    plyr,
+    Matrix,
+    dplyr
+LinkingTo: Rcpp
+LazyData: TRUE
+RoxygenNote: 6.0.1
