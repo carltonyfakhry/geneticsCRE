@@ -7,7 +7,7 @@ Author: Carl Tony Fakhry
 Maintainer: Carl Tony Fakhry <cfakhry@cs.umb.edu>
 Description: geneticsCRE computes a statistic on causal graphs to identify rare
        and significant pathways.
-License: GPL (>=3)
+License: Carl Tony Fakhry
 Depends:
     R ,
     Rcpp ,
