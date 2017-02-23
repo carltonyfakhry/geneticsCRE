@@ -237,6 +237,8 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
   std::vector<std::vector<uint64_t> > paths_pos1 = (pos_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : (readPaths(pos_path1));
   std::vector<std::vector<uint64_t> > paths_pos2 = (pathLength == 5) ? paths_pos1 : (readPaths(pos_path2));
 
+  // std::cout << "parsedpaths" << std::endl;
+
   // A priority queue for the indices of the top K paths
   IndicesScoresQueue indicesQ;
   for(int j = 0; j < K; j++) indicesQ.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
@@ -257,8 +259,9 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
   //   nthreads = max_available_cores;
   // }
   nthreads = omp_get_max_threads();
-  omp_set_dynamic(0);
+  // omp_set_dynamic(0);
   omp_set_num_threads(nthreads);
+  // std::cout << nthreads << std::endl;
 
   // Create a priority queue which holds the top K scores per thread
   std::vector<IndicesScoresQueue> LocalIndicesQ;
@@ -301,10 +304,11 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
       for(int k = 0; k < iterations; k++)
         local_max_scores[j][k] = max_scores[j][k];
 
-    #pragma omp parallel for shared(path_pos1,paths_pos2,flipped_pivot_length,location,count,ValueTable2,LocalIndicesQ,local_max_scores,CaseORControl2,vlen,vlen2,nCases,nControls,iterations) if(pathLength > 3)
+    #pragma omp parallel for schedule(dynamic,1) shared(path_pos1,paths_pos2,flipped_pivot_length,location,count,ValueTable2,LocalIndicesQ,local_max_scores,CaseORControl2,vlen,vlen2,nCases,nControls,iterations) if(pathLength > 3)
     for(int j = location; j < (location + count); j++){
 
       int tid = omp_get_thread_num();
+
       IndicesScoresQueue &tid_localindicesq = LocalIndicesQ[tid];
 
       std::vector<uint64_t> joined_pos(path_pos1.size());
@@ -483,7 +487,7 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
   // }
 
   nthreads = omp_get_max_threads();
-  omp_set_dynamic(0);
+  // omp_set_dynamic(0);
   omp_set_num_threads(nthreads);
 
   // Create a priority queue which holds the top K scores per thread
@@ -531,7 +535,7 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
       for(int k = 0; k < iterations; k++)
         local_max_scores[j][k] = max_scores[j][k];
 
-    #pragma omp parallel for shared(path_pos1,path_neg1,path_conflict1,paths_pos2,paths_neg2,paths_conflict2,flipped_pivot_length,location,count,ValueTable2,LocalIndicesQ,local_max_scores,CaseORControl2,vlen,vlen2,nCases,nControls,iterations) if(pathLength > 3)
+    #pragma omp parallel for schedule(dynamic,1) shared(path_pos1,path_neg1,path_conflict1,paths_pos2,paths_neg2,paths_conflict2,flipped_pivot_length,location,count,ValueTable2,LocalIndicesQ,local_max_scores,CaseORControl2,vlen,vlen2,nCases,nControls,iterations) if(pathLength > 3)
     for(int j = location; j < (location + count); j++){
 
       int tid = omp_get_thread_num();
