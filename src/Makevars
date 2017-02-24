@@ -1,2 +1,6 @@
-PKG_CXXFLAGS += -fopenmp
+# this needs to be set in ~/.R/Makevars
+#CXX1XFLAGS=-O3 -march=native -pipe -fstack-protector-strong
+#LDFLAGS = -Wl,-O3,--sort-common,--as-needed,-z,relro
+
+PKG_CXXFLAGS =-fopenmp -mpopcnt -ftree-vectorize
 CXX_STD = CXX11
