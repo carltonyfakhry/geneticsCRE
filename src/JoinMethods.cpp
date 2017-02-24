@@ -8,31 +8,6 @@
 
 using namespace Rcpp;
 
-
-
-/**
- *
- * Brian Kernighan's algorithm for counting the number of bits
- * in a int64_t integer.
- *
- */
-inline int bitCount(uint64_t n){
-
-  int count = 0;
-
-  while(n){
-
-    n &= (n-one_64bit);
-    count++;
-
-  }
-
-  return count;
-
-}
-
-
-
 /**
  *
  * Get the total number of paths to be processed.
@@ -324,8 +299,8 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
       int cases = 0;
       int controls = 0;
-      for(int k = 0; k < vlen; k++) cases += bitCount(joined_pos[k]);
-      for(int k = vlen; k < vlen + vlen2; k++) controls += bitCount(joined_pos[k]);
+      for(int k = 0; k < vlen; k++) cases += __builtin_popcount(joined_pos[k]);
+      for(int k = vlen; k < vlen + vlen2; k++) controls += __builtin_popcount(joined_pos[k]);
 
       double score = ValueTable2[cases][controls];
       double flipped_score = ValueTable2[controls][cases];
@@ -355,12 +330,12 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
         for(int k = 0; k < vlen; k++){
           uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-          cases_m += bitCount(permuted_path_k);
+          cases_m += __builtin_popcount(permuted_path_k);
         }
 
         for(int k = vlen; k < vlen + vlen2; k++){
           uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-          controls_m += bitCount(permuted_path_k);
+          controls_m += __builtin_popcount(permuted_path_k);
         }
 
         int new_cases_m = cases_m + (controls - controls_m);
@@ -578,12 +553,12 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
       int controls_pos = 0;
       int controls_neg = 0;
       for(int k = 0; k < vlen; k++){
-        cases_pos += bitCount(joined_pos[k]);
-        controls_neg += bitCount(joined_neg[k]);
+        cases_pos += __builtin_popcount(joined_pos[k]);
+        controls_neg += __builtin_popcount(joined_neg[k]);
       }
       for(int k = vlen; k < vlen + vlen2; k++){
-        controls_pos += bitCount(joined_pos[k]);
-        cases_neg += bitCount(joined_neg[k]);
+        controls_pos += __builtin_popcount(joined_pos[k]);
+        cases_neg += __builtin_popcount(joined_neg[k]);
       }
 
       int cases = cases_pos + cases_neg;
@@ -618,15 +593,15 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
         int controls_neg_m = 0;
         for(int k = 0; k < vlen; k++){
           uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-          cases_pos_m += bitCount(permuted_path_k);
+          cases_pos_m += __builtin_popcount(permuted_path_k);
           permuted_path_k = joined_neg[k] & caseorcontrol[k];
-          controls_neg_m += bitCount(permuted_path_k);
+          controls_neg_m += __builtin_popcount(permuted_path_k);
         }
         for(int k = vlen; k < vlen + vlen2; k++){
           uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-          controls_pos_m += bitCount(permuted_path_k);
+          controls_pos_m += __builtin_popcount(permuted_path_k);
           permuted_path_k = joined_neg[k] & caseorcontrol[k];
-          cases_neg_m += bitCount(permuted_path_k);
+          cases_neg_m += __builtin_popcount(permuted_path_k);
         }
 
         int new_cases = cases_pos_m + cases_neg_m + (controls_pos - controls_pos_m) + (controls_neg - controls_neg_m);

@@ -52,7 +52,7 @@
 #'             Epub 2012 Nov 29'.
 #'
 #'@export
-GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
+GetBestPaths <- function(dataset, nCases, nControls, path = '.', method = 1, threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
 
   # Check the input parameters
   geneticsCRE:::check_input(nCases, nControls, method, threshold_percent, K, pathLength, iterations, nthreads)
@@ -295,6 +295,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   dest_path_neg3 <- paste(path, "geneticsCRE_joined_neg3", sep = "")
   dest_path_conflict3 <- paste(path, "geneticsCRE_joined_conflict3", sep = "")
 
+  timeStart <- as.numeric(Sys.time()) * 1000
+
   # Processing the paths
   for(path_length in c(1,2,3,4,5)){
 
@@ -432,6 +434,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
     UserLengths <- c(UserLengths, rep(path_length, length(Pvalues)))
 
   }
+
+  print(sprintf("total time: %f", as.numeric(Sys.time()) * 1000 - timeStart, digits=15))
 
   suppressWarnings(file.remove(dest_path_pos1, dest_path_neg1, dest_path_conflict1))
   suppressWarnings(file.remove(dest_path_pos2, dest_path_neg2, dest_path_conflict2))
