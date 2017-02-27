@@ -1,2 +1,2 @@
-PKG_CXXFLAGS += -fopenmp
+PKG_CXXFLAGS =-fopenmp -mpopcnt -ftree-vectorize
 CXX_STD = CXX11

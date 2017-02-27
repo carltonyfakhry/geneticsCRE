@@ -5,12 +5,12 @@ parsePaths <- function(data, nCases, nControls, file_path) {
     invisible(.Call('geneticsCRE_parsePaths', PACKAGE = 'geneticsCRE', data, nCases, nControls, file_path))
 }
 
-JoinIndicesMethod1 <- function(srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, queues4init, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, pos_path2, dest_path_pos) {
-    .Call('geneticsCRE_JoinIndicesMethod1', PACKAGE = 'geneticsCRE', srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, queues4init, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, pos_path2, dest_path_pos)
+JoinIndicesMethod1 <- function(srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, pos_path2, dest_path_pos) {
+    .Call('geneticsCRE_JoinIndicesMethod1', PACKAGE = 'geneticsCRE', srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, pos_path2, dest_path_pos)
 }
 
-JoinIndicesMethod2 <- function(srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, queues4init, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict) {
-    .Call('geneticsCRE_JoinIndicesMethod2', PACKAGE = 'geneticsCRE', srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, queues4init, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict)
+JoinIndicesMethod2 <- function(srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict) {
+    .Call('geneticsCRE_JoinIndicesMethod2', PACKAGE = 'geneticsCRE', srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict)
 }
 
 getMatchingList <- function(uids, counts, location) {

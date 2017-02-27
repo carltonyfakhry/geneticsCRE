@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <Rmath.h>
-#include <set>
 #include <utility>
 #include <iterator>
 #include <sstream>
@@ -14,6 +13,10 @@
 
 
 using namespace Rcpp;
+
+
+#define ROUND_DOWN(x, s) ((x) & ~((s)-1))
+
 
 
 const uint64_t one_64bit = 1;

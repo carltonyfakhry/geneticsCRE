@@ -14,6 +14,8 @@
 #'                in the patient.
 #' @param nCases The number of cases (Must be greater than 1).
 #' @param nControls The number of controls (Must be greater than 1).
+#' @param path The path where the package will write and read from files
+#'              created by the package.
 #' @param method The method to be invoked. The value 1 calls the unsigned method
 #'               while the value 2 calls the signed method.
 #' @param threshold_percent All genes which occur in less than emph{threshold_percent}
@@ -34,25 +36,27 @@
 #'                corresponding to the stratum.
 #' @param nthreads The number of threads to be used in the parallel region
 #'                 of the code. Default value is \emph{nthreads = NA}, in
-#'                 which case \emph{nthreads} will be set the number of
-#'                 cores available.
+#'                 which case \emph{nthreads} will be set to the maximum number of
+#'                 threads that can be created. If \emph{nthreads} is greater
+#'                 than the maximum number of threads that can be created, then
+#'                 \emph{nthreads} will default back to the maximum number of threads
+#'                 that can be created.
 #'
 #' @return This function returns a list with the following items:
-#'         \item{SignedPaths}{The top K signed paths for each length. Available
-#'                            only for method 2.}
+#'         \item{SignedPaths}{The top K signed paths for each length.}
 #'         \item{UserKpaths}{The top K paths for each length.}
 #'         \item{UserLengths}{The lengths of each path.}
 #'         \item{UserScores}{The scores of each path.}
 #'         \item{UserPvalues}{The p-values of each path.}
 #'
-#' @author Carl Tony Fakhry, Ping Chen and Kourosh Zarringhalam
+#' @author Carl Tony Fakhry
 #'
 #' @references Franceschini, A (2013). STRING v9.1: protein-protein interaction networks, with increased coverage
 #'             and integration. In:'Nucleic Acids Res. 2013 Jan;41(Database issue):D808-15. doi: 10.1093/nar/gks1094.
 #'             Epub 2012 Nov 29'.
 #'
 #'@export
-GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
+GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
 
   # Check the input parameters
   geneticsCRE:::check_input(nCases, nControls, method, threshold_percent, K, pathLength, iterations, nthreads)
@@ -71,8 +75,6 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   dataset <- geneticsCRE:::PreprocessTable(dataset, threshold_percent, nCases, nControls)
   genes <- dataset$genes
   data <- dataset$data
-  # genes <- dataset$genes[1:1000]
-  # data <- dataset$data[1:1000,]
   genes_data <- data.frame(genes = genes, data)
   patients <- dataset$patients
   rm(dataset)
@@ -95,7 +97,6 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   # Rels <- rbind(Rels, c(8306,8307,-1))
   # Rels <- rbind(Rels, c(8307,8308,-1))
   #
-  # path = "/home/kolonel"
   # # The significant path should be GENE1 (+) -> GENE2 (-) -> GENE3 (+) -> GENE4 (-) -> GENE5 (+)  for method 3 and its unsigned version for method 2
   #
   # df = matrix(0, nrow = 5, ncol = ncol(data))
@@ -120,8 +121,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   #
   # # Add 40 more ones for each protein
   # df[1,102:141] = 1 ; df[2,(1537+101):(1537+140)] = 1 ; df[3,501:540] = 1 ; df[4,(1537+301):(1537+340)] = 1 ; df[5,901:940] = 1
-  #
-#
+
+
   # # Experiment 2 flipped version of Experiment1
   # # Add 5 ones for each protein
   # df[1,(1537+2):(1537+6)] = 1 ; df[2,1:5] = 1 ; df[3,(1537+401):(1537+405)] = 1 ; df[4,201:205] = 1 ; df[5,(1537+801):(1537+805)] = 1
@@ -173,10 +174,10 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   # df[3,401:540] = 1
   # df[4,(1537+201):(1537+340)] = 1
   # df[5,801:940] = 1
-#
-#   data = rbind(data, df)
-#   genes = c(genes, "GENE1","GENE2","GENE3","GENE4","GENE5")
-#   genes_data <- data.frame(genes = genes, data)
+
+  # data = rbind(data, df)
+  # genes = c(genes, "GENE1","GENE2","GENE3","GENE4","GENE5")
+  # genes_data <- data.frame(genes = genes, data)
 
   # Keep gene symbols in Ents which are present in the dataset
   Ents <- Ents[Ents$symbol != "-1",]
@@ -244,31 +245,10 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   UserLengths <- c()
   UserPvalues <- c()
 
-  #######################################################################################
-  # Throughout the code we will use the concept of a path data structure to denote the paths
-  # in a network. The values of a path for each patient can be 1,-1,c for conflict and 0. Instead of storing these values
-  # in a vector for all paths (which is very memory consuming), we store the column indices where
-  # they occur in a path. For example, counts_pos[2] stands for the number of indices
-  # which are positive in the second path of length 1. Moreover, cols_pos contains
-  # all the cols which are positive placed in the order of occurrence of the path. For example
-  # the first entries in cols_pos are the indices of the columns of path 1 which are positive.
-  # locations_pos[2] indicates where the columns of path 2 begin in cols_pos.
-  # locations starts at 0. A similar structure for negative and conflicting columns is used.
-  # 0 entries are simply ignored because they are not used in computing the score of path.
-  #######################################################################################
-
   # Create the relations data frame for the input data. This data frame will be used in the joining
   # of the paths of length 1 and 2.
   Rels_data <- data.frame(srcuid = Ents$uid)
-  # # lst_data <- geneticsCRE:::matchData(genes_data, Ents$uid)
-  # #
   Rels_data2 <- data.frame(srcuid = Ents2$uid)
-  # lst_data2 <- geneticsCRE:::matchData(genes_data2, Ents2$uid)
-
-  # Create the lists that will hold the path data structures for paths of length 1,2 and 3
-  # lst1 <- NA
-  # lst2 <- NA
-  # lst3 <- NA
 
   # Create the relations data frame for paths of length 3
   Rels <- Rels[order(Rels$srcuid, Rels$trguid),]
@@ -279,8 +259,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   Rels3 <- Rels3[order(Rels3$srcuid, Rels3$trguid, Rels3$trguid2),]
   rm(Rels2)
 
-  # # Get the sign of the third gene in a path of length 3 assuming the first
-  # # gene in the path has a positive sign
+  # Get the sign of the third gene in a path of length 3 assuming the first
+  # gene in the path has a positive sign
   third_gene_sign <- rep(1, nrow(Rels3))
   third_gene_sign[Rels3$sign == -1 & Rels3$sign2 == 1] <- -1
   third_gene_sign[Rels3$sign == 1 & Rels3$sign2 == -1] <- -1
@@ -296,31 +276,18 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
   dest_path_conflict3 <- paste(path, "geneticsCRE_joined_conflict3", sep = "")
 
   # Processing the paths
-  for(path_length in c(1,2,3,4,5)){
+  for(path_length in 1:pathLength){
 
     if(path_length == 1){
 
       print("Processing paths of length 1...")
 
-      # lst0 <- geneticsCRE:::getListEmptyPaths(length(Ents$uid))
-      # lst0_2 <- geneticsCRE:::getListEmptyPaths(length(Ents2$uid))
-#
-#       lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
-#                                          lst0, lst_data, 1, ValueTable, matrix(, ncol=1, nrow = 0),
-#                                          nCases, nControls, K, iterations, CaseORControl, method, nthreads)
-#
-#       lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
-#                                         lst0_2, lst_data2, 1, ValueTable, matrix(, ncol=1, nrow = 0),
-#                                         nCases, nControls, K, iterations, CaseORControl, method, nthreads)
-
       path_data_file <- paste(path, "data_geneticsCRE", sep = "")
       geneticsCRE:::parsePaths(data, nCases, nControls, path_data_file)
       rm(data)
-      # Rels_data <- data.frame(srcuid = Ents$uid)
 
       lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
-                                         1, ValueTable, matrix(, ncol=1, nrow = 0),
-                                         nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data_file, "", "",dest_path_pos1,
+                                         1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data_file, "", "",dest_path_pos1,
                                          dest_path_neg1, dest_path_conflict1)
       file.remove(path_data_file)
 
@@ -328,11 +295,9 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
       path_data2_file <- paste(path, "data2_geneticsCRE", sep = "")
       geneticsCRE:::parsePaths(data2, nCases, nControls, path_data2_file)
       rm(data2)
-      # Rels_data2 <- data.frame(srcuid = Ents2$uid)
 
       lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
-                                        1, ValueTable, matrix(, ncol=1, nrow = 0),
-                                        nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data2_file, "", "", "",
+                                        1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data2_file, "", "", "",
                                         "", "")
       file.remove(path_data2_file)
 
@@ -340,16 +305,13 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
 
       print("Processing paths of length 2...")
 
-      # lst_data2 <- geneticsCRE:::matchData2(genes_data, Rels$trguid)
-
       path_data3_file <- paste(path, "data3_geneticsCRE", sep = "")
       data3 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
       geneticsCRE:::parsePaths(data3, nCases, nControls, path_data3_file)
       rm(data3)
 
       lst2 <- geneticsCRE:::ProcessPaths(Rels_data, Rels, Rels_data$srcuid, Rels_data$srcuid, Rels$sign, Rels$srcuid,
-                                          2, ValueTable, matrix(, ncol=1, nrow = 0),
-                                         nCases, nControls, K, iterations, CaseORControl, method, nthreads, dest_path_pos1,
+                                          2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, dest_path_pos1,
                                          dest_path_neg1, dest_path_conflict1, path_data3_file, "", "", dest_path_pos2,
                                          dest_path_neg2, dest_path_conflict2)
       lst <- lst2
@@ -359,16 +321,13 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
 
       print("Processing paths of length 3...")
 
-      # lst_data3 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
-
       path_data4_file <- paste(path, "data4_geneticsCRE", sep = "")
       data4 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
       geneticsCRE:::parsePaths(data4, nCases, nControls, path_data4_file)
       rm(data4)
 
       lst3 <- geneticsCRE:::ProcessPaths(Rels, Rels, Rels$srcuid, Rels$trguid, Rels$sign, Rels$srcuid,
-                                         3, ValueTable, matrix(, ncol=1, nrow = 0),
-                                         nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                         3, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2, path_data4_file, "", "",
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3)
 
@@ -381,11 +340,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
       print("Processing paths of length 4...")
 
 
-      # queues4init <- geneticsCRE:::InitQueuesMatrix(lst3$cummulation_vectors, lst2$cummulation_vectors, Rels3, Rels, lst3$inds, third_gene_sign, path_length,
-                                                    # ValueTable, nCases, nControls, K, iterations, CaseORControl, method)
-
       lst4 <- geneticsCRE:::ProcessPaths(Rels3, Rels, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels$srcuid,
-                                         4, ValueTable, matrix(,ncol=1,nrow=0), nCases, nControls, K, iterations,
+                                         4, ValueTable, nCases, nControls, K, iterations,
                                          CaseORControl, method, nthreads,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2,
@@ -398,11 +354,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path, method = 1, threshold
 
       print("Processing paths of length 5...")
 
-      # queues4init <- geneticsCRE:::InitQueuesMatrix(lst3$cummulation_vectors, lst2$cummulation_vectors, Rels3, Rels, lst4$inds, third_gene_sign, path_length,
-                                                    # ValueTable, nCases, nControls, K, iterations, CaseORControl, method)
-
       lst5 <- geneticsCRE:::ProcessPaths(Rels3, Rels3, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels3$srcuid,
-                                         5, ValueTable, matrix(,ncol=1,nrow=0), nCases, nControls, K, iterations,
+                                         5, ValueTable, nCases, nControls, K, iterations,
                                          CaseORControl, method, nthreads,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,

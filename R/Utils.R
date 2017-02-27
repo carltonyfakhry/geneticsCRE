@@ -1,4 +1,3 @@
-
 # Randomize columns of data
 getRandomizedDatCols <- function(ncol_data, strataF, nCases, nControls, stratagroups, stratanumbers){
 
@@ -96,33 +95,9 @@ SignUid2SignSymbol <- function(Ents, UserKsignpaths){
 }
 
 
-
-# # Prepare data to be in the order in which it will be joined to its corresponding path.
-# # trgs_toB_joined is a vector of uids whose data will be joined respectively
-# # to some path.
-# matchData <- function(genes_data, trgs_toB_joined){
-#
-#   genes_data <- genes_data[match(trgs_toB_joined, genes_data$uid),]
-#   data <- as.matrix(genes_data[,3:ncol(genes_data)])
-#   Tsparsedata <- Matrix::Matrix(t(data), sparse = T)
-#   data_cols <- Tsparsedata@i # The rows in each column of t(data) which are not 0 (indices start at 0)
-#   data_counts <- diff(Tsparsedata@p) # the number of rows which are non-zero in each column of t(data), counts of each column must be at least 1 (handled in the preprocessing of the table)
-#   data_locations <- Tsparsedata@p[1:ncol(Tsparsedata)] # locations in data_cols which correspond to a different column in t(data)
-#   lst <- list()
-#   lst[["counts_pos"]] <- data_counts
-#   lst[["counts_neg"]] <- rep(0, length(data_counts))
-#   lst[["counts_conflict"]] <- rep(0, length(data_counts))
-#   lst[["cols_pos"]] <- data_cols
-#   lst[["cols_neg"]] <- vector(mode="integer", length=0)
-#   lst[["cols_conflict"]] <- vector(mode="integer", length=0)
-#   lst[["locations_pos"]] <- data_locations
-#   lst[["locations_neg"]] <- rep(0, length(data_locations))
-#   lst[["locations_conflict"]] <- rep(0, length(data_locations))
-#   return(lst)
-#
-# }
-
-
+# Prepare data to be in the order in which it will be joined to its corresponding path.
+# trgs_toB_joined is a vector of uids whose data will be joined respectively
+# to some path.
 matchData <- function(genes_data, trgs_toB_joined){
 
   genes_data <- genes_data[match(trgs_toB_joined, genes_data$uid),]
@@ -256,6 +231,8 @@ check_input <- function(nCases, nControls, method, threshold_percent, K, pathLen
 
 
 
+# For columns <= nCases will be set to 1 if they are permuted and remain <= nCases.
+# For columns > nControls will be set to 1 if they are permuted and remain > nCases.
 getCaseORControl <- function(RandIndicesMat, nCases, nControls){
 
   CaseORControl <- matrix(0, nrow = nrow(RandIndicesMat), ncol = ncol(RandIndicesMat))

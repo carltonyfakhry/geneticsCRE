@@ -20,6 +20,9 @@ in the patient.}
 
 \item{nControls}{The number of controls (Must be greater than 1).}
 
+\item{path}{The path where the package will write and read from files
+created by the package.}
+
 \item{method}{The method to be invoked. The value 1 calls the unsigned method
 while the value 2 calls the signed method.}
 
@@ -46,13 +49,15 @@ corresponding to the stratum.}
 
 \item{nthreads}{The number of threads to be used in the parallel region
 of the code. Default value is \emph{nthreads = NA}, in
-which case \emph{nthreads} will be set the number of
-cores available.}
+which case \emph{nthreads} will be set to the maximum number of
+threads that can be created. If \emph{nthreads} is greater
+than the maximum number of threads that can be created, then
+\emph{nthreads} will default back to the maximum number of threads
+that can be created.}
 }
 \value{
 This function returns a list with the following items:
-        \item{SignedPaths}{The top K signed paths for each length. Available
-                           only for method 2.}
+        \item{SignedPaths}{The top K signed paths for each length.}
         \item{UserKpaths}{The top K paths for each length.}
         \item{UserLengths}{The lengths of each path.}
         \item{UserScores}{The scores of each path.}
@@ -67,5 +72,5 @@ Franceschini, A (2013). STRING v9.1: protein-protein interaction networks, with 
             Epub 2012 Nov 29'.
 }
 \author{
-Carl Tony Fakhry, Ping Chen and Kourosh Zarringhalam
+Carl Tony Fakhry
 }
