@@ -1,8 +1,8 @@
 #include "Utils.h"
 #include <omp.h>
 #include <fstream>
-// #include <emmintrin.h>
-// #include <nmmintrin.h>
+#include <emmintrin.h>
+#include <nmmintrin.h>
 
 
 // [[Rcpp::plugins(openmp)]]
@@ -260,10 +260,10 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
   // Store CaseORControl information into 64bit integers
   std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
-  // uint64_t CaseORControl22[iterations][vlen + vlen2] __attribute__ ((aligned (16)));
-  // for(int i = 0; i < iterations; i++)
-  //   for(int j = 0; j < vlen + vlen2; j++)
-  //     CaseORControl22[i][j] = CaseORControl2[i][j];
+  uint64_t CaseORControl22[iterations][vlen + vlen2] __attribute__ ((aligned (16)));
+  for(int i = 0; i < iterations; i++)
+    for(int j = 0; j < vlen + vlen2; j++)
+      CaseORControl22[i][j] = CaseORControl2[i][j];
 
 
   // Copy the paths into 2D vectors
@@ -369,8 +369,8 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
       }
 
       std::vector<double> &tid_max_scores = local_max_scores[tid];
-      // uint64_t joined_pos2[vlen + vlen2] __attribute__ ((aligned (16)));
-      // for(int k = 0; k < vlen + vlen2; k++) joined_pos2[k] = joined_pos[k];
+      uint64_t joined_pos2[vlen + vlen2] __attribute__ ((aligned (16)));
+      for(int k = 0; k < vlen + vlen2; k++) joined_pos2[k] = joined_pos[k];
 
       for(int m = 0; m < iterations; m++){
 
@@ -380,76 +380,76 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
         double perm_flipped_score = 0;
 
         std::vector<uint64_t> &caseorcontrol = CaseORControl2[m];
-        // uint64_t *p_joined_pos = joined_pos2;
-        // uint64_t *p_caseorcontrol2 = CaseORControl22[m];
+        uint64_t *p_joined_pos = joined_pos2;
+        uint64_t *p_caseorcontrol2 = CaseORControl22[m];
 
         int cases_m = 0;
 
-        // int k = 0;
-        // for(; k < ROUND_DOWN(vlen,2); k+=2){
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_store_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   cases_m += __builtin_popcountll(perm_joins[0]);
-        //   cases_m += __builtin_popcountll(perm_joins[1]);
-        //   p_joined_pos+=2;
-        //   p_caseorcontrol2+=2;
-        // }
-        // if(k < vlen - 1){
-        //   p_joined_pos++;
-        //   p_caseorcontrol2++;
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_store_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   cases_m += __builtin_popcountll(perm_joins[0]);
-        //   cases_m += __builtin_popcountll(perm_joins[1]);
-        //   p_caseorcontrol2++;
-        //   p_joined_pos++;
-        // }
-
-        for(int k = 0; k < vlen; k++){
-          uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-          cases_m += __builtin_popcountll(permuted_path_k);
+        int k = 0;
+        for(; k < ROUND_DOWN(vlen,2); k+=2){
+          __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
+          __m128i* ptr2 = (__m128i*) (p_joined_pos);
+          __m128i val1_4 = _mm_loadu_si128(ptr1);
+          __m128i val2_4 = _mm_loadu_si128(ptr2);
+          uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
+          _mm_store_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
+          cases_m += __builtin_popcountll(perm_joins[0]);
+          cases_m += __builtin_popcountll(perm_joins[1]);
+          p_joined_pos+=2;
+          p_caseorcontrol2+=2;
         }
+        if(k < vlen - 1){
+          p_joined_pos++;
+          p_caseorcontrol2++;
+          __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
+          __m128i* ptr2 = (__m128i*) (p_joined_pos);
+          __m128i val1_4 = _mm_loadu_si128(ptr1);
+          __m128i val2_4 = _mm_loadu_si128(ptr2);
+          uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
+          _mm_store_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
+          cases_m += __builtin_popcountll(perm_joins[0]);
+          cases_m += __builtin_popcountll(perm_joins[1]);
+          p_caseorcontrol2++;
+          p_joined_pos++;
+        }
+
+        // for(int k = 0; k < vlen; k++){
+        //   uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
+        //   cases_m += __builtin_popcountll(permuted_path_k);
+        // }
 
         int controls_m = 0;
 
-        // k = vlen;
-        // for(; k < ROUND_DOWN(vlen + vlen2,2); k+=2){
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_storeu_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   controls_m += __builtin_popcountll(perm_joins[0]);
-        //   controls_m += __builtin_popcountll(perm_joins[1]);
-        //   p_joined_pos+=2;
-        //   p_caseorcontrol2+=2;
-        // }
-        // if(k < vlen + vlen2 - 1){
-        //   p_joined_pos++;
-        //   p_caseorcontrol2++;
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_storeu_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   controls_m += __builtin_popcountll(perm_joins[0]);
-        //   controls_m += __builtin_popcountll(perm_joins[1]);
-        // }
-
-        for(int k = vlen; k < vlen + vlen2; k++){
-          uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-          controls_m += __builtin_popcountll(permuted_path_k);
+        k = vlen;
+        for(; k < ROUND_DOWN(vlen + vlen2,2); k+=2){
+          __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
+          __m128i* ptr2 = (__m128i*) (p_joined_pos);
+          __m128i val1_4 = _mm_loadu_si128(ptr1);
+          __m128i val2_4 = _mm_loadu_si128(ptr2);
+          uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
+          _mm_storeu_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
+          controls_m += __builtin_popcountll(perm_joins[0]);
+          controls_m += __builtin_popcountll(perm_joins[1]);
+          p_joined_pos+=2;
+          p_caseorcontrol2+=2;
         }
+        if(k < vlen + vlen2 - 1){
+          p_joined_pos++;
+          p_caseorcontrol2++;
+          __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
+          __m128i* ptr2 = (__m128i*) (p_joined_pos);
+          __m128i val1_4 = _mm_loadu_si128(ptr1);
+          __m128i val2_4 = _mm_loadu_si128(ptr2);
+          uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
+          _mm_storeu_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
+          controls_m += __builtin_popcountll(perm_joins[0]);
+          controls_m += __builtin_popcountll(perm_joins[1]);
+        }
+
+        // for(int k = vlen; k < vlen + vlen2; k++){
+        //   uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
+        //   controls_m += __builtin_popcountll(permuted_path_k);
+        // }
 
         int new_cases_m = cases_m + (controls - controls_m);
         int new_controls_m = controls_m + (cases - cases_m);
