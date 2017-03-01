@@ -18,6 +18,19 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// getMatchingList
+List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector location);
+RcppExport SEXP geneticsCRE_getMatchingList(SEXP uidsSEXP, SEXP countsSEXP, SEXP locationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerVector >::type uids(uidsSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type counts(countsSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type location(locationSEXP);
+    rcpp_result_gen = Rcpp::wrap(getMatchingList(uids, counts, location));
+    return rcpp_result_gen;
+END_RCPP
+}
 // JoinIndices
 List JoinIndices(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLoc, IntegerVector joining_gene_sign, NumericMatrix ValueTable, int nCases, int nControls, int K, int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads, std::string pos_path1, std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2, std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict);
 RcppExport SEXP geneticsCRE_JoinIndices(SEXP srcuidSEXP, SEXP trguids2SEXP, SEXP uids_CountLocSEXP, SEXP joining_gene_signSEXP, SEXP ValueTableSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP CaseORControlSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP, SEXP pos_path1SEXP, SEXP neg_path1SEXP, SEXP conflict_path1SEXP, SEXP pos_path2SEXP, SEXP neg_path2SEXP, SEXP conflict_path2SEXP, SEXP dest_path_posSEXP, SEXP dest_path_negSEXP, SEXP dest_path_conflictSEXP) {
@@ -47,19 +60,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type dest_path_neg(dest_path_negSEXP);
     Rcpp::traits::input_parameter< std::string >::type dest_path_conflict(dest_path_conflictSEXP);
     rcpp_result_gen = Rcpp::wrap(JoinIndices(srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict));
-    return rcpp_result_gen;
-END_RCPP
-}
-// getMatchingList
-Rcpp::List getMatchingList(Rcpp::IntegerVector uids, Rcpp::IntegerVector counts, Rcpp::IntegerVector location);
-RcppExport SEXP geneticsCRE_getMatchingList(SEXP uidsSEXP, SEXP countsSEXP, SEXP locationSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type uids(uidsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type counts(countsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type location(locationSEXP);
-    rcpp_result_gen = Rcpp::wrap(getMatchingList(uids, counts, location));
     return rcpp_result_gen;
 END_RCPP
 }

@@ -1,35 +1,28 @@
 #include <fstream>
-#include "Utils.h"
+#include <Rcpp.h>
 #include "gcre.h"
 
 // [[Rcpp::plugins(cpp11)]]
 
 using namespace Rcpp;
 
+const uint64_t one_64bit = 1;
+
 /**
  *
  * Get the total number of paths to be processed.
  *
  */
-
 int getTotalPaths(IntegerVector trguids, List uids_CountLoc){
-
   int total_paths = 0;
-
   for(int i = 0; i < trguids.size(); i++){
-
     int uid = trguids[i];
-    std::string geneuid = IntToString(uid);
+    std::string geneuid = std::to_string(uid);
     IntegerVector temp = as<IntegerVector>(uids_CountLoc[geneuid]);
     total_paths += temp[0];
-
   }
-
   return total_paths;
-
 }
-
-
 
 /**
  *
@@ -117,13 +110,11 @@ std::vector<std::vector<uint64_t> > readPaths(std::string file_path){
         str2 += str[j];
       }
       else{
-        uint64_t val = StringToInt(str2);
-        path.push_back(val);
+        path.push_back((uint64_t) std::stoul(str2));
         str2 = "";
       }
     }
-    uint64_t val = StringToInt(str2);
-    path.push_back(val);
+    path.push_back((uint64_t) std::stoul(str2));
     str2 = "";
     paths.push_back(path);
     i++;
@@ -204,6 +195,28 @@ std::vector<std::vector<uint64_t> > parseCaseORControl(IntegerMatrix CaseORContr
 
   return CaseORControl2;
 
+}
+
+/**
+ *
+ * Create list indexed by the names of gene uids. Each entry in the list
+ * is a vector with the first entry being the count of paths starting
+ * with the corresponding gene uids and the second entry be the location
+ * of the first path in the relations data frame.
+ *
+ */
+// [[Rcpp::export]]
+List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector location){
+  List uids_2countsloc = List();
+  for(unsigned int i = 0; i < uids.size(); i++){
+    std::string uids_str = std::to_string(uids[i]);
+    Rcpp::IntegerVector temp = IntegerVector(2);
+    int count = counts[i];
+    temp[0] = count;
+    temp[1] = location[i];
+    uids_2countsloc[uids_str] = temp;
+  }
+  return uids_2countsloc;
 }
 
 // [[Rcpp::export]]

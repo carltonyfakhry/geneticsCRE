@@ -72,7 +72,7 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
     // Find the locations and the number of the paths matching with uid
     int uid = trguids2[i];
-    std::string geneuid = IntToString(uid); // convert integer to string
+    std::string geneuid = std::to_string(uid);
     IntegerVector uid_count_loc = uids_CountLoc[geneuid];
     int count = uid_count_loc[0];
     if(count == 0) continue;
