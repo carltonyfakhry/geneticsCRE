@@ -1,13 +1,9 @@
 #include "Utils.h"
 #include <omp.h>
 #include <fstream>
-// #include <emmintrin.h>
-// #include <nmmintrin.h>
-
 
 // [[Rcpp::plugins(openmp)]]
 // [[Rcpp::plugins(cpp11)]]
-
 
 using namespace Rcpp;
 
@@ -369,8 +365,6 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
       }
 
       std::vector<double> &tid_max_scores = local_max_scores[tid];
-      // uint64_t joined_pos2[vlen + vlen2] __attribute__ ((aligned (16)));
-      // for(int k = 0; k < vlen + vlen2; k++) joined_pos2[k] = joined_pos[k];
 
       for(int m = 0; m < iterations; m++){
 
@@ -380,38 +374,8 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
         double perm_flipped_score = 0;
 
         std::vector<uint64_t> &caseorcontrol = CaseORControl2[m];
-        // uint64_t *p_joined_pos = joined_pos2;
-        // uint64_t *p_caseorcontrol2 = CaseORControl22[m];
 
         int cases_m = 0;
-
-        // int k = 0;
-        // for(; k < ROUND_DOWN(vlen,2); k+=2){
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_store_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   cases_m += __builtin_popcountll(perm_joins[0]);
-        //   cases_m += __builtin_popcountll(perm_joins[1]);
-        //   p_joined_pos+=2;
-        //   p_caseorcontrol2+=2;
-        // }
-        // if(k < vlen - 1){
-        //   p_joined_pos++;
-        //   p_caseorcontrol2++;
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_store_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   cases_m += __builtin_popcountll(perm_joins[0]);
-        //   cases_m += __builtin_popcountll(perm_joins[1]);
-        //   p_caseorcontrol2++;
-        //   p_joined_pos++;
-        // }
 
         for(int k = 0; k < vlen; k++){
           uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
@@ -419,32 +383,6 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
         }
 
         int controls_m = 0;
-
-        // k = vlen;
-        // for(; k < ROUND_DOWN(vlen + vlen2,2); k+=2){
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_storeu_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   controls_m += __builtin_popcountll(perm_joins[0]);
-        //   controls_m += __builtin_popcountll(perm_joins[1]);
-        //   p_joined_pos+=2;
-        //   p_caseorcontrol2+=2;
-        // }
-        // if(k < vlen + vlen2 - 1){
-        //   p_joined_pos++;
-        //   p_caseorcontrol2++;
-        //   __m128i* ptr1 = (__m128i*) (p_caseorcontrol2);
-        //   __m128i* ptr2 = (__m128i*) (p_joined_pos);
-        //   __m128i val1_4 = _mm_loadu_si128(ptr1);
-        //   __m128i val2_4 = _mm_loadu_si128(ptr2);
-        //   uint64_t perm_joins[] __attribute__ ((aligned (16))) = {0,0};
-        //   _mm_storeu_si128((__m128i*) perm_joins, _mm_and_si128(val1_4, val2_4));
-        //   controls_m += __builtin_popcountll(perm_joins[0]);
-        //   controls_m += __builtin_popcountll(perm_joins[1]);
-        // }
 
         for(int k = vlen; k < vlen + vlen2; k++){
           uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
@@ -518,6 +456,16 @@ List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
 }
 
+void print_path_info(std::string name, std::vector<std::vector<uint64_t>> paths)
+{
+  long total_count = 0;
+  for(int k = 0; k < paths.size(); k += 1) {
+    for(auto v : paths[k])
+      if(v != 0)
+        total_count += 1;
+  }
+  std::printf("[%s] total count: %d, mean: %f\n", name.c_str(), total_count, total_count / (double) paths.size());
+}
 
 
 /**
@@ -531,6 +479,35 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
                         int iterations, IntegerMatrix CaseORControl, int method, int pathLength, int nthreads, std::string pos_path1,
                         std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2,
                         std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
+
+
+  printf("################\n");
+  printf("srcuid size : %d\n", srcuid.size());
+  printf("trguid size : %d\n", trguids2.size());
+  printf("uids cl size: %d\n", uids_CountLoc.size());
+  printf("join gene s : %d\n", joining_gene_sign.size());
+  printf("value table : %d x %d\n", ValueTable.rows(), ValueTable.cols());
+  printf("caseorcon   : %d x %d\n", CaseORControl.rows(), CaseORControl.cols());
+  printf("ncases      : %d\n", nCases);
+  printf("ncontrols   : %d\n", nControls);
+  printf("K           : %d\n", K);
+  printf("iterations  : %d\n", iterations);
+  printf("method      : %d\n", method);
+  printf("pathlen     : %d\n", pathLength);
+  printf("nthread     : %d\n", nthreads);
+  printf("\n");
+
+  printf("pos1 : %s\n", pos_path1.c_str());
+  printf("neg1 : %s\n", neg_path1.c_str());
+  printf("con1 : %s\n", conflict_path1.c_str());
+  printf("pos2 : %s\n", pos_path2.c_str());
+  printf("neg2 : %s\n", neg_path2.c_str());
+  printf("con2 : %s\n", conflict_path2.c_str());
+  printf("pos3 : %s\n", dest_path_pos.c_str());
+  printf("neg3 : %s\n", dest_path_neg.c_str());
+  printf("con3 : %s\n", dest_path_conflict.c_str());
+
+  printf("################\n\n");
 
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
@@ -563,6 +540,16 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
   std::vector<std::vector<uint64_t> > &paths_neg2 = (neg_path2 == "") ? temp_paths_neg2 = getZeroMatrix(total_srcuidsRels2, vlen + vlen2) : temp_paths_neg2 = (pathLength == 5) ? paths_neg1 : temp_paths_neg22 = readPaths(neg_path2); // Only empty paths for paths of length 1
   std::vector<std::vector<uint64_t> > paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
   std::vector<std::vector<uint64_t> > &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_srcuidsRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
+
+  std::printf("input paths1: %d\n", paths_pos1.size());
+  std::printf("input paths2: %d\n", paths_pos2.size());
+
+  print_path_info("pos1", paths_pos1);
+  print_path_info("pos2", paths_pos2);
+  print_path_info("neg1", paths_neg1);
+  print_path_info("neg2", paths_neg2);
+  print_path_info("con1", paths_conflict1);
+  print_path_info("con2", paths_conflict2);
 
   // A priority queue for the indices of the top K paths in the data
   IndicesScoresQueue indicesQ;
@@ -735,6 +722,7 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
     }
 
+
     // Update the values in max_scores given the values of local_max_scores
     for(int j = 0; j < nthreads; j++){
       for(int k = 0; k < iterations; k++)
@@ -742,6 +730,7 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
     }
 
   }
+
 
   NumericVector permutedscores(iterations);
   for(int i = 0; i < nthreads; i++){

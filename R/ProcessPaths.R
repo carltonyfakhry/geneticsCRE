@@ -275,6 +275,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
   dest_path_neg3 <- paste(path, "geneticsCRE_joined_neg3", sep = "")
   dest_path_conflict3 <- paste(path, "geneticsCRE_joined_conflict3", sep = "")
 
+  timeStart <- as.numeric(Sys.time()) * 1000
+
   # Processing the paths
   for(path_length in 1:pathLength){
 
@@ -385,6 +387,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
     UserLengths <- c(UserLengths, rep(path_length, length(Pvalues)))
 
   }
+
+  print(sprintf("total time: %f", as.numeric(Sys.time()) * 1000 - timeStart, digits=15))
 
   suppressWarnings(file.remove(dest_path_pos1, dest_path_neg1, dest_path_conflict1))
   suppressWarnings(file.remove(dest_path_pos2, dest_path_neg2, dest_path_conflict2))
