@@ -2,17 +2,18 @@
 #include "Utils.h"
 #include "gcre.h"
 
-List join_method2(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLoc, IntegerVector joining_gene_sign,
-  vecd2d value_table, int nCases, int nControls, int K,
+List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
+  vec2dd value_table, int nCases, int nControls, int K,
   int iterations, IntegerMatrix CaseORControl, int pathLength, int nthreads, std::string pos_path1,
   std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2,
-  std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
+  std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict, int total_paths){
 
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
 
   // If pathLength <=3 then we will store the joining of the different paths
-  int total_paths = (pathLength > 3) ? 0 : getTotalPaths(trguids2, uids_CountLoc);
+  if (pathLength > 3)
+    total_paths = 0;
   std::vector<std::vector<uint64_t> > joined_paths_pos(total_paths, std::vector<uint64_t>(vlen + vlen2, 0));
   std::vector<std::vector<uint64_t> > joined_paths_neg(total_paths, std::vector<uint64_t>(vlen + vlen2, 0));
   std::vector<std::vector<uint64_t> > joined_paths_conflict(total_paths, std::vector<uint64_t>(vlen + vlen2, 0));
@@ -26,13 +27,13 @@ List join_method2(IntegerVector srcuid, IntegerVector trguids2, List uids_CountL
   std::vector<std::vector<uint64_t> > temp_paths_neg22;
   std::vector<std::vector<uint64_t> > temp_paths_conflict2;
   std::vector<std::vector<uint64_t> > temp_paths_conflict22;
-  int total_srcuidsRels2 = getTotalCountsCountLoc(uids_CountLoc);
-  std::vector<std::vector<uint64_t> > paths_pos1 = (pos_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(pos_path1); // Only empty paths for paths of length 1
+  int total_src_uidssRels2 = getTotalCountsCountLoc(uids_CountLoc);
+  std::vector<std::vector<uint64_t> > paths_pos1 = (pos_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(pos_path1); // Only empty paths for paths of length 1
   std::vector<std::vector<uint64_t> > &paths_pos2 = (pathLength == 5) ? paths_pos1 : temp_paths_pos2 = readPaths(pos_path2);
-  std::vector<std::vector<uint64_t> > paths_neg1 = (neg_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(neg_path1); // Only empty paths for paths of length 1
-  std::vector<std::vector<uint64_t> > &paths_neg2 = (neg_path2 == "") ? temp_paths_neg2 = getZeroMatrix(total_srcuidsRels2, vlen + vlen2) : temp_paths_neg2 = (pathLength == 5) ? paths_neg1 : temp_paths_neg22 = readPaths(neg_path2); // Only empty paths for paths of length 1
-  std::vector<std::vector<uint64_t> > paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
-  std::vector<std::vector<uint64_t> > &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_srcuidsRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
+  std::vector<std::vector<uint64_t> > paths_neg1 = (neg_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(neg_path1); // Only empty paths for paths of length 1
+  std::vector<std::vector<uint64_t> > &paths_neg2 = (neg_path2 == "") ? temp_paths_neg2 = getZeroMatrix(total_src_uidssRels2, vlen + vlen2) : temp_paths_neg2 = (pathLength == 5) ? paths_neg1 : temp_paths_neg22 = readPaths(neg_path2); // Only empty paths for paths of length 1
+  std::vector<std::vector<uint64_t> > paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
+  std::vector<std::vector<uint64_t> > &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_src_uidssRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
 
   // A priority queue for the indices of the top K paths in the data
   IndicesScoresQueue indicesQ;
@@ -57,9 +58,9 @@ List join_method2(IntegerVector srcuid, IntegerVector trguids2, List uids_CountL
   int total_srcs = 0;
   total_paths = 0;
 
-  for(int i = 0; i < trguids2.size(); i++){
+  for(int i = 0; i < trg_uids.size(); i++){
     // Check if source node has changed
-    int src = srcuid[i];
+    int src = src_uids[i];
     if(src != prev_src){
       prev_src = src;
       total_srcs++;
@@ -70,14 +71,14 @@ List join_method2(IntegerVector srcuid, IntegerVector trguids2, List uids_CountL
     }
 
     // Find the locations and the number of the paths matching with uid
-    int uid = trguids2[i];
+    int uid = trg_uids[i];
     std::string geneuid = std::to_string(uid);
     IntegerVector uid_count_loc = uids_CountLoc[geneuid];
     int count = uid_count_loc[0];
     if(count == 0) continue;
     int location = uid_count_loc[1];
     int sign;
-    if(pathLength > 3) sign = joining_gene_sign[i];
+    if(pathLength > 3) sign = join_gene_signs[i];
 
     // Get the data of the first path
     std::vector<uint64_t> &path_pos1 = paths_pos1[i];
@@ -94,11 +95,11 @@ List join_method2(IntegerVector srcuid, IntegerVector trguids2, List uids_CountL
       int tid = 0;
       IndicesScoresQueue &tid_localindicesq = LocalIndicesQ[tid];
 
-      if(pathLength < 3) sign = joining_gene_sign[j];
+      if(pathLength < 3) sign = join_gene_signs[j];
 
       if(pathLength == 3){
-        int sign2 = joining_gene_sign[i];
-        int sign3 = joining_gene_sign[j];
+        int sign2 = join_gene_signs[i];
+        int sign3 = join_gene_signs[j];
         sign = ((sign2 == -1 && sign3 == 1) || (sign2 == 1 && sign3 == -1)) ? -1 : 1;
       }
 

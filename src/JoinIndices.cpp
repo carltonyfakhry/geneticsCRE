@@ -2,10 +2,10 @@
 #include <Rcpp.h>
 #include "gcre.h"
 
-// [[Rcpp::plugins(cpp11)]]
-
 using namespace std;
 using namespace Rcpp;
+
+// [[Rcpp::plugins(cpp11)]]
 
 const uint64_t one_64bit = 1;
 
@@ -130,9 +130,17 @@ vector<vector<uint64_t>> readPaths(string file_path){
 
 // conversions from R
 
-vecd2d copy_rmatrix(NumericMatrix matrix)
+vector<int> copy_rvector(IntegerVector r_vec)
 {
-  vecd2d table(matrix.nrow(), vector<double>(matrix.ncol()));
+  vector<int> vec(r_vec.size());
+  for(int k = 0; k < r_vec.size(); k += 1)
+    vec[k] = r_vec[k];
+  return vec;
+}
+
+vec2dd copy_rmatrix(NumericMatrix matrix)
+{
+  vec2dd table(matrix.nrow(), vector<double>(matrix.ncol()));
   for(int r = 0; r < matrix.nrow(); r += 1){
     for(int c = 0; c < matrix.ncol(); c += 1)
       table[r][c] = matrix(r,c);
@@ -233,13 +241,17 @@ List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector loc
 }
 
 // [[Rcpp::export]]
-List JoinIndices(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLoc, IntegerVector joining_gene_sign,
+List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs,
   NumericMatrix r_value_table, int nCases, int nControls, int K,
   int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads, std::string pos_path1,
   std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2,
   std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
 
-  vecd2d value_table = copy_rmatrix(r_value_table);
+  vec2dd value_table = copy_rmatrix(r_value_table);
+  vector<int> src_uids = copy_rvector(r_src_uids);
+  vector<int> trg_uids = copy_rvector(r_trg_uids);
+  vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
+
   
 /*
   printf("################\n");
@@ -272,13 +284,13 @@ List JoinIndices(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLo
 */
 
   if(method == "method2") {
-    return join_method2(srcuid, trguids2, uids_CountLoc, joining_gene_sign,
+    return join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
       value_table, nCases, nControls, K,
       iterations, CaseORControl, pathLength, nthreads, pos_path1,
       neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2,
-      dest_path_pos, dest_path_neg, dest_path_conflict);
+      dest_path_pos, dest_path_neg, dest_path_conflict, getTotalPaths(r_trg_uids, uids_CountLoc));
   } else if(method == "method2-old") {
-    return JoinIndicesMethod2(srcuid, trguids2, uids_CountLoc, joining_gene_sign,
+    return JoinIndicesMethod2(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs,
       r_value_table, nCases, nControls, K,
       iterations, CaseORControl, pathLength, nthreads, pos_path1,
       neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2,
