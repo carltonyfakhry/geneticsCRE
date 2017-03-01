@@ -163,24 +163,17 @@ void parsePaths(IntegerMatrix data, int nCases, int nControls, std::string file_
   vector<vector<uint64_t>> paths(data.nrow(), vector<uint64_t>(vlen + vlen2, 0));
 
   for(int i = 0; i < data.nrow(); i++){
-
     for(int j = 0; j < data.ncol(); j++){
-
       if(data(i,j) != 0){
-
         if(j < nCases)
           paths[i][j/64] |= one_64bit << j % 64;
         else
           paths[i][vlen + (j-nCases)/64] |= one_64bit << (j-nCases) % 64;
-
       }
-
     }
-
   }
 
   StorePaths(paths, file_path);
-
 }
 
 

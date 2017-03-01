@@ -11,6 +11,33 @@ using namespace std;
 typedef std::vector<std::vector<double>> vec2dd; 
 typedef std::vector<std::vector<uint64_t>> vec2d64u; 
 
+struct score_t {
+  int src_uid;
+  int trg_uid;
+  double score;
+};
+
+struct paths_t {
+};
+
+struct paths_vec_t : paths_t {
+  vec2d64u pos;
+  vec2d64u neg;
+  vec2d64u con;
+};
+
+struct paths_block_t : paths_t {
+  struct path_t {
+    uint64_t hash = 0;
+    short lengh = 0;
+    short* index;
+    uint64_t* pos;
+    uint64_t* neg;
+    uint64_t* con;
+  };
+};
+
+
 vec2d64u parseCaseORControl(Rcpp::IntegerMatrix CaseORControl, int nCases, int nControls);
 void parsePaths(Rcpp::IntegerMatrix data, int nCases, int nControls, string file_path);
 void StorePaths(vec2d64u &paths, string file_path);
