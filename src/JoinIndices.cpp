@@ -4,6 +4,7 @@
 
 // [[Rcpp::plugins(cpp11)]]
 
+using namespace std;
 using namespace Rcpp;
 
 const uint64_t one_64bit = 1;
@@ -17,7 +18,7 @@ int getTotalPaths(IntegerVector trguids, List uids_CountLoc){
   int total_paths = 0;
   for(int i = 0; i < trguids.size(); i++){
     int uid = trguids[i];
-    std::string geneuid = std::to_string(uid);
+    string geneuid = to_string(uid);
     IntegerVector temp = as<IntegerVector>(uids_CountLoc[geneuid]);
     total_paths += temp[0];
   }
@@ -53,8 +54,8 @@ int getTotalCountsCountLoc(List uids_CountLoc){
  *
  */
 
-std::vector<std::vector<uint64_t> > getZeroMatrix(int dim1, int dim2){
-  std::vector<std::vector<uint64_t> > temp(dim1, std::vector<uint64_t>(dim2, 0));
+vector<vector<uint64_t>> getZeroMatrix(int dim1, int dim2){
+  vector<vector<uint64_t>> temp(dim1, vector<uint64_t>(dim2, 0));
   return temp;
 }
 
@@ -65,9 +66,9 @@ std::vector<std::vector<uint64_t> > getZeroMatrix(int dim1, int dim2){
  * This functions writes paths to a file.
  *
  */
-void StorePaths(std::vector<std::vector<uint64_t> > &paths, std::string file_path){
+void StorePaths(vector<vector<uint64_t>> &paths, string file_path){
 
-  std::ofstream data_file;
+  ofstream data_file;
   data_file.open(file_path);
 
   for(unsigned int i = 0; i < paths.size(); i++){
@@ -77,7 +78,7 @@ void StorePaths(std::vector<std::vector<uint64_t> > &paths, std::string file_pat
       if(j < paths[0].size() - 1)
         data_file << paths[i][j] << ",";
       else
-        data_file << paths[i][j] << std::endl;
+        data_file << paths[i][j] << endl;
 
     }
 
@@ -95,26 +96,26 @@ void StorePaths(std::vector<std::vector<uint64_t> > &paths, std::string file_pat
  *
  */
 
-std::vector<std::vector<uint64_t> > readPaths(std::string file_path){
+vector<vector<uint64_t>> readPaths(string file_path){
 
-  std::ifstream data_file(file_path);
-  std::vector<std::vector<uint64_t> > paths;
+  ifstream data_file(file_path);
+  vector<vector<uint64_t>> paths;
 
-  std::string str;
+  string str;
   int i = 0;
-  while (std::getline(data_file, str)){
-    std::vector<uint64_t> path;
-    std::string str2("");
+  while (getline(data_file, str)){
+    vector<uint64_t> path;
+    string str2("");
     for(unsigned int j = 0; j < str.size(); j++){
       if(str[j] != ','){
         str2 += str[j];
       }
       else{
-        path.push_back((uint64_t) std::stoul(str2));
+        path.push_back((uint64_t) stoul(str2));
         str2 = "";
       }
     }
-    path.push_back((uint64_t) std::stoul(str2));
+    path.push_back((uint64_t) stoul(str2));
     str2 = "";
     paths.push_back(path);
     i++;
@@ -127,6 +128,18 @@ std::vector<std::vector<uint64_t> > readPaths(std::string file_path){
 }
 
 
+// conversions from R
+
+vecd2d copy_rmatrix(NumericMatrix matrix)
+{
+  vecd2d table(matrix.nrow(), vector<double>(matrix.ncol()));
+  for(int r = 0; r < matrix.nrow(); r += 1){
+    for(int c = 0; c < matrix.ncol(); c += 1)
+      table[r][c] = matrix(r,c);
+  }
+  printf("copied value matrix: %d x %d\n", matrix.nrow(), matrix.ncol());
+  return table;
+}
 
 /**
  *
@@ -139,7 +152,7 @@ void parsePaths(IntegerMatrix data, int nCases, int nControls, std::string file_
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
 
-  std::vector<std::vector<uint64_t> > paths(data.nrow(), std::vector<uint64_t>(vlen + vlen2, 0));
+  vector<vector<uint64_t>> paths(data.nrow(), vector<uint64_t>(vlen + vlen2, 0));
 
   for(int i = 0; i < data.nrow(); i++){
 
@@ -170,13 +183,13 @@ void parsePaths(IntegerMatrix data, int nCases, int nControls, std::string file_
  *
  */
 
-std::vector<std::vector<uint64_t> > parseCaseORControl(IntegerMatrix CaseORControl, int nCases, int nControls){
+vector<vector<uint64_t>> parseCaseORControl(IntegerMatrix CaseORControl, int nCases, int nControls){
 
 
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
 
-  std::vector<std::vector<uint64_t> > CaseORControl2(CaseORControl.nrow(), std::vector<uint64_t>(vlen + vlen2, 0));
+  vector<vector<uint64_t>> CaseORControl2(CaseORControl.nrow(), vector<uint64_t>(vlen + vlen2, 0));
   for(int i = 0; i < CaseORControl.nrow(); i++){
 
     for(int j = 0; j < nCases; j++){
@@ -209,7 +222,7 @@ std::vector<std::vector<uint64_t> > parseCaseORControl(IntegerMatrix CaseORContr
 List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector location){
   List uids_2countsloc = List();
   for(unsigned int i = 0; i < uids.size(); i++){
-    std::string uids_str = std::to_string(uids[i]);
+    string uids_str = to_string(uids[i]);
     Rcpp::IntegerVector temp = IntegerVector(2);
     int count = counts[i];
     temp[0] = count;
@@ -221,11 +234,13 @@ List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector loc
 
 // [[Rcpp::export]]
 List JoinIndices(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLoc, IntegerVector joining_gene_sign,
-  NumericMatrix ValueTable, int nCases, int nControls, int K,
+  NumericMatrix r_value_table, int nCases, int nControls, int K,
   int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads, std::string pos_path1,
   std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2,
   std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
 
+  vecd2d value_table = copy_rmatrix(r_value_table);
+  
 /*
   printf("################\n");
   printf("srcuid size : %d\n", srcuid.size());
@@ -257,8 +272,14 @@ List JoinIndices(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLo
 */
 
   if(method == "method2") {
+    return join_method2(srcuid, trguids2, uids_CountLoc, joining_gene_sign,
+      value_table, nCases, nControls, K,
+      iterations, CaseORControl, pathLength, nthreads, pos_path1,
+      neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2,
+      dest_path_pos, dest_path_neg, dest_path_conflict);
+  } else if(method == "method2-old") {
     return JoinIndicesMethod2(srcuid, trguids2, uids_CountLoc, joining_gene_sign,
-      ValueTable, nCases, nControls, K,
+      r_value_table, nCases, nControls, K,
       iterations, CaseORControl, pathLength, nthreads, pos_path1,
       neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2,
       dest_path_pos, dest_path_neg, dest_path_conflict);
