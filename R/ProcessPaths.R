@@ -291,8 +291,10 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       rm(data)
 
       lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
-                                         1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data_file, "", "",dest_path_pos1,
-                                         dest_path_neg1, dest_path_conflict1)
+                                         1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                         "", "", "",
+                                         path_data_file, "", "",
+                                         dest_path_pos1, dest_path_neg1, dest_path_conflict1)
       file.remove(path_data_file)
 
 
@@ -301,8 +303,10 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       rm(data2)
 
       lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
-                                        1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data2_file, "", "", "",
-                                        "", "")
+                                        1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                        "", "", "",
+                                        path_data2_file, "", "",
+                                        "", "", "")
       file.remove(path_data2_file)
 
     }else if(path_length == 2){
@@ -315,9 +319,10 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       rm(data3)
 
       lst2 <- geneticsCRE:::ProcessPaths(Rels_data, Rels, Rels_data$srcuid, Rels_data$srcuid, Rels$sign, Rels$srcuid,
-                                          2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, dest_path_pos1,
-                                         dest_path_neg1, dest_path_conflict1, path_data3_file, "", "", dest_path_pos2,
-                                         dest_path_neg2, dest_path_conflict2)
+                                         2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                         dest_path_pos1, dest_path_neg1, dest_path_conflict1,
+                                         path_data3_file, "", "",
+                                         dest_path_pos2, dest_path_neg2, dest_path_conflict2)
       lst <- lst2
       file.remove(path_data3_file)
 
@@ -332,7 +337,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst3 <- geneticsCRE:::ProcessPaths(Rels, Rels, Rels$srcuid, Rels$trguid, Rels$sign, Rels$srcuid,
                                          3, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         dest_path_pos2, dest_path_neg2, dest_path_conflict2, path_data4_file, "", "",
+                                         dest_path_pos2, dest_path_neg2, dest_path_conflict2,
+                                         path_data4_file, "", "",
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3)
 
       lst <- lst3

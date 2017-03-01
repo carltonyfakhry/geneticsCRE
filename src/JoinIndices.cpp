@@ -253,35 +253,35 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
   vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
 
   
-/*
+
   printf("################\n");
-  printf("srcuid size : %d\n", srcuid.size());
-  printf("trguid size : %d\n", trguids2.size());
-  printf("uids cl size: %d\n", uids_CountLoc.size());
-  printf("join gene s : %d\n", joining_gene_sign.size());
-  printf("value table : %d x %d\n", ValueTable.rows(), ValueTable.cols());
-  printf("caseorcon   : %d x %d\n", CaseORControl.rows(), CaseORControl.cols());
-  printf("ncases      : %d\n", nCases);
-  printf("ncontrols   : %d\n", nControls);
-  printf("K           : %d\n", K);
-  printf("iterations  : %d\n", iterations);
+  // printf("srcuid size : %d\n", srcuid.size());
+  // printf("trguid size : %d\n", trguids2.size());
+  // printf("uids cl size: %d\n", uids_CountLoc.size());
+  // printf("join genes  : %d\n", joining_gene_sign.size());
+  // printf("value table : %d x %d\n", ValueTable.rows(), ValueTable.cols());
+  // printf("caseorcon   : %d x %d\n", CaseORControl.rows(), CaseORControl.cols());
+  // printf("ncases      : %d\n", nCases);
+  // printf("ncontrols   : %d\n", nControls);
+  // printf("K           : %d\n", K);
+  // printf("iterations  : %d\n", iterations);
   printf("method      : %s\n", method.c_str());
   printf("pathlen     : %d\n", pathLength);
   printf("nthread     : %d\n", nthreads);
   printf("\n");
 
-  printf("pos1 : %s\n", pos_path1.c_str());
-  printf("neg1 : %s\n", neg_path1.c_str());
-  printf("con1 : %s\n", conflict_path1.c_str());
-  printf("pos2 : %s\n", pos_path2.c_str());
-  printf("neg2 : %s\n", neg_path2.c_str());
-  printf("con2 : %s\n", conflict_path2.c_str());
-  printf("pos3 : %s\n", dest_path_pos.c_str());
-  printf("neg3 : %s\n", dest_path_neg.c_str());
-  printf("con3 : %s\n", dest_path_conflict.c_str());
+  // printf("pos1 : %s\n", pos_path1.c_str());
+  // printf("neg1 : %s\n", neg_path1.c_str());
+  // printf("con1 : %s\n", conflict_path1.c_str());
+  // printf("pos2 : %s\n", pos_path2.c_str());
+  // printf("neg2 : %s\n", neg_path2.c_str());
+  // printf("con2 : %s\n", conflict_path2.c_str());
+  // printf("pos3 : %s\n", dest_path_pos.c_str());
+  // printf("neg3 : %s\n", dest_path_neg.c_str());
+  // printf("con3 : %s\n", dest_path_conflict.c_str());
 
   printf("################\n\n");
-*/
+
 
   if(method == "method2") {
     return join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
