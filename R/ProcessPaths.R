@@ -280,6 +280,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
   # Processing the paths
   for(path_length in 1:pathLength){
 
+    timeStartLoop <- as.numeric(Sys.time()) * 1000
+
     if(path_length == 1){
 
       print("Processing paths of length 1...")
@@ -366,6 +368,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       lst <- lst5
 
     }
+
+    print(sprintf("  time for lengh %d: %f", path_length, as.numeric(Sys.time()) * 1000 - timeStartLoop, digits=15))
 
     UserScores <- c(UserScores, lst$scores)
     UserKpaths <- c(UserKpaths, lst$path)

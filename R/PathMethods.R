@@ -30,23 +30,17 @@ ProcessPaths <- function(Rels1, Rels2,
 
   print(paste(length(unique_Rels1_srcs) , "source nodes for paths of length", path_length, "and their permutations will be processed!", sep = " "))
 
-  if(method == 2){
+  lst <- geneticsCRE:::JoinIndices(Rels1_srcs, Rels1_trgs, uids_CountLoc, joining_gene_sign,
+                                   ValueTable, nCases, nControls, K,
+                                   iterations, CaseORControl, method, path_length, nthreads,
+                                   pos_path1, neg_path1, conflict_path1,
+                                   pos_path2, neg_path2, conflict_path2,
+                                   dest_path_pos1, dest_path_neg1, dest_path_conflict1)
 
-    lst <- geneticsCRE:::JoinIndicesMethod2(Rels1_srcs, Rels1_trgs, uids_CountLoc, joining_gene_sign,
-                                            ValueTable, nCases, nControls, K,
-                                            iterations, CaseORControl, method, path_length, nthreads,
-                                            pos_path1, neg_path1, conflict_path1,
-                                            pos_path2, neg_path2, conflict_path2, dest_path_pos1,
-                                            dest_path_neg1, dest_path_conflict1)
-
-  }else{
-
-    lst <- geneticsCRE:::JoinIndicesMethod1(Rels1_srcs, Rels1_trgs, uids_CountLoc, joining_gene_sign,
-                                            ValueTable, nCases, nControls, K,
-                                            iterations, CaseORControl, method, path_length, nthreads, pos_path1, pos_path2, dest_path_pos1)
-
-  }
-
+  # lst <- geneticsCRE:::JoinIndicesMethod1(Rels1_srcs, Rels1_trgs, uids_CountLoc, joining_gene_sign,
+  #                                         ValueTable, nCases, nControls, K,
+  #                                         iterations, CaseORControl, method, path_length, nthreads,
+  #                                         pos_path1, pos_path2, dest_path_pos1)
 
   # Get the paths and signedpaths
   inds <- lst$ids
