@@ -358,6 +358,9 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
   vec2d_u64 paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
   vec2d_u64 &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_src_uidssRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
 
+  printf(" **** total_src_uidssRels2: %d\n", total_src_uidssRels2);
+  printf(" **** paths pos2: %d\n", paths_pos2.size());
+
 
   printf("################\n");
   // printf("srcuid size : %d\n", srcuid.size());
@@ -387,8 +390,8 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
 
   printf("################\n\n");
 
-  compare_vecs(paths0, paths_pos1, paths_neg1, paths_conflict1);
-  compare_vecs(paths1, paths_pos2, paths_neg2, paths_conflict2);
+  // compare_vecs(paths0, paths_pos1, paths_neg1, paths_conflict1);
+  // compare_vecs(paths1, paths_pos2, paths_neg2, paths_conflict2);
 
   if(method == "method2") {
     return join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
