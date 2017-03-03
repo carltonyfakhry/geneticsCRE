@@ -202,11 +202,12 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
                                          1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         data0,
+                                         NULL, data0, TRUE,
                                          "", "", "",
                                          path_data_file, "", "",
                                          dest_path_pos1, dest_path_neg1, dest_path_conflict1)
       file.remove(path_data_file)
+      print(lst1$paths)
 
 
       path_data2_file <- paste(path, "data2_geneticsCRE", sep = "")
@@ -215,7 +216,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
                                         1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                        data0,
+                                        NULL, data0, FALSE,
                                         "", "", "",
                                         path_data2_file, "", "",
                                         "", "", "")
@@ -232,7 +233,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst2 <- geneticsCRE:::ProcessPaths(Rels_data, Rels, Rels_data$srcuid, Rels_data$srcuid, Rels$sign, Rels$srcuid,
                                          2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         
+                                         NULL, NULL, TRUE,
                                          dest_path_pos1, dest_path_neg1, dest_path_conflict1,
                                          path_data3_file, "", "",
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2)
@@ -250,6 +251,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst3 <- geneticsCRE:::ProcessPaths(Rels, Rels, Rels$srcuid, Rels$trguid, Rels$sign, Rels$srcuid,
                                          3, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                         NULL, NULL, TRUE,
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2,
                                          path_data4_file, "", "",
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3)
@@ -266,6 +268,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       lst4 <- geneticsCRE:::ProcessPaths(Rels3, Rels, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels$srcuid,
                                          4, ValueTable, nCases, nControls, K, iterations,
                                          CaseORControl, method, nthreads,
+                                         NULL, NULL, FALSE,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2,
                                          "", "", "")
@@ -280,6 +283,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       lst5 <- geneticsCRE:::ProcessPaths(Rels3, Rels3, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels3$srcuid,
                                          5, ValueTable, nCases, nControls, K, iterations,
                                          CaseORControl, method, nthreads,
+                                         NULL, NULL, FALSE,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          "", "", "")

@@ -320,22 +320,22 @@ static void compare_vecs(paths_vec* paths, vec2d_u64& pos, vec2d_u64& neg, vec2d
 List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs,
   NumericMatrix r_value_table, int nCases, int nControls, int K,
   int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads,
-  SEXP xp_paths0, SEXP xp_paths1,
+  SEXP xp_paths0, SEXP xp_paths1, bool keep_joined,
   std::string pos_path1, std::string neg_path1, std::string conflict_path1,
   std::string pos_path2, std::string neg_path2, std::string conflict_path2,
   std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
 
   // paths0 can be NULL; paths1 must be present
-  paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
-  paths_vec* paths0 = NULL;
-  if(!Rf_isNull(xp_paths0)){
-    paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
-  } else {
-    paths0 = (paths_vec*) createZeroPathSet(r_trg_uids.size(), paths1->width_ul, method);
-  }
+  // paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
+  // paths_vec* paths0 = NULL;
+  // if(!Rf_isNull(xp_paths0)){
+  //   paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
+  // } else {
+  //   paths0 = (paths_vec*) createZeroPathSet(r_trg_uids.size(), paths1->width_ul, method);
+  // }
 
-  printf("p1: %d\n", (unsigned long) paths1);
-  printf("p0: %d\n", (unsigned long) paths0);
+  // printf("p1: %d\n", (unsigned long) paths1);
+  // printf("p0: %d\n", (unsigned long) paths0);
 
   vec2d_d value_table = copy_rmatrix(r_value_table);
   vector<int> src_uids = copy_rvector(r_src_uids);
@@ -394,11 +394,38 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
   // compare_vecs(paths1, paths_pos2, paths_neg2, paths_conflict2);
 
   if(method == "method2") {
-    return join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
+    joined_res* res = join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
       value_table, nCases, nControls, K,
-      iterations, CaseORControl, pathLength, nthreads, pos_path1,
-      neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2,
-      dest_path_pos, dest_path_neg, dest_path_conflict, getTotalPaths(r_trg_uids, uids_CountLoc));
+      iterations, CaseORControl, pathLength, nthreads,
+      keep_joined,
+      pos_path1, neg_path1, conflict_path1,
+      pos_path2, neg_path2, conflict_path2,
+      dest_path_pos, dest_path_neg, dest_path_conflict,
+      getTotalPaths(r_trg_uids, uids_CountLoc));
+
+
+    NumericVector scores(res->scores.size());
+    for(int k = 0; k < res->scores.size(); k++)
+      scores[k] = res->scores[k];
+
+    NumericVector permuted_scores(res->permuted_scores.size());
+    for(int k = 0; k < res->permuted_scores.size(); k++)
+      permuted_scores[k] = res->permuted_scores[k];
+
+    IntegerMatrix ids(res->ids.size(),2);
+    for(int k = 0; k < res->ids.size(); k++){
+      ids(k,0) = res->ids[k][0];
+      ids(k,1) = res->ids[k][1];
+    }
+
+
+    if(keep_joined){
+      XPtr<paths_type> res_paths(res->paths, true);
+      return List::create(Named("scores") = scores, Named("ids") = ids, Named("TestScores") = permuted_scores, Named("paths") = res_paths);
+    }else {
+      return List::create(Named("scores") = scores, Named("ids") = ids, Named("TestScores") = permuted_scores);
+    }
+
   } else if(method == "method2-old") {
     return JoinIndicesMethod2(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs,
       r_value_table, nCases, nControls, K,

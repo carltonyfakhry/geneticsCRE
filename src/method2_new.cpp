@@ -2,9 +2,10 @@
 #include "Utils.h"
 #include "gcre.h"
 
-List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
+joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
   vec2d_d value_table, int nCases, int nControls, int K,
-  int iterations, IntegerMatrix CaseORControl, int pathLength, int nthreads, 
+  int iterations, IntegerMatrix CaseORControl, int pathLength, int nthreads,
+  bool keep_joined,
   std::string pos_path1, std::string neg_path1, std::string conflict_path1,
   std::string pos_path2, std::string neg_path2, std::string conflict_path2,
   std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict,
@@ -217,13 +218,15 @@ List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_Co
     }
   }
 
-  NumericVector permutedscores(iterations);
+  joined_res* res = new joined_res;
+
+  res->permuted_scores.resize(iterations);
   for(int i = 0; i < nthreads; i++){
     for(int j = 0; j < iterations; j++){
       if(i == 0){
-        permutedscores[j] = max_scores[i][j];
-      }else if(max_scores[i][j] > permutedscores[j]){
-        permutedscores[j] = max_scores[i][j];
+        res->permuted_scores[j] = max_scores[i][j];
+      }else if(max_scores[i][j] > res->permuted_scores[j]){
+        res->permuted_scores[j] = max_scores[i][j];
       }
     }
   }
@@ -237,19 +240,17 @@ List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_Co
     }
   }
 
-  std::cout << "zero: " << zero_comps << " of " << total_comps << "\n";
-  printf("prctz: %f\n", zero_comps / (double) total_comps * 100.0);
-
-
   // Create a vector for the indices of the k paths with the highest scores
-  IntegerMatrix ids(indicesQ.size(),2);
-  NumericVector scores(indicesQ.size());
+  // IntegerMatrix ids(indicesQ.size(),2);
+  // TODO move to R wrapper
+  res->ids.resize(indicesQ.size(), vec_u64(2));
+  res->scores.resize(indicesQ.size());
   int j = 0;
   while(indicesQ.size() != 0){
     ScoreIndices temp = indicesQ.top();
-    scores[j] = temp.first;
-    ids(j,0) = temp.second.first + 1; // Add 1 because it will be used as an index in the R code
-    ids(j,1) = temp.second.second + 1;
+    res->scores[j] = temp.first;
+    res->ids[j][0] = temp.second.first + 1; // Add 1 because it will be used as an index in the R code
+    res->ids[j][1] = temp.second.second + 1;
     indicesQ.pop();
     j++;
   }
@@ -260,5 +261,5 @@ List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_Co
     StorePaths(joined_paths_conflict, dest_path_conflict);
   }
 
-  return List::create(Named("scores") = scores, Named("ids") = ids, Named("TestScores") = permutedscores);
+  return res;
 }
