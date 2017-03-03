@@ -197,6 +197,8 @@ XPtr<paths_type> createPathSet(IntegerMatrix data, int num_cases, int num_contro
   paths->width_ul = vlenc + vlent;
   paths->num_cases = num_cases;
   paths->pos.resize(paths->size, vec_u64(paths->width_ul, 0));
+  paths->neg.resize(paths->size, vec_u64(paths->width_ul, 0));
+  paths->con.resize(paths->size, vec_u64(paths->width_ul, 0));
 
   for(int r = 0; r < data.nrow(); r++){
     for(int c = 0; c < data.ncol(); c++){
@@ -210,6 +212,21 @@ XPtr<paths_type> createPathSet(IntegerMatrix data, int num_cases, int num_contro
   }
 
   return XPtr<paths_type>(paths, true) ;
+}
+
+paths_type* createZeroPathSet(int size, int width_ul, std::string method){
+
+  // allocate on heap
+  paths_vec* paths = new paths_vec;
+
+  paths->size = size;
+  paths->width_ul = width_ul;
+  paths->num_cases = 0;
+  paths->pos.resize(paths->size, vec_u64(paths->width_ul, 0));
+  paths->neg.resize(paths->size, vec_u64(paths->width_ul, 0));
+  paths->con.resize(paths->size, vec_u64(paths->width_ul, 0));
+
+  return paths;
 }
 
 
@@ -268,26 +285,79 @@ List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector loc
   return uids_2countsloc;
 }
 
+static void compare_vecs(paths_vec* paths, vec2d_u64& pos, vec2d_u64& neg, vec2d_u64& con){
+  printf("\n-----------------------\n");
+  printf("[str] pos: %zu x %zu, neg: %zu x %zu, con: %zu x %zu\n", paths->pos.size(), paths->pos[0].size(), paths->neg.size(), paths->neg[0].size(), paths->con.size(), paths->con[0].size());
+  printf("[vec] pos: %zu x %zu, neg: %zu x %zu, con: %zu x %zu\n", pos.size(), pos[0].size(), neg.size(), neg[0].size(), con.size(), con[0].size());
+  printf("\n");
+  if(paths->pos.size() != pos.size() || paths->pos[0].size() != pos[0].size() || paths->neg.size() != neg.size() || paths->neg[0].size() != neg[0].size() || paths->con.size() != con.size() || paths->con[0].size() != con[0].size())
+    stop("bad!");
+  for(int n = 0; n < pos.size(); n++){
+    for(int k = 0; k < pos[n].size(); k++){
+      if(pos[n][k] != paths->pos[n][k]){
+        printf("%lu != %lu", pos[n][k], paths->pos[n][k]);
+        stop("bad!");
+      }
+    }
+    for(int k = 0; k < neg[n].size(); k++){
+      if(neg[n][k] != paths->neg[n][k]){
+        printf("%lu != %lu", neg[n][k], paths->neg[n][k]);
+        stop("bad!");
+      }
+    }
+    for(int k = 0; k < con[n].size(); k++){
+      if(con[n][k] != paths->con[n][k]){
+        printf("%lu != %lu", con[n][k], paths->con[n][k]);
+        stop("bad!");
+      }
+    }
+  }
+
+  printf("\n-----------------------\n\n");
+}
+
 // [[Rcpp::export]]
 List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs,
   NumericMatrix r_value_table, int nCases, int nControls, int K,
   int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads,
-  SEXP xp_paths0,
+  SEXP xp_paths0, SEXP xp_paths1,
   std::string pos_path1, std::string neg_path1, std::string conflict_path1,
   std::string pos_path2, std::string neg_path2, std::string conflict_path2,
   std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
 
-  paths_vec* paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
-  printf("size: %d, width: %d, cases: %d\n", paths0->size, paths0->width_ul, paths0->num_cases);
-  for(int k = 0; k < paths0->width_ul; k++)
-    printf(" %d", paths0->pos[0][k]);
-  printf("\n");
-  exit(0);
+  // paths0 can be NULL; paths1 must be present
+  paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
+  paths_vec* paths0 = NULL;
+  if(!Rf_isNull(xp_paths0)){
+    paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
+  } else {
+    paths0 = (paths_vec*) createZeroPathSet(r_trg_uids.size(), paths1->width_ul, method);
+  }
+
+  printf("p1: %d\n", (unsigned long) paths1);
+  printf("p0: %d\n", (unsigned long) paths0);
 
   vec2d_d value_table = copy_rmatrix(r_value_table);
   vector<int> src_uids = copy_rvector(r_src_uids);
   vector<int> trg_uids = copy_rvector(r_trg_uids);
   vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
+
+
+  int vlen = (int) ceil(nCases/64.0);
+  int vlen2 = (int) ceil(nControls/64.0);
+  int total_src_uidssRels2 = getTotalCountsCountLoc(uids_CountLoc);
+  vec2d_u64 temp_paths_pos2;
+  vec2d_u64 temp_paths_neg2;
+  vec2d_u64 temp_paths_neg22;
+  vec2d_u64 temp_paths_conflict2;
+  vec2d_u64 temp_paths_conflict22;
+  vec2d_u64 paths_pos1 = (pos_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(pos_path1); // Only empty paths for paths of length 1
+  vec2d_u64 &paths_pos2 = (pathLength == 5) ? paths_pos1 : temp_paths_pos2 = readPaths(pos_path2);
+  vec2d_u64 paths_neg1 = (neg_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(neg_path1); // Only empty paths for paths of length 1
+  vec2d_u64 &paths_neg2 = (neg_path2 == "") ? temp_paths_neg2 = getZeroMatrix(total_src_uidssRels2, vlen + vlen2) : temp_paths_neg2 = (pathLength == 5) ? paths_neg1 : temp_paths_neg22 = readPaths(neg_path2); // Only empty paths for paths of length 1
+  vec2d_u64 paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
+  vec2d_u64 &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_src_uidssRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
+
 
   printf("################\n");
   // printf("srcuid size : %d\n", srcuid.size());
@@ -317,6 +387,8 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
 
   printf("################\n\n");
 
+  compare_vecs(paths0, paths_pos1, paths_neg1, paths_conflict1);
+  compare_vecs(paths1, paths_pos2, paths_neg2, paths_conflict2);
 
   if(method == "method2") {
     return join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,

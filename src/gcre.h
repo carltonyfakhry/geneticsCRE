@@ -68,8 +68,9 @@ int getTotalCountsCountLoc(Rcpp::List uids_CountLoc);
 
 Rcpp::List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
   vec2d_d value_table, int nCases, int nControls, int K,
-  int iterations, Rcpp::IntegerMatrix CaseORControl, int pathLength, int nthreads, string pos_path1,
-  string neg_path1, string conflict_path1, string pos_path2, string neg_path2, string conflict_path2,
+  int iterations, Rcpp::IntegerMatrix CaseORControl, int pathLength, int nthreads,
+  string pos_path1, string neg_path1, string conflict_path1,
+  string pos_path2, string neg_path2, string conflict_path2,
   string dest_path_pos, string dest_path_neg, string dest_path_conflict, int total_paths);
 
 Rcpp::List JoinIndicesMethod1(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguids2, Rcpp::List uids_CountLoc, Rcpp::IntegerVector joining_gene_sign,

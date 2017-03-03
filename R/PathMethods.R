@@ -35,7 +35,7 @@ ProcessPaths <- function(Rels1, Rels2,
   lst <- geneticsCRE:::JoinIndices(Rels1_srcs, Rels1_trgs, uids_CountLoc, joining_gene_sign,
                                    ValueTable, nCases, nControls, K,
                                    iterations, CaseORControl, method, path_length, nthreads,
-                                   paths0,
+                                   NULL, paths0,
                                    pos_path1, neg_path1, conflict_path1,
                                    pos_path2, neg_path2, conflict_path2,
                                    dest_path_pos1, dest_path_neg1, dest_path_conflict1)

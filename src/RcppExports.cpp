@@ -47,8 +47,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // JoinIndices
-List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs, NumericMatrix r_value_table, int nCases, int nControls, int K, int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads, SEXP xp_paths0, std::string pos_path1, std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2, std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict);
-RcppExport SEXP geneticsCRE_JoinIndices(SEXP r_src_uidsSEXP, SEXP r_trg_uidsSEXP, SEXP uids_CountLocSEXP, SEXP r_join_gene_signsSEXP, SEXP r_value_tableSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP CaseORControlSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP, SEXP xp_paths0SEXP, SEXP pos_path1SEXP, SEXP neg_path1SEXP, SEXP conflict_path1SEXP, SEXP pos_path2SEXP, SEXP neg_path2SEXP, SEXP conflict_path2SEXP, SEXP dest_path_posSEXP, SEXP dest_path_negSEXP, SEXP dest_path_conflictSEXP) {
+List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs, NumericMatrix r_value_table, int nCases, int nControls, int K, int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads, SEXP xp_paths0, SEXP xp_paths1, std::string pos_path1, std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2, std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict);
+RcppExport SEXP geneticsCRE_JoinIndices(SEXP r_src_uidsSEXP, SEXP r_trg_uidsSEXP, SEXP uids_CountLocSEXP, SEXP r_join_gene_signsSEXP, SEXP r_value_tableSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP CaseORControlSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP, SEXP xp_paths0SEXP, SEXP xp_paths1SEXP, SEXP pos_path1SEXP, SEXP neg_path1SEXP, SEXP conflict_path1SEXP, SEXP pos_path2SEXP, SEXP neg_path2SEXP, SEXP conflict_path2SEXP, SEXP dest_path_posSEXP, SEXP dest_path_negSEXP, SEXP dest_path_conflictSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -66,6 +66,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type pathLength(pathLengthSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< SEXP >::type xp_paths0(xp_paths0SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type xp_paths1(xp_paths1SEXP);
     Rcpp::traits::input_parameter< std::string >::type pos_path1(pos_path1SEXP);
     Rcpp::traits::input_parameter< std::string >::type neg_path1(neg_path1SEXP);
     Rcpp::traits::input_parameter< std::string >::type conflict_path1(conflict_path1SEXP);
@@ -75,7 +76,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type dest_path_pos(dest_path_posSEXP);
     Rcpp::traits::input_parameter< std::string >::type dest_path_neg(dest_path_negSEXP);
     Rcpp::traits::input_parameter< std::string >::type dest_path_conflict(dest_path_conflictSEXP);
-    rcpp_result_gen = Rcpp::wrap(JoinIndices(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, xp_paths0, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict));
+    rcpp_result_gen = Rcpp::wrap(JoinIndices(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, xp_paths0, xp_paths1, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict));
     return rcpp_result_gen;
 END_RCPP
 }
