@@ -191,7 +191,10 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
     if(path_length == 1){
 
-      print("Processing paths of length 1...")
+      # print("Processing paths of length 1...")
+
+      # opaque pointer to path data
+      data0 <- geneticsCRE:::createPathSet(data, nCases, nControls, method)
 
       path_data_file <- paste(path, "data_geneticsCRE", sep = "")
       geneticsCRE:::parsePaths(data, nCases, nControls, path_data_file)
@@ -199,6 +202,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
                                          1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                         data0,
                                          "", "", "",
                                          path_data_file, "", "",
                                          dest_path_pos1, dest_path_neg1, dest_path_conflict1)
@@ -211,6 +215,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
                                         1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                        data0,
                                         "", "", "",
                                         path_data2_file, "", "",
                                         "", "", "")
@@ -218,7 +223,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
     }else if(path_length == 2){
 
-      print("Processing paths of length 2...")
+      # print("Processing paths of length 2...")
 
       path_data3_file <- paste(path, "data3_geneticsCRE", sep = "")
       data3 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
@@ -227,6 +232,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
       lst2 <- geneticsCRE:::ProcessPaths(Rels_data, Rels, Rels_data$srcuid, Rels_data$srcuid, Rels$sign, Rels$srcuid,
                                          2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
+                                         
                                          dest_path_pos1, dest_path_neg1, dest_path_conflict1,
                                          path_data3_file, "", "",
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2)
@@ -235,7 +241,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
     }else if(path_length == 3){
 
-      print("Processing paths of length 3...")
+      # print("Processing paths of length 3...")
 
       path_data4_file <- paste(path, "data4_geneticsCRE", sep = "")
       data4 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
@@ -254,7 +260,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
     }
     else if(path_length == 4){
 
-      print("Processing paths of length 4...")
+      # print("Processing paths of length 4...")
 
 
       lst4 <- geneticsCRE:::ProcessPaths(Rels3, Rels, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels$srcuid,
@@ -269,7 +275,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
     else if(path_length == 5){
 
 
-      print("Processing paths of length 5...")
+      # print("Processing paths of length 5...")
 
       lst5 <- geneticsCRE:::ProcessPaths(Rels3, Rels3, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels3$srcuid,
                                          5, ValueTable, nCases, nControls, K, iterations,

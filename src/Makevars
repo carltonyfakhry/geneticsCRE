@@ -1,4 +1,4 @@
-PKG_CXXFLAGS = -mpopcnt
-PKG_CXX1XFLAGS = -mpopcnt
+PKG_CXXFLAGS = -mpopcnt -std=c++11
+PKG_CXX1XFLAGS = -mpopcnt -mpopcnt -std=c++11
 #PKG_LIBS = -fopenmp
 CXX_STD = CXX11

@@ -70,10 +70,10 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
     if(src != prev_src){
       prev_src = src;
       total_srcs++;
-      if((total_srcs % 100) == 0){
-        Rcout << "    " <<  total_srcs << " source nodes for paths of length " << pathLength << " and their permutations have been processed!" << std::endl;
-        checkUserInterrupt();
-      }
+      // if((total_srcs % 100) == 0){
+      //   Rcout << "    " <<  total_srcs << " source nodes for paths of length " << pathLength << " and their permutations have been processed!" << std::endl;
+      //   checkUserInterrupt();
+      // }
     }
 
     // Find the locations and the number of the paths matching with uid

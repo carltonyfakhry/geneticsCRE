@@ -3,10 +3,14 @@
 #include "gcre.h"
 
 List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
-  vec2dd value_table, int nCases, int nControls, int K,
-  int iterations, IntegerMatrix CaseORControl, int pathLength, int nthreads, std::string pos_path1,
-  std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2,
-  std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict, int total_paths){
+  vec2d_d value_table, int nCases, int nControls, int K,
+  int iterations, IntegerMatrix CaseORControl, int pathLength, int nthreads, 
+  std::string pos_path1, std::string neg_path1, std::string conflict_path1,
+  std::string pos_path2, std::string neg_path2, std::string conflict_path2,
+  std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict,
+  int total_paths){
+
+  std::cout.imbue(std::locale("en_US.UTF8"));
 
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
@@ -58,16 +62,19 @@ List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_Co
   int total_srcs = 0;
   total_paths = 0;
 
+  long total_comps = 0;
+  long zero_comps = 0;
+
   for(int i = 0; i < trg_uids.size(); i++){
     // Check if source node has changed
     int src = src_uids[i];
     if(src != prev_src){
       prev_src = src;
       total_srcs++;
-      if((total_srcs % 100) == 0){
-        Rcout << "    " <<  total_srcs << " source nodes for paths of length " << pathLength << " and their permutations have been processed!" << std::endl;
-        checkUserInterrupt();
-      }
+      // if((total_srcs % 100) == 0){
+      //   Rcout << "    " <<  total_srcs << " source nodes for paths of length " << pathLength << " and their permutations have been processed!" << std::endl;
+      //   checkUserInterrupt();
+      // }
     }
 
     // Find the locations and the number of the paths matching with uid
@@ -114,6 +121,11 @@ List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_Co
       for(int k = 0; k < vlen + vlen2; k++){
         uint64_t temp_pos = path_pos1[k] | path_pos2[k];
         uint64_t temp_neg = path_neg1[k] | path_neg2[k];
+
+        total_comps += 1;
+        if(temp_pos == 0 || temp_neg == 0)
+          zero_comps += 1;
+
         uint64_t temp_conflict = (path_conflict1[k] | path_conflict2[k]) | (temp_pos & temp_neg);
         joined_conflict[k] = temp_conflict;
         joined_pos[k] = temp_pos ^ (temp_conflict & temp_pos);
@@ -224,6 +236,10 @@ List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_Co
       indicesQ.pop();
     }
   }
+
+  std::cout << "zero: " << zero_comps << " of " << total_comps << "\n";
+  printf("prctz: %f\n", zero_comps / (double) total_comps * 100.0);
+
 
   // Create a vector for the indices of the k paths with the highest scores
   IntegerMatrix ids(indicesQ.size(),2);

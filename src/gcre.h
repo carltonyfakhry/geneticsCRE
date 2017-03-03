@@ -1,15 +1,19 @@
 #ifndef GCRE_H
 #define GCRE_H
 
-#include <cstdint>
+#include <inttypes.h>
 
 // TODO isolate to join indices
 #include <Rcpp.h>
 
+// these are types visible to R; keeping that minimal
+#include "geneticsCRE_types.h"
+
 using namespace std;
 
-typedef std::vector<std::vector<double>> vec2dd; 
-typedef std::vector<std::vector<uint64_t>> vec2d64u; 
+typedef std::vector<uint64_t> vec_u64; 
+typedef std::vector<std::vector<uint64_t>> vec2d_u64; 
+typedef std::vector<std::vector<double>> vec2d_d; 
 
 struct score_t {
   int src_uid;
@@ -17,17 +21,20 @@ struct score_t {
   double score;
 };
 
-struct paths_t {
+struct paths_base : paths_type {
+  int size;
+  int width_ul;
+  int num_cases;
 };
 
-struct paths_vec_t : paths_t {
-  vec2d64u pos;
-  vec2d64u neg;
-  vec2d64u con;
+struct paths_vec : paths_base {
+  vec2d_u64 pos;
+  vec2d_u64 neg;
+  vec2d_u64 con;
 };
 
-struct paths_block_t : paths_t {
-  struct path_t {
+struct paths_block : paths_base {
+  struct path {
     uint64_t hash = 0;
     short lengh = 0;
     short* index;
@@ -37,17 +44,30 @@ struct paths_block_t : paths_t {
   };
 };
 
+// // struct path_set {
+// //   int len;
+// //   path_set(int len);
+// //   ~path_set();
+// // };
 
-vec2d64u parseCaseORControl(Rcpp::IntegerMatrix CaseORControl, int nCases, int nControls);
+// path_set::path_set(int len) : len(len) {
+//   printf("i am created: %d, %d\n", len, len);
+// }
+
+// path_set::~path_set(){
+//   printf("i am destructed\n");
+// }
+
+vec2d_u64 parseCaseORControl(Rcpp::IntegerMatrix CaseORControl, int nCases, int nControls);
 void parsePaths(Rcpp::IntegerMatrix data, int nCases, int nControls, string file_path);
-void StorePaths(vec2d64u &paths, string file_path);
-vec2d64u readPaths(string file_path);
+void StorePaths(vec2d_u64 &paths, string file_path);
+vec2d_u64 readPaths(string file_path);
 int getTotalPaths(Rcpp::IntegerVector trguids, Rcpp::List uids_CountLoc);
-vec2d64u getZeroMatrix(int dim1, int dim2);
+vec2d_u64 getZeroMatrix(int dim1, int dim2);
 int getTotalCountsCountLoc(Rcpp::List uids_CountLoc);
 
 Rcpp::List join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
-  vec2dd value_table, int nCases, int nControls, int K,
+  vec2d_d value_table, int nCases, int nControls, int K,
   int iterations, Rcpp::IntegerMatrix CaseORControl, int pathLength, int nthreads, string pos_path1,
   string neg_path1, string conflict_path1, string pos_path2, string neg_path2, string conflict_path2,
   string dest_path_pos, string dest_path_neg, string dest_path_conflict, int total_paths);

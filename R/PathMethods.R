@@ -6,9 +6,11 @@
 ProcessPaths <- function(Rels1, Rels2,
                          Rels1_srcs, Rels1_trgs, joining_gene_sign, Rels2_srcs,
                          path_length, ValueTable, nCases, nControls, K, iterations,
-                         CaseORControl, method, nthreads, pos_path1, neg_path1, conflict_path1,
-                         pos_path2, neg_path2, conflict_path2, dest_path_pos1,
-                         dest_path_neg1, dest_path_conflict1){
+                         CaseORControl, method, nthreads,
+                         paths0,
+                         pos_path1, neg_path1, conflict_path1,
+                         pos_path2, neg_path2, conflict_path2,
+                         dest_path_pos1, dest_path_neg1, dest_path_conflict1){
 
   # Handle source nodes, which are source nodes in Rels1
   unique_Rels1_srcs <- sort(unique(Rels1_srcs))
@@ -33,6 +35,7 @@ ProcessPaths <- function(Rels1, Rels2,
   lst <- geneticsCRE:::JoinIndices(Rels1_srcs, Rels1_trgs, uids_CountLoc, joining_gene_sign,
                                    ValueTable, nCases, nControls, K,
                                    iterations, CaseORControl, method, path_length, nthreads,
+                                   paths0,
                                    pos_path1, neg_path1, conflict_path1,
                                    pos_path2, neg_path2, conflict_path2,
                                    dest_path_pos1, dest_path_neg1, dest_path_conflict1)

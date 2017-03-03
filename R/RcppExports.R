@@ -5,11 +5,15 @@ parsePaths <- function(data, nCases, nControls, file_path) {
     invisible(.Call('geneticsCRE_parsePaths', PACKAGE = 'geneticsCRE', data, nCases, nControls, file_path))
 }
 
+createPathSet <- function(data, num_cases, num_controls, method) {
+    .Call('geneticsCRE_createPathSet', PACKAGE = 'geneticsCRE', data, num_cases, num_controls, method)
+}
+
 getMatchingList <- function(uids, counts, location) {
     .Call('geneticsCRE_getMatchingList', PACKAGE = 'geneticsCRE', uids, counts, location)
 }
 
-JoinIndices <- function(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict) {
-    .Call('geneticsCRE_JoinIndices', PACKAGE = 'geneticsCRE', r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict)
+JoinIndices <- function(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, xp_paths0, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict) {
+    .Call('geneticsCRE_JoinIndices', PACKAGE = 'geneticsCRE', r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, xp_paths0, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict)
 }
 

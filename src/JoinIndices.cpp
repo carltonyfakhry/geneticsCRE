@@ -1,13 +1,13 @@
 #include <fstream>
-#include <Rcpp.h>
 #include "gcre.h"
+#include <Rcpp.h>
 
 using namespace std;
 using namespace Rcpp;
 
 // [[Rcpp::plugins(cpp11)]]
 
-const uint64_t one_64bit = 1;
+const uint64_t ONE_UL = 1;
 
 /**
  *
@@ -138,9 +138,9 @@ vector<int> copy_rvector(IntegerVector r_vec)
   return vec;
 }
 
-vec2dd copy_rmatrix(NumericMatrix matrix)
+vec2d_d copy_rmatrix(NumericMatrix matrix)
 {
-  vec2dd table(matrix.nrow(), vector<double>(matrix.ncol()));
+  vec2d_d table(matrix.nrow(), vector<double>(matrix.ncol()));
   for(int r = 0; r < matrix.nrow(); r += 1){
     for(int c = 0; c < matrix.ncol(); c += 1)
       table[r][c] = matrix(r,c);
@@ -166,9 +166,9 @@ void parsePaths(IntegerMatrix data, int nCases, int nControls, std::string file_
     for(int j = 0; j < data.ncol(); j++){
       if(data(i,j) != 0){
         if(j < nCases)
-          paths[i][j/64] |= one_64bit << j % 64;
+          paths[i][j/64] |= ONE_UL << j % 64;
         else
-          paths[i][vlen + (j-nCases)/64] |= one_64bit << (j-nCases) % 64;
+          paths[i][vlen + (j-nCases)/64] |= ONE_UL << (j-nCases) % 64;
       }
     }
   }
@@ -176,6 +176,41 @@ void parsePaths(IntegerMatrix data, int nCases, int nControls, std::string file_
   StorePaths(paths, file_path);
 }
 
+/**
+ *
+ * This function parses paths into their 64 bit representations.
+ *
+ */
+// [[Rcpp::export]]
+XPtr<paths_type> createPathSet(IntegerMatrix data, int num_cases, int num_controls, std::string method){
+
+  if(data.ncol() != num_cases + num_cases)
+    stop("data width does not match case/control counts: " + to_string(data.ncol()));
+
+  int vlenc = (int) ceil(num_cases / 64.0);
+  int vlent = (int) ceil(num_controls / 64.0);
+
+  // allocate on heap
+  paths_vec* paths = new paths_vec;
+
+  paths->size = data.nrow();
+  paths->width_ul = vlenc + vlent;
+  paths->num_cases = num_cases;
+  paths->pos.resize(paths->size, vec_u64(paths->width_ul, 0));
+
+  for(int r = 0; r < data.nrow(); r++){
+    for(int c = 0; c < data.ncol(); c++){
+      if(data(r,c) != 0){
+        if(c < num_cases)
+          paths->pos[r][c/64] |= ONE_UL << c % 64;
+        else
+          paths->pos[r][vlenc + (c-num_cases)/64] |= ONE_UL << (c-num_cases) % 64;
+      }
+    }
+  }
+
+  return XPtr<paths_type>(paths, true) ;
+}
 
 
 /**
@@ -196,13 +231,13 @@ vector<vector<uint64_t>> parseCaseORControl(IntegerMatrix CaseORControl, int nCa
     for(int j = 0; j < nCases; j++){
       int index = j/64;
       if(CaseORControl(i,j) == 1)
-        CaseORControl2[i][index] |= one_64bit << j % 64;
+        CaseORControl2[i][index] |= ONE_UL << j % 64;
     }
 
     for(int j = nCases; j < nCases + nControls; j++){
       int index = vlen + (j-nCases)/64;
       if(CaseORControl(i,j) == 1)
-        CaseORControl2[i][index] |= one_64bit << (j-nCases) % 64;
+        CaseORControl2[i][index] |= ONE_UL << (j-nCases) % 64;
     }
 
   }
@@ -236,16 +271,23 @@ List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector loc
 // [[Rcpp::export]]
 List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs,
   NumericMatrix r_value_table, int nCases, int nControls, int K,
-  int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads, std::string pos_path1,
-  std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2,
+  int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads,
+  SEXP xp_paths0,
+  std::string pos_path1, std::string neg_path1, std::string conflict_path1,
+  std::string pos_path2, std::string neg_path2, std::string conflict_path2,
   std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
 
-  vec2dd value_table = copy_rmatrix(r_value_table);
+  paths_vec* paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
+  printf("size: %d, width: %d, cases: %d\n", paths0->size, paths0->width_ul, paths0->num_cases);
+  for(int k = 0; k < paths0->width_ul; k++)
+    printf(" %d", paths0->pos[0][k]);
+  printf("\n");
+  exit(0);
+
+  vec2d_d value_table = copy_rmatrix(r_value_table);
   vector<int> src_uids = copy_rvector(r_src_uids);
   vector<int> trg_uids = copy_rvector(r_trg_uids);
   vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
-
-  
 
   printf("################\n");
   // printf("srcuid size : %d\n", srcuid.size());
