@@ -1,10 +1,8 @@
 #ifndef GCRE_H
 #define GCRE_H
 
+#include <vector>
 #include <inttypes.h>
-
-// TODO isolate to join indices
-#include <Rcpp.h>
 
 // these are types visible to R; keeping that minimal
 #include "geneticsCRE_types.h"
@@ -16,10 +14,22 @@ typedef std::vector<std::vector<uint64_t>> vec2d_u64;
 typedef std::vector<double> vec_d;
 typedef std::vector<std::vector<double>> vec2d_d;
 
+struct uid_ref {
+  int src;
+  int trg;
+  int count;
+  int location;
+};
+
 struct score_t {
   int src_uid;
   int trg_uid;
   double score;
+};
+
+class JoinMethod {
+public:
+  virtual paths_type* createPathSet() const = 0;
 };
 
 struct paths_base : paths_type {
@@ -65,17 +75,14 @@ struct joined_res {
 //   printf("i am destructed\n");
 // }
 
-int getTotalPaths(Rcpp::IntegerVector trguids, Rcpp::List uids_CountLoc);
-int getTotalCountsCountLoc(Rcpp::List uids_CountLoc);
-
-joined_res* join_method2_new(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
+joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs,
   vec2d_d& value_table, int num_cases, int num_controls, int top_k,
   int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
-  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, int total_paths);
+  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, uint64_t total_paths);
 
-joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
-  vec2d_d& value_table, int num_cases, int num_controls, int top_k,
-  int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
-  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, int total_paths);
+// joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
+//   vec2d_d& value_table, int num_cases, int num_controls, int top_k,
+//   int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
+//   paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, int total_paths);
 
 #endif

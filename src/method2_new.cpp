@@ -2,11 +2,11 @@
 #include "Utils.h"
 #include "gcre.h"
 
-joined_res* join_method2_new(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
+joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs,
   vec2d_d& value_table, int num_cases, int num_controls, int top_k,
   int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
   paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res,
-  int total_paths){
+  uint64_t total_paths){
 
   std::cout.imbue(std::locale("en_US.UTF8"));
 
@@ -58,11 +58,11 @@ joined_res* join_method2_new(vector<int>& src_uids, vector<int>& trg_uids, Rcpp:
   long total_comps = 0;
   long zero_comps = 0;
 
-  for(int i = 0; i < trg_uids.size(); i++){
+  for(int i = 0; i < uids.size(); i++){
     // Check if source node has changed
-    int src = src_uids[i];
-    if(src != prev_src){
-      prev_src = src;
+    uid_ref& uid = uids[i];
+    if(uid.src != prev_src){
+      prev_src = uid.src;
       total_srcs++;
       // if((total_srcs % 100) == 0){
       //   Rcout << "    " <<  total_srcs << " source nodes for paths of length " << path_length << " and their permutations have been processed!" << std::endl;
@@ -71,13 +71,14 @@ joined_res* join_method2_new(vector<int>& src_uids, vector<int>& trg_uids, Rcpp:
     }
 
     // Find the locations and the number of the paths matching with uid
-    int uid = trg_uids[i];
-    std::string geneuid = std::to_string(uid);
-    IntegerVector uid_count_loc = uids_CountLoc[geneuid];
-    int count = uid_count_loc[0];
-    if(count == 0) continue;
-    int location = uid_count_loc[1];
+    // int uid = trg_uids[i];
+    // std::string geneuid = std::to_string(uid);
+    // IntegerVector uid_count_loc = uids_CountLoc[geneuid];
+    // int count = uid_count_loc[0];
+    if(uid.count == 0) continue;
+    // int location = uid_count_loc[1];
     int sign;
+
     if(path_length > 3) sign = join_gene_signs[i];
 
     // Get the data of the first path
@@ -91,7 +92,7 @@ joined_res* join_method2_new(vector<int>& src_uids, vector<int>& trg_uids, Rcpp:
       for(int k = 0; k < iterations; k++)
         local_max_scores[j][k] = max_scores[j][k];
     }
-    for(int j = location; j < (location + count); j++){
+    for(int j = uid.location; j < (uid.location + uid.count); j++){
       int tid = 0;
       IndicesScoresQueue &tid_localindicesq = LocalIndicesQ[tid];
 

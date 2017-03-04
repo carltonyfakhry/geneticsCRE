@@ -14,46 +14,14 @@ static int vector_width_ul(int count){
   return (int) ceil(count / 64.0);
 }
 
-/**
- *
- * Get the total number of paths to be processed.
- *
- */
-int getTotalPaths(IntegerVector trguids, List uids_CountLoc){
-  int total_paths = 0;
-  for(int i = 0; i < trguids.size(); i++){
-    int uid = trguids[i];
-    string geneuid = to_string(uid);
-    IntegerVector temp = as<IntegerVector>(uids_CountLoc[geneuid]);
-    total_paths += temp[0];
-  }
-  return total_paths;
-}
-
-/**
- *
- * Get the total counts in uids_CountLoc.
- *
- */
-int getTotalCountsCountLoc(List uids_CountLoc){
-  int total_paths = 0;
-  for(List::iterator it = uids_CountLoc.begin(); it != uids_CountLoc.end(); ++it){
-    IntegerVector temp = as<IntegerVector>(*it);
-    total_paths += temp[0];
-  }
-  return total_paths;
-}
-
-
-
 // conversions from R
 
-vec2d_u64& create_case_mask(IntegerMatrix& r_cases, int num_cases, int num_controls){
+vec2d_u64 create_case_mask(IntegerMatrix& r_cases, int num_cases, int num_controls){
 
   int vlenc = vector_width_ul(num_cases);
   int vlent = vector_width_ul(num_controls);
 
-  vec2d_u64& mask = *new vec2d_u64(r_cases.nrow(), vec_u64(vlenc + vlent, 0));
+  vec2d_u64 mask(r_cases.nrow(), vec_u64(vlenc + vlent, 0));
   for(int i = 0; i < r_cases.nrow(); i++){
     for(int j = 0; j < num_cases; j++){
       int index = j / 64;
@@ -71,17 +39,17 @@ vec2d_u64& create_case_mask(IntegerMatrix& r_cases, int num_cases, int num_contr
   return mask;
 }
 
-vector<int>& copy_rvector(IntegerVector& r_vec)
+vector<int> copy_rvector(IntegerVector& r_vec)
 {
-  vector<int>& vec = *new vector<int>(r_vec.size());
+  vector<int> vec(r_vec.size());
   for(int k = 0; k < r_vec.size(); k += 1)
     vec[k] = r_vec[k];
   return vec;
 }
 
-vec2d_d& copy_rmatrix(NumericMatrix& matrix)
+vec2d_d copy_rmatrix(NumericMatrix& matrix)
 {
-  vec2d_d& table = *new vec2d_d(matrix.nrow(), vector<double>(matrix.ncol()));
+  vec2d_d table(matrix.nrow(), vector<double>(matrix.ncol()));
   for(int r = 0; r < matrix.nrow(); r += 1){
     for(int c = 0; c < matrix.ncol(); c += 1)
       table[r][c] = matrix(r,c);
@@ -159,16 +127,33 @@ List getMatchingList(IntegerVector& uids, IntegerVector& counts, IntegerVector& 
 }
 
 // [[Rcpp::export]]
-List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs,
+List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_count_locs, IntegerVector r_join_gene_signs,
   NumericMatrix r_value_table, int num_cases, int num_controls, int K,
   int iterations, IntegerMatrix r_case_mask, std::string method, int pathLength, int nthreads,
   SEXP xp_paths0, SEXP xp_paths1, SEXP xp_paths_res){
 
-  vec2d_u64& case_mask = create_case_mask(r_case_mask, num_cases, num_controls);
-  vec2d_d& value_table = copy_rmatrix(r_value_table);
-  vector<int>& src_uids = copy_rvector(r_src_uids);
-  vector<int>& trg_uids = copy_rvector(r_trg_uids);
-  vector<int>& join_gene_signs = copy_rvector(r_join_gene_signs);
+  if(r_trg_uids.size() != r_src_uids.size())
+    stop("uid size mismatch");
+
+  vec2d_u64 case_mask = create_case_mask(r_case_mask, num_cases, num_controls);
+  vec2d_d value_table = copy_rmatrix(r_value_table);
+  vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
+
+  uint64_t total_paths = 0;
+  vector<uid_ref> uids(r_trg_uids.size(), uid_ref());
+  for(int k = 0; k < r_trg_uids.size(); k++){
+    uid_ref& uid = uids[k];
+    uid.trg = r_trg_uids[k];
+    uid.src = r_src_uids[k];
+    IntegerVector count_loc = r_uid_count_locs[to_string(uid.trg)];
+    uid.count = count_loc[0];
+    uid.location = count_loc[1];
+    total_paths += uid.count;
+  }
+  // for(int k = 0; k < 32; k++)
+  //   printf(" %d:%d(%d..%d)", uids[k].src, uids[k].trg, uids[k].location, uids[k].count);
+  // printf("\n");
+
 
   paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
 
@@ -178,7 +163,7 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
     paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
   }else{
     paths0 = new paths_vec;
-    paths0->size = trg_uids.size();
+    paths0->size = r_trg_uids.size();
     paths0->width_ul = 50;
     paths0->num_cases = num_cases;
     paths0->pos.resize(paths0->size, vec_u64(paths0->width_ul, 0));
@@ -192,10 +177,10 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
     paths_res = (paths_vec*) XPtr<paths_type>(xp_paths_res).get();
 
   printf("################\n");
-  // printf("srcuid size : %d\n", srcuid.size());
-  // printf("trguid size : %d\n", trguids2.size());
-  // printf("uids cl size: %d\n", uids_CountLoc.size());
-  // printf("join genes  : %d\n", joining_gene_sign.size());
+  printf("srcuid size : %d\n", r_src_uids.size());
+  printf("trguid size : %d\n", r_trg_uids.size());
+  printf("uids cl size: %d\n", r_uid_count_locs.size());
+  printf("join genes  : %d\n", r_join_gene_signs.size());
   // printf("value table : %d x %d\n", ValueTable.rows(), ValueTable.cols());
   // printf("caseorcon   : %d x %d\n", CaseORControl.rows(), CaseORControl.cols());
   // printf("num_cases      : %d\n", num_cases);
@@ -210,11 +195,11 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
 
   if(method == "method2") {
 
-    joined_res* res = join_method2_new(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
+    joined_res* res = join_method2_new(uids, join_gene_signs,
       value_table, num_cases, num_controls, K,
       iterations, case_mask, pathLength, nthreads,
       paths0, paths1, paths_res,
-      getTotalPaths(r_trg_uids, uids_CountLoc));
+      total_paths);
 
     NumericVector scores(res->scores.size());
     for(int k = 0; k < res->scores.size(); k++)
