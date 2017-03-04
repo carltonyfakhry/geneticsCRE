@@ -276,8 +276,6 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
     UserPvalues <- c(UserPvalues, Pvalues)
     UserLengths <- c(UserLengths, rep(path_length, length(Pvalues)))
 
-    print("PATHSETS:")
-    print(paths)
   }
 
   print(sprintf("total time: %f", as.numeric(Sys.time()) * 1000 - timeStart, digits=15))

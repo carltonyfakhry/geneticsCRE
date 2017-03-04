@@ -13,7 +13,7 @@ getMatchingList <- function(uids, counts, location) {
     .Call('geneticsCRE_getMatchingList', PACKAGE = 'geneticsCRE', uids, counts, location)
 }
 
-JoinIndices <- function(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, xp_paths0, xp_paths1, xp_paths_res) {
-    .Call('geneticsCRE_JoinIndices', PACKAGE = 'geneticsCRE', r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, xp_paths0, xp_paths1, xp_paths_res)
+JoinIndices <- function(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, num_cases, num_controls, K, iterations, r_case_mask, method, pathLength, nthreads, xp_paths0, xp_paths1, xp_paths_res) {
+    .Call('geneticsCRE_JoinIndices', PACKAGE = 'geneticsCRE', r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs, r_value_table, num_cases, num_controls, K, iterations, r_case_mask, method, pathLength, nthreads, xp_paths0, xp_paths1, xp_paths_res)
 }
 

@@ -2,9 +2,9 @@
 #include "Utils.h"
 #include "gcre.h"
 
-joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
-  vec2d_d value_table, int nCases, int nControls, int K,
-  int iterations, IntegerMatrix CaseORControl, int pathLength, int nthreads,
+joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
+  vec2d_d& value_table, int nCases, int nControls, int K,
+  int iterations, vec2d_u64& case_mask, int pathLength, int nthreads,
   paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res,
   int total_paths){
 
@@ -22,12 +22,8 @@ joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List 
     printf("  ** resized stored paths: %d x %d\n", paths_res->size, paths_res->width_ul);
   }
 
-
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
-
-  // Store CaseORControl information into 64bit integers
-  std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
 
   vec2d_u64 &paths_pos1 = paths0->pos;
   vec2d_u64 &paths_pos2 = paths1->pos;
@@ -176,7 +172,7 @@ joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List 
         double perm_score = 0;
         double perm_flipped_score = 0;
 
-        std::vector<uint64_t> &caseorcontrol = CaseORControl2[m];
+        vec_u64& caseorcontrol = case_mask[m];
         int cases_pos_m = 0;
         int controls_pos_m = 0;
         int cases_neg_m = 0;
