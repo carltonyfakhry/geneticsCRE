@@ -3,8 +3,8 @@
 #include "gcre.h"
 
 joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
-  vec2d_d& value_table, int nCases, int nControls, int K,
-  int iterations, vec2d_u64& case_mask, int pathLength, int nthreads,
+  vec2d_d& value_table, int num_cases, int num_controls, int top_k,
+  int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
   paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res,
   int total_paths){
 
@@ -15,15 +15,15 @@ joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::Lis
   if(keep_paths){
     paths_res->size = total_paths;
     paths_res->width_ul = paths1->width_ul;
-    paths_res->num_cases = nCases;
+    paths_res->num_cases = num_cases;
     paths_res->pos.resize(paths_res->size, vec_u64(paths_res->width_ul, 0));
     paths_res->neg.resize(paths_res->size, vec_u64(paths_res->width_ul, 0));
     paths_res->con.resize(paths_res->size, vec_u64(paths_res->width_ul, 0));
     printf("  ** resized stored paths: %d x %d\n", paths_res->size, paths_res->width_ul);
   }
 
-  int vlen = (int) ceil(nCases/64.0);
-  int vlen2 = (int) ceil(nControls/64.0);
+  int vlen = (int) ceil(num_cases/64.0);
+  int vlen2 = (int) ceil(num_controls/64.0);
 
   vec2d_u64 &paths_pos1 = paths0->pos;
   vec2d_u64 &paths_pos2 = paths1->pos;
@@ -34,7 +34,7 @@ joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::Lis
 
   // A priority queue for the indices of the top K paths in the data
   IndicesScoresQueue indicesQ;
-  for(int j = 0; j < K; j++)
+  for(int j = 0; j < top_k; j++)
     indicesQ.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
 
   nthreads = 1;
@@ -43,7 +43,7 @@ joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::Lis
   std::vector<IndicesScoresQueue> LocalIndicesQ;
   for(int k = 0; k < nthreads; k++){
     IndicesScoresQueue localindicesq;
-    for(int j = 0; j < K; j++) localindicesq.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
+    for(int j = 0; j < top_k; j++) localindicesq.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
       LocalIndicesQ.push_back(localindicesq);
   }
 
@@ -65,7 +65,7 @@ joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::Lis
       prev_src = src;
       total_srcs++;
       // if((total_srcs % 100) == 0){
-      //   Rcout << "    " <<  total_srcs << " source nodes for paths of length " << pathLength << " and their permutations have been processed!" << std::endl;
+      //   Rcout << "    " <<  total_srcs << " source nodes for paths of length " << path_length << " and their permutations have been processed!" << std::endl;
       //   checkUserInterrupt();
       // }
     }
@@ -78,7 +78,7 @@ joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::Lis
     if(count == 0) continue;
     int location = uid_count_loc[1];
     int sign;
-    if(pathLength > 3) sign = join_gene_signs[i];
+    if(path_length > 3) sign = join_gene_signs[i];
 
     // Get the data of the first path
     std::vector<uint64_t> &path_pos1 = paths_pos1[i];
@@ -95,9 +95,9 @@ joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::Lis
       int tid = 0;
       IndicesScoresQueue &tid_localindicesq = LocalIndicesQ[tid];
 
-      if(pathLength < 3) sign = join_gene_signs[j];
+      if(path_length < 3) sign = join_gene_signs[j];
 
-      if(pathLength == 3){
+      if(path_length == 3){
         int sign2 = join_gene_signs[i];
         int sign3 = join_gene_signs[j];
         sign = ((sign2 == -1 && sign3 == 1) || (sign2 == 1 && sign3 == -1)) ? -1 : 1;
