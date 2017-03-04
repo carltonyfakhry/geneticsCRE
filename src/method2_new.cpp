@@ -2,11 +2,9 @@
 #include "Utils.h"
 #include "gcre.h"
 
-joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs,
-  vec2d_d& value_table, int num_cases, int num_controls, int top_k,
-  int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
-  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res,
-  uint64_t total_paths){
+joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
+  vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u64& case_mask,
+  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, uint64_t total_paths){
 
   std::cout.imbue(std::locale("en_US.UTF8"));
 
@@ -15,15 +13,15 @@ joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs
   if(keep_paths){
     paths_res->size = total_paths;
     paths_res->width_ul = paths1->width_ul;
-    paths_res->num_cases = num_cases;
+    paths_res->num_cases = conf.num_cases;
     paths_res->pos.resize(paths_res->size, vec_u64(paths_res->width_ul, 0));
     paths_res->neg.resize(paths_res->size, vec_u64(paths_res->width_ul, 0));
     paths_res->con.resize(paths_res->size, vec_u64(paths_res->width_ul, 0));
     printf("  ** resized stored paths: %d x %d\n", paths_res->size, paths_res->width_ul);
   }
 
-  int vlen = (int) ceil(num_cases/64.0);
-  int vlen2 = (int) ceil(num_controls/64.0);
+  int vlen = (int) ceil(conf.num_cases/64.0);
+  int vlen2 = (int) ceil(conf.num_controls/64.0);
 
   vec2d_u64 &paths_pos1 = paths0->pos;
   vec2d_u64 &paths_pos2 = paths1->pos;
@@ -34,21 +32,22 @@ joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs
 
   // A priority queue for the indices of the top K paths in the data
   IndicesScoresQueue indicesQ;
-  for(int j = 0; j < top_k; j++)
+  for(int j = 0; j < conf.top_k; j++)
     indicesQ.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
 
-  nthreads = 1;
+  // TODO conf.nthreads
+  int nthreads = 1;
 
   // Create a priority queue which holds the top K scores per thread
   std::vector<IndicesScoresQueue> LocalIndicesQ;
   for(int k = 0; k < nthreads; k++){
     IndicesScoresQueue localindicesq;
-    for(int j = 0; j < top_k; j++) localindicesq.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
+    for(int j = 0; j < conf.top_k; j++) localindicesq.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
       LocalIndicesQ.push_back(localindicesq);
   }
 
   // Global 2D vector which holds the maximum scores per permutation for each corresponding thread
-  std::vector<std::vector<double> > max_scores(nthreads, std::vector<double>(iterations, -INFINITY));
+  std::vector<std::vector<double> > max_scores(nthreads, std::vector<double>(conf.iterations, -INFINITY));
 
   int flipped_pivot_length = paths_pos2.size();
   int prev_src = -1;
@@ -79,7 +78,7 @@ joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs
     // int location = uid_count_loc[1];
     int sign;
 
-    if(path_length > 3) sign = join_gene_signs[i];
+    if(conf.path_length > 3) sign = join_gene_signs[i];
 
     // Get the data of the first path
     std::vector<uint64_t> &path_pos1 = paths_pos1[i];
@@ -87,18 +86,18 @@ joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs
     std::vector<uint64_t> &path_conflict1 = paths_conflict1[i];
 
     // Copy the values from max_scores into a local container local_max_scores to increase performance
-    std::vector<std::vector<double> > local_max_scores(nthreads, std::vector<double>(iterations));
+    std::vector<std::vector<double> > local_max_scores(nthreads, std::vector<double>(conf.iterations));
     for(int j = 0; j < nthreads; j++){
-      for(int k = 0; k < iterations; k++)
+      for(int k = 0; k < conf.iterations; k++)
         local_max_scores[j][k] = max_scores[j][k];
     }
     for(int j = uid.location; j < (uid.location + uid.count); j++){
       int tid = 0;
       IndicesScoresQueue &tid_localindicesq = LocalIndicesQ[tid];
 
-      if(path_length < 3) sign = join_gene_signs[j];
+      if(conf.path_length < 3) sign = join_gene_signs[j];
 
-      if(path_length == 3){
+      if(conf.path_length == 3){
         int sign2 = join_gene_signs[i];
         int sign3 = join_gene_signs[j];
         sign = ((sign2 == -1 && sign3 == 1) || (sign2 == 1 && sign3 == -1)) ? -1 : 1;
@@ -166,7 +165,7 @@ joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs
 
       std::vector<double> &tid_max_scores = local_max_scores[tid];
 
-      for(int m = 0; m < iterations; m++){
+      for(int m = 0; m < conf.iterations; m++){
 
         double &max_score = tid_max_scores[m];
         double max_score2 = tid_max_scores[m];
@@ -208,16 +207,16 @@ joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs
 
     // Update the values in max_scores given the values of local_max_scores
     for(int j = 0; j < nthreads; j++){
-      for(int k = 0; k < iterations; k++)
+      for(int k = 0; k < conf.iterations; k++)
         if(max_scores[j][k] < local_max_scores[j][k]) max_scores[j][k] = local_max_scores[j][k];
     }
   }
 
   joined_res* res = new joined_res;
 
-  res->permuted_scores.resize(iterations);
+  res->permuted_scores.resize(conf.iterations);
   for(int i = 0; i < nthreads; i++){
-    for(int j = 0; j < iterations; j++){
+    for(int j = 0; j < conf.iterations; j++){
       if(i == 0){
         res->permuted_scores[j] = max_scores[i][j];
       }else if(max_scores[i][j] > res->permuted_scores[j]){

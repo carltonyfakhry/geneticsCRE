@@ -14,6 +14,15 @@ typedef std::vector<std::vector<uint64_t>> vec2d_u64;
 typedef std::vector<double> vec_d;
 typedef std::vector<std::vector<double>> vec2d_d;
 
+struct join_config {
+  int num_cases = 0;
+  int num_controls = 0;
+  int top_k = 0;
+  int path_length = 0;
+  int iterations = 0;
+  int nthreads = 0;
+};
+
 struct uid_ref {
   int src;
   int trg;
@@ -75,9 +84,8 @@ struct joined_res {
 //   printf("i am destructed\n");
 // }
 
-joined_res* join_method2_new(vector<uid_ref>& uids, vector<int>& join_gene_signs,
-  vec2d_d& value_table, int num_cases, int num_controls, int top_k,
-  int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
+joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
+  vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u64& case_mask,
   paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, uint64_t total_paths);
 
 // joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,

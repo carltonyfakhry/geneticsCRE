@@ -45,8 +45,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // JoinIndices
-List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_count_locs, IntegerVector r_join_gene_signs, NumericMatrix r_value_table, int num_cases, int num_controls, int K, int iterations, IntegerMatrix r_case_mask, std::string method, int pathLength, int nthreads, SEXP xp_paths0, SEXP xp_paths1, SEXP xp_paths_res);
-RcppExport SEXP geneticsCRE_JoinIndices(SEXP r_src_uidsSEXP, SEXP r_trg_uidsSEXP, SEXP r_uid_count_locsSEXP, SEXP r_join_gene_signsSEXP, SEXP r_value_tableSEXP, SEXP num_casesSEXP, SEXP num_controlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP r_case_maskSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP, SEXP xp_paths0SEXP, SEXP xp_paths1SEXP, SEXP xp_paths_resSEXP) {
+List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_count_locs, IntegerVector r_join_gene_signs, NumericMatrix r_value_table, int num_cases, int num_controls, int top_k, int iterations, IntegerMatrix r_case_mask, std::string method, int path_length, int nthreads, SEXP xp_paths0, SEXP xp_paths1, SEXP xp_paths_res);
+RcppExport SEXP geneticsCRE_JoinIndices(SEXP r_src_uidsSEXP, SEXP r_trg_uidsSEXP, SEXP r_uid_count_locsSEXP, SEXP r_join_gene_signsSEXP, SEXP r_value_tableSEXP, SEXP num_casesSEXP, SEXP num_controlsSEXP, SEXP top_kSEXP, SEXP iterationsSEXP, SEXP r_case_maskSEXP, SEXP methodSEXP, SEXP path_lengthSEXP, SEXP nthreadsSEXP, SEXP xp_paths0SEXP, SEXP xp_paths1SEXP, SEXP xp_paths_resSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -57,16 +57,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericMatrix >::type r_value_table(r_value_tableSEXP);
     Rcpp::traits::input_parameter< int >::type num_cases(num_casesSEXP);
     Rcpp::traits::input_parameter< int >::type num_controls(num_controlsSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
+    Rcpp::traits::input_parameter< int >::type top_k(top_kSEXP);
     Rcpp::traits::input_parameter< int >::type iterations(iterationsSEXP);
     Rcpp::traits::input_parameter< IntegerMatrix >::type r_case_mask(r_case_maskSEXP);
     Rcpp::traits::input_parameter< std::string >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< int >::type pathLength(pathLengthSEXP);
+    Rcpp::traits::input_parameter< int >::type path_length(path_lengthSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< SEXP >::type xp_paths0(xp_paths0SEXP);
     Rcpp::traits::input_parameter< SEXP >::type xp_paths1(xp_paths1SEXP);
     Rcpp::traits::input_parameter< SEXP >::type xp_paths_res(xp_paths_resSEXP);
-    rcpp_result_gen = Rcpp::wrap(JoinIndices(r_src_uids, r_trg_uids, r_uid_count_locs, r_join_gene_signs, r_value_table, num_cases, num_controls, K, iterations, r_case_mask, method, pathLength, nthreads, xp_paths0, xp_paths1, xp_paths_res));
+    rcpp_result_gen = Rcpp::wrap(JoinIndices(r_src_uids, r_trg_uids, r_uid_count_locs, r_join_gene_signs, r_value_table, num_cases, num_controls, top_k, iterations, r_case_mask, method, path_length, nthreads, xp_paths0, xp_paths1, xp_paths_res));
     return rcpp_result_gen;
 END_RCPP
 }

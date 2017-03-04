@@ -128,8 +128,8 @@ List getMatchingList(IntegerVector& uids, IntegerVector& counts, IntegerVector& 
 
 // [[Rcpp::export]]
 List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_count_locs, IntegerVector r_join_gene_signs,
-  NumericMatrix r_value_table, int num_cases, int num_controls, int K,
-  int iterations, IntegerMatrix r_case_mask, std::string method, int pathLength, int nthreads,
+  NumericMatrix r_value_table, int num_cases, int num_controls, int top_k,
+  int iterations, IntegerMatrix r_case_mask, std::string method, int path_length, int nthreads,
   SEXP xp_paths0, SEXP xp_paths1, SEXP xp_paths_res){
 
   if(r_trg_uids.size() != r_src_uids.size())
@@ -138,6 +138,15 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
   vec2d_u64 case_mask = create_case_mask(r_case_mask, num_cases, num_controls);
   vec2d_d value_table = copy_rmatrix(r_value_table);
   vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
+
+  join_config conf;
+  conf.num_cases = num_cases;
+  conf.num_controls = num_controls;
+  conf.top_k = top_k;
+  conf.path_length = path_length;
+  conf.iterations = iterations;
+  conf.nthreads = nthreads;
+
 
   uint64_t total_paths = 0;
   vector<uid_ref> uids(r_trg_uids.size(), uid_ref());
@@ -153,7 +162,6 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
   // for(int k = 0; k < 32; k++)
   //   printf(" %d:%d(%d..%d)", uids[k].src, uids[k].trg, uids[k].location, uids[k].count);
   // printf("\n");
-
 
   paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
 
@@ -177,10 +185,10 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
     paths_res = (paths_vec*) XPtr<paths_type>(xp_paths_res).get();
 
   printf("################\n");
-  printf("srcuid size : %d\n", r_src_uids.size());
-  printf("trguid size : %d\n", r_trg_uids.size());
-  printf("uids cl size: %d\n", r_uid_count_locs.size());
-  printf("join genes  : %d\n", r_join_gene_signs.size());
+  // printf("srcuid size : %d\n", r_src_uids.size());
+  // printf("trguid size : %d\n", r_trg_uids.size());
+  // printf("uids cl size: %d\n", r_uid_count_locs.size());
+  // printf("join genes  : %d\n", r_join_gene_signs.size());
   // printf("value table : %d x %d\n", ValueTable.rows(), ValueTable.cols());
   // printf("caseorcon   : %d x %d\n", CaseORControl.rows(), CaseORControl.cols());
   // printf("num_cases      : %d\n", num_cases);
@@ -188,18 +196,14 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
   // printf("K           : %d\n", K);
   // printf("iterations  : %d\n", iterations);
   printf("method      : %s\n", method.c_str());
-  printf("pathlen     : %d\n", pathLength);
+  printf("pathlen     : %d\n", path_length);
   printf("nthread     : %d\n", nthreads);
   printf("\n");
   printf("################\n\n");
 
   if(method == "method2") {
 
-    joined_res* res = join_method2_new(uids, join_gene_signs,
-      value_table, num_cases, num_controls, K,
-      iterations, case_mask, pathLength, nthreads,
-      paths0, paths1, paths_res,
-      total_paths);
+    joined_res* res = join_method2_new(conf, uids, join_gene_signs, value_table, case_mask, paths0, paths1, paths_res, total_paths);
 
     NumericVector scores(res->scores.size());
     for(int k = 0; k < res->scores.size(); k++)
