@@ -184,6 +184,8 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
   timeStart <- as.numeric(Sys.time()) * 1000
 
+  paths <- list()
+
   # Processing the paths
   for(path_length in 1:pathLength){
 
@@ -194,29 +196,32 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       # print("Processing paths of length 1...")
 
       # opaque pointer to path data
-      data0 <- geneticsCRE:::createPathSet(data, nCases, nControls, method)
+      paths$dest1 <- geneticsCRE:::createEmptyPathSet(method)
+      paths$dest2 <- geneticsCRE:::createEmptyPathSet(method)
+      paths$dest3 <- geneticsCRE:::createEmptyPathSet(method)
 
       path_data_file <- paste(path, "data_geneticsCRE", sep = "")
       geneticsCRE:::parsePaths(data, nCases, nControls, path_data_file)
+      paths$data <- geneticsCRE:::createPathSet(data, nCases, nControls, method)
       rm(data)
 
       lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
                                          1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         NULL, data0, TRUE,
+                                         NULL, paths$data, paths$dest1,
                                          "", "", "",
                                          path_data_file, "", "",
                                          dest_path_pos1, dest_path_neg1, dest_path_conflict1)
       file.remove(path_data_file)
-      print(lst1$paths)
 
 
       path_data2_file <- paste(path, "data2_geneticsCRE", sep = "")
       geneticsCRE:::parsePaths(data2, nCases, nControls, path_data2_file)
+      paths$data2 <- geneticsCRE:::createPathSet(data2, nCases, nControls, method)
       rm(data2)
 
       lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
                                         1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                        NULL, data0, FALSE,
+                                        NULL, paths$data2, NULL,
                                         "", "", "",
                                         path_data2_file, "", "",
                                         "", "", "")
@@ -229,11 +234,12 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       path_data3_file <- paste(path, "data3_geneticsCRE", sep = "")
       data3 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
       geneticsCRE:::parsePaths(data3, nCases, nControls, path_data3_file)
+      paths$data3 <- geneticsCRE:::createPathSet(data3, nCases, nControls, method)
       rm(data3)
 
       lst2 <- geneticsCRE:::ProcessPaths(Rels_data, Rels, Rels_data$srcuid, Rels_data$srcuid, Rels$sign, Rels$srcuid,
                                          2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         NULL, NULL, TRUE,
+                                         paths$dest1, paths$data3, paths$dest2,
                                          dest_path_pos1, dest_path_neg1, dest_path_conflict1,
                                          path_data3_file, "", "",
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2)
@@ -247,11 +253,12 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       path_data4_file <- paste(path, "data4_geneticsCRE", sep = "")
       data4 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
       geneticsCRE:::parsePaths(data4, nCases, nControls, path_data4_file)
+      paths$data4 <- geneticsCRE:::createPathSet(data4, nCases, nControls, method)
       rm(data4)
 
       lst3 <- geneticsCRE:::ProcessPaths(Rels, Rels, Rels$srcuid, Rels$trguid, Rels$sign, Rels$srcuid,
                                          3, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         NULL, NULL, TRUE,
+                                         paths$dest2, paths$data4, paths$dest3,
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2,
                                          path_data4_file, "", "",
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3)
@@ -268,7 +275,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       lst4 <- geneticsCRE:::ProcessPaths(Rels3, Rels, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels$srcuid,
                                          4, ValueTable, nCases, nControls, K, iterations,
                                          CaseORControl, method, nthreads,
-                                         NULL, NULL, FALSE,
+                                         paths$dest3, paths$dest2, NULL,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          dest_path_pos2, dest_path_neg2, dest_path_conflict2,
                                          "", "", "")
@@ -283,7 +290,7 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
       lst5 <- geneticsCRE:::ProcessPaths(Rels3, Rels3, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels3$srcuid,
                                          5, ValueTable, nCases, nControls, K, iterations,
                                          CaseORControl, method, nthreads,
-                                         NULL, NULL, FALSE,
+                                         paths$dest3, paths$dest3, NULL,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          dest_path_pos3, dest_path_neg3, dest_path_conflict3,
                                          "", "", "")
@@ -312,6 +319,9 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
     Pvalues <- sapply(lst$scores, function(x, y) {length(which(TestScores >= x))/length(TestScores)}, y = TestScores)
     UserPvalues <- c(UserPvalues, Pvalues)
     UserLengths <- c(UserLengths, rep(path_length, length(Pvalues)))
+
+    print("PATHSETS:")
+    print(paths)
 
   }
 

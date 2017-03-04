@@ -9,6 +9,12 @@ using namespace Rcpp;
 
 const uint64_t ONE_UL = 1;
 
+
+// need consistent padding for different alignments
+static int vector_width_ul(int count){
+  return (int) ceil(count / 64.0);
+}
+
 /**
  *
  * Get the total number of paths to be processed.
@@ -187,8 +193,8 @@ XPtr<paths_type> createPathSet(IntegerMatrix data, int num_cases, int num_contro
   if(data.ncol() != num_cases + num_cases)
     stop("data width does not match case/control counts: " + to_string(data.ncol()));
 
-  int vlenc = (int) ceil(num_cases / 64.0);
-  int vlent = (int) ceil(num_controls / 64.0);
+  int vlenc = vector_width_ul(num_cases);
+  int vlent = vector_width_ul(num_controls);
 
   // allocate on heap
   paths_vec* paths = new paths_vec;
@@ -214,19 +220,30 @@ XPtr<paths_type> createPathSet(IntegerMatrix data, int num_cases, int num_contro
   return XPtr<paths_type>(paths, true) ;
 }
 
-paths_type* createZeroPathSet(int size, int width_ul, std::string method){
+// [[Rcpp::export]]
+XPtr<paths_type> createZeroedPathSet(int size, int num_cases, int num_controls, std::string method){
 
   // allocate on heap
   paths_vec* paths = new paths_vec;
 
   paths->size = size;
-  paths->width_ul = width_ul;
+  paths->width_ul = vector_width_ul(num_cases) + vector_width_ul(num_controls);
   paths->num_cases = 0;
   paths->pos.resize(paths->size, vec_u64(paths->width_ul, 0));
   paths->neg.resize(paths->size, vec_u64(paths->width_ul, 0));
   paths->con.resize(paths->size, vec_u64(paths->width_ul, 0));
 
-  return paths;
+  printf("  ** created zeroed matrix: %d x %d\n", paths->size, paths->width_ul);
+
+  return XPtr<paths_type>(paths, true) ;
+}
+
+// [[Rcpp::export]]
+XPtr<paths_type> createEmptyPathSet(std::string method){
+  paths_vec* paths = new paths_vec;
+  paths->size = 0;
+  paths->width_ul = 0;
+  return XPtr<paths_type>(paths, true) ;
 }
 
 
@@ -286,28 +303,51 @@ List getMatchingList(IntegerVector uids, IntegerVector counts, IntegerVector loc
 }
 
 static void compare_vecs(paths_vec* paths, vec2d_u64& pos, vec2d_u64& neg, vec2d_u64& con){
-  printf("\n-----------------------\n");
+  printf("\n-----------------------  %lu\n", (unsigned long) paths);
   printf("[str] pos: %zu x %zu, neg: %zu x %zu, con: %zu x %zu\n", paths->pos.size(), paths->pos[0].size(), paths->neg.size(), paths->neg[0].size(), paths->con.size(), paths->con[0].size());
   printf("[vec] pos: %zu x %zu, neg: %zu x %zu, con: %zu x %zu\n", pos.size(), pos[0].size(), neg.size(), neg[0].size(), con.size(), con[0].size());
   printf("\n");
   if(paths->pos.size() != pos.size() || paths->pos[0].size() != pos[0].size() || paths->neg.size() != neg.size() || paths->neg[0].size() != neg[0].size() || paths->con.size() != con.size() || paths->con[0].size() != con[0].size())
     stop("bad!");
+
+  for(int n = 0; n < 2; n++){
+    printf("[");
+    for(int k = 0; k < pos[n].size(); k++){
+      if(pos[n][k] != 0)
+        printf("%lu:%lu ", pos[n][k], paths->pos[n][k]);
+    }
+    printf("]");
+    printf("[");
+    for(int k = 0; k < neg[n].size(); k++){
+      if(neg[n][k] != 0)
+        printf("%lu:%lu ", neg[n][k], paths->neg[n][k]);
+    }
+    printf("]");
+    printf("[");
+    for(int k = 0; k < con[n].size(); k++){
+      if(con[n][k] != 0)
+        printf("%lu:%lu ", con[n][k], paths->con[n][k]);
+    }
+    printf("]");
+    printf("\n");
+  }
+
   for(int n = 0; n < pos.size(); n++){
     for(int k = 0; k < pos[n].size(); k++){
       if(pos[n][k] != paths->pos[n][k]){
-        printf("%lu != %lu", pos[n][k], paths->pos[n][k]);
+        printf("%lu != %lu\n", pos[n][k], paths->pos[n][k]);
         stop("bad!");
       }
     }
     for(int k = 0; k < neg[n].size(); k++){
       if(neg[n][k] != paths->neg[n][k]){
-        printf("%lu != %lu", neg[n][k], paths->neg[n][k]);
+        printf("%lu != %lu\n", neg[n][k], paths->neg[n][k]);
         stop("bad!");
       }
     }
     for(int k = 0; k < con[n].size(); k++){
       if(con[n][k] != paths->con[n][k]){
-        printf("%lu != %lu", con[n][k], paths->con[n][k]);
+        printf("%lu != %lu\n", con[n][k], paths->con[n][k]);
         stop("bad!");
       }
     }
@@ -320,32 +360,41 @@ static void compare_vecs(paths_vec* paths, vec2d_u64& pos, vec2d_u64& neg, vec2d
 List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_CountLoc, IntegerVector r_join_gene_signs,
   NumericMatrix r_value_table, int nCases, int nControls, int K,
   int iterations, IntegerMatrix CaseORControl, std::string method, int pathLength, int nthreads,
-  SEXP xp_paths0, SEXP xp_paths1, bool keep_joined,
+  SEXP xp_paths0, SEXP xp_paths1, SEXP xp_paths_res,
   std::string pos_path1, std::string neg_path1, std::string conflict_path1,
   std::string pos_path2, std::string neg_path2, std::string conflict_path2,
   std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict){
-
-  // paths0 can be NULL; paths1 must be present
-  // paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
-  // paths_vec* paths0 = NULL;
-  // if(!Rf_isNull(xp_paths0)){
-  //   paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
-  // } else {
-  //   paths0 = (paths_vec*) createZeroPathSet(r_trg_uids.size(), paths1->width_ul, method);
-  // }
-
-  // printf("p1: %d\n", (unsigned long) paths1);
-  // printf("p0: %d\n", (unsigned long) paths0);
 
   vec2d_d value_table = copy_rmatrix(r_value_table);
   vector<int> src_uids = copy_rvector(r_src_uids);
   vector<int> trg_uids = copy_rvector(r_trg_uids);
   vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
 
+  paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
+
+  // TODO fix leak
+  paths_vec* paths0 = NULL;
+  if(!Rf_isNull(xp_paths0)){
+    paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
+  }else{
+    paths0 = new paths_vec;
+    paths0->size = trg_uids.size();
+    paths0->width_ul = 50;
+    paths0->num_cases = nCases;
+    paths0->pos.resize(paths0->size, vec_u64(paths0->width_ul, 0));
+    paths0->neg.resize(paths0->size, vec_u64(paths0->width_ul, 0));
+    paths0->con.resize(paths0->size, vec_u64(paths0->width_ul, 0));
+    printf("  ** resized zero matrix: %d x %d\n", paths0->size, paths0->width_ul);
+  }
+
+  paths_vec* paths_res = NULL;
+  if(!Rf_isNull(xp_paths_res))
+    paths_res = (paths_vec*) XPtr<paths_type>(xp_paths_res).get();
 
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
   int total_src_uidssRels2 = getTotalCountsCountLoc(uids_CountLoc);
+
   vec2d_u64 temp_paths_pos2;
   vec2d_u64 temp_paths_neg2;
   vec2d_u64 temp_paths_neg22;
@@ -390,19 +439,19 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
 
   printf("################\n\n");
 
-  // compare_vecs(paths0, paths_pos1, paths_neg1, paths_conflict1);
-  // compare_vecs(paths1, paths_pos2, paths_neg2, paths_conflict2);
+  compare_vecs(paths0, paths_pos1, paths_neg1, paths_conflict1);
+  compare_vecs(paths1, paths_pos2, paths_neg2, paths_conflict2);
 
   if(method == "method2") {
+
     joined_res* res = join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
       value_table, nCases, nControls, K,
       iterations, CaseORControl, pathLength, nthreads,
-      keep_joined,
+      paths0, paths1, paths_res,
       pos_path1, neg_path1, conflict_path1,
       pos_path2, neg_path2, conflict_path2,
       dest_path_pos, dest_path_neg, dest_path_conflict,
       getTotalPaths(r_trg_uids, uids_CountLoc));
-
 
     NumericVector scores(res->scores.size());
     for(int k = 0; k < res->scores.size(); k++)
@@ -418,13 +467,7 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
       ids(k,1) = res->ids[k][1];
     }
 
-
-    if(keep_joined){
-      XPtr<paths_type> res_paths(res->paths, true);
-      return List::create(Named("scores") = scores, Named("ids") = ids, Named("TestScores") = permuted_scores, Named("paths") = res_paths);
-    }else {
-      return List::create(Named("scores") = scores, Named("ids") = ids, Named("TestScores") = permuted_scores);
-    }
+    return List::create(Named("scores") = scores, Named("ids") = ids, Named("TestScores") = permuted_scores);
 
   } else if(method == "method2-old") {
     return JoinIndicesMethod2(r_src_uids, r_trg_uids, uids_CountLoc, r_join_gene_signs,

@@ -23,9 +23,9 @@ struct score_t {
 };
 
 struct paths_base : paths_type {
-  int size;
-  int width_ul;
-  int num_cases;
+  int size = 0;
+  int width_ul = 0;
+  int num_cases = 0;
 };
 
 struct paths_vec : paths_base {
@@ -38,7 +38,7 @@ struct paths_block : paths_base {
   struct path {
     uint64_t hash = 0;
     short lengh = 0;
-    short* index;
+    short* index = NULL;
     uint64_t* pos;
     uint64_t* neg;
     uint64_t* con;
@@ -49,7 +49,6 @@ struct joined_res {
   vec2d_u64 ids;
   vec_d scores;
   vec_d permuted_scores;
-  paths_type* paths = NULL;
 };
 
 // // struct path_set {
@@ -77,7 +76,7 @@ int getTotalCountsCountLoc(Rcpp::List uids_CountLoc);
 joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
   vec2d_d value_table, int nCases, int nControls, int K,
   int iterations, Rcpp::IntegerMatrix CaseORControl, int pathLength, int nthreads,
-  bool keep_joined,
+  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res,
   string pos_path1, string neg_path1, string conflict_path1,
   string pos_path2, string neg_path2, string conflict_path2,
   string dest_path_pos, string dest_path_neg, string dest_path_conflict, int total_paths);
