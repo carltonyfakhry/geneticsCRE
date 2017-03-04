@@ -68,6 +68,11 @@ struct joined_res {
 int getTotalPaths(Rcpp::IntegerVector trguids, Rcpp::List uids_CountLoc);
 int getTotalCountsCountLoc(Rcpp::List uids_CountLoc);
 
+joined_res* join_method2_new(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
+  vec2d_d& value_table, int num_cases, int num_controls, int top_k,
+  int iterations, vec2d_u64& case_mask, int path_length, int nthreads,
+  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, int total_paths);
+
 joined_res* join_method2(vector<int>& src_uids, vector<int>& trg_uids, Rcpp::List& uids_CountLoc, vector<int>& join_gene_signs,
   vec2d_d& value_table, int num_cases, int num_controls, int top_k,
   int iterations, vec2d_u64& case_mask, int path_length, int nthreads,

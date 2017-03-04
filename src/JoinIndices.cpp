@@ -210,7 +210,7 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List uids_C
 
   if(method == "method2") {
 
-    joined_res* res = join_method2(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
+    joined_res* res = join_method2_new(src_uids, trg_uids, uids_CountLoc, join_gene_signs,
       value_table, num_cases, num_controls, K,
       iterations, case_mask, pathLength, nthreads,
       paths0, paths1, paths_res,
