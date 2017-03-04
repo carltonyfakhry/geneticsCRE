@@ -6,18 +6,11 @@ joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List 
   vec2d_d value_table, int nCases, int nControls, int K,
   int iterations, IntegerMatrix CaseORControl, int pathLength, int nthreads,
   paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res,
-  std::string pos_path1, std::string neg_path1, std::string conflict_path1,
-  std::string pos_path2, std::string neg_path2, std::string conflict_path2,
-  std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict,
   int total_paths){
 
   std::cout.imbue(std::locale("en_US.UTF8"));
 
   bool keep_paths = paths_res != NULL;
-
-  std::cout << "KEEP PATHS: ";
-  std::cout << keep_paths;
-  std::cout << endl;
 
   if(keep_paths){
     paths_res->size = total_paths;
@@ -33,36 +26,15 @@ joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List 
   int vlen = (int) ceil(nCases/64.0);
   int vlen2 = (int) ceil(nControls/64.0);
 
-  // If pathLength <=3 then we will store the joining of the different paths
-  if (pathLength > 3)
-    total_paths = 0;
-  // std::vector<std::vector<uint64_t> > joined_paths_pos(total_paths, std::vector<uint64_t>(vlen + vlen2, 0));
-  // std::vector<std::vector<uint64_t> > joined_paths_neg(total_paths, std::vector<uint64_t>(vlen + vlen2, 0));
-  // std::vector<std::vector<uint64_t> > joined_paths_conflict(total_paths, std::vector<uint64_t>(vlen + vlen2, 0));
-
   // Store CaseORControl information into 64bit integers
   std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
 
-  // Copy the paths into 2D vectors
-  // std::vector<std::vector<uint64_t> > temp_paths_pos2;
-  // std::vector<std::vector<uint64_t> > temp_paths_neg2;
-  // std::vector<std::vector<uint64_t> > temp_paths_neg22;
-  // std::vector<std::vector<uint64_t> > temp_paths_conflict2;
-  // std::vector<std::vector<uint64_t> > temp_paths_conflict22;
-  // int total_src_uidssRels2 = getTotalCountsCountLoc(uids_CountLoc);
-  // std::vector<std::vector<uint64_t> > paths_pos1 = (pos_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(pos_path1); // Only empty paths for paths of length 1
-  // std::vector<std::vector<uint64_t> > &paths_pos2 = (pathLength == 5) ? paths_pos1 : temp_paths_pos2 = readPaths(pos_path2);
-  // std::vector<std::vector<uint64_t> > paths_neg1 = (neg_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(neg_path1); // Only empty paths for paths of length 1
-  // std::vector<std::vector<uint64_t> > &paths_neg2 = (neg_path2 == "") ? temp_paths_neg2 = getZeroMatrix(total_src_uidssRels2, vlen + vlen2) : temp_paths_neg2 = (pathLength == 5) ? paths_neg1 : temp_paths_neg22 = readPaths(neg_path2); // Only empty paths for paths of length 1
-  // std::vector<std::vector<uint64_t> > paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trg_uids.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
-  // std::vector<std::vector<uint64_t> > &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_src_uidssRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
-
-  std::vector<std::vector<uint64_t>> paths_pos1 = paths0->pos;
-  std::vector<std::vector<uint64_t>> &paths_pos2 = paths1->pos;
-  std::vector<std::vector<uint64_t>> paths_neg1 = paths0->neg;
-  std::vector<std::vector<uint64_t>> &paths_neg2 = paths1->neg;
-  std::vector<std::vector<uint64_t>> paths_conflict1 = paths0->con;
-  std::vector<std::vector<uint64_t>> &paths_conflict2 = paths1->con;
+  vec2d_u64 &paths_pos1 = paths0->pos;
+  vec2d_u64 &paths_pos2 = paths1->pos;
+  vec2d_u64 &paths_neg1 = paths0->neg;
+  vec2d_u64 &paths_neg2 = paths1->neg;
+  vec2d_u64 &paths_conflict1 = paths0->con;
+  vec2d_u64 &paths_conflict2 = paths1->con;
 
   // A priority queue for the indices of the top K paths in the data
   IndicesScoresQueue indicesQ;
@@ -135,10 +107,11 @@ joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List 
         sign = ((sign2 == -1 && sign3 == 1) || (sign2 == 1 && sign3 == -1)) ? -1 : 1;
       }
 
-      std::vector<uint64_t> joined_pos(path_pos1.size());
-      std::vector<uint64_t> joined_neg(path_pos1.size());
-      std::vector<uint64_t> joined_conflict(path_pos1.size());
+      vec_u64 joined_pos(path_pos1.size());
+      vec_u64 joined_neg(path_pos1.size());
+      vec_u64 joined_conflict(path_pos1.size());
 
+      // TODO ??
       std::vector<uint64_t> &path_pos2 = (sign == 1) ? paths_pos2[j] : paths_neg2[j];
       std::vector<uint64_t> &path_neg2 = (sign == 1) ? paths_neg2[j] : paths_pos2[j];
       std::vector<uint64_t> &path_conflict2 = paths_conflict2[j];
@@ -278,12 +251,6 @@ joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List 
     res->ids[j][1] = temp.second.second + 1;
     indicesQ.pop();
     j++;
-  }
-
-  if(dest_path_pos != ""){
-    StorePaths(paths_res->pos, dest_path_pos);
-    StorePaths(paths_res->neg, dest_path_neg);
-    StorePaths(paths_res->con, dest_path_conflict);
   }
 
   return res;

@@ -66,30 +66,12 @@ struct joined_res {
 // }
 
 vec2d_u64 parseCaseORControl(Rcpp::IntegerMatrix CaseORControl, int nCases, int nControls);
-void parsePaths(Rcpp::IntegerMatrix data, int nCases, int nControls, string file_path);
-void StorePaths(vec2d_u64 &paths, string file_path);
-vec2d_u64 readPaths(string file_path);
 int getTotalPaths(Rcpp::IntegerVector trguids, Rcpp::List uids_CountLoc);
-vec2d_u64 getZeroMatrix(int dim1, int dim2);
 int getTotalCountsCountLoc(Rcpp::List uids_CountLoc);
 
 joined_res* join_method2(vector<int> src_uids, vector<int> trg_uids, Rcpp::List uids_CountLoc, vector<int> join_gene_signs,
   vec2d_d value_table, int nCases, int nControls, int K,
   int iterations, Rcpp::IntegerMatrix CaseORControl, int pathLength, int nthreads,
-  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res,
-  string pos_path1, string neg_path1, string conflict_path1,
-  string pos_path2, string neg_path2, string conflict_path2,
-  string dest_path_pos, string dest_path_neg, string dest_path_conflict, int total_paths);
-
-Rcpp::List JoinIndicesMethod1(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguids2, Rcpp::List uids_CountLoc, Rcpp::IntegerVector joining_gene_sign,
-  Rcpp::NumericMatrix ValueTable, int nCases, int nControls, int K,
-  int iterations, Rcpp::IntegerMatrix CaseORControl, int pathLength, int nthreads, string pos_path1,
-  string pos_path2, string dest_path_pos);
-
-Rcpp::List JoinIndicesMethod2(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguids2, Rcpp::List uids_CountLoc, Rcpp::IntegerVector joining_gene_sign,
-  Rcpp::NumericMatrix ValueTable, int nCases, int nControls, int K,
-  int iterations, Rcpp::IntegerMatrix CaseORControl, int pathLength, int nthreads, string pos_path1,
-  string neg_path1, string conflict_path1, string pos_path2, string neg_path2, string conflict_path2,
-  string dest_path_pos, string dest_path_neg, string dest_path_conflict);
+  paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, int total_paths);
 
 #endif
