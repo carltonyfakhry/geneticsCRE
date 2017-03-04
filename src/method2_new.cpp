@@ -1,5 +1,3 @@
-#include <fstream>
-#include "Utils.h"
 #include "gcre.h"
 
 joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
@@ -30,24 +28,13 @@ joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
   vec2d_u64 &paths_conflict1 = paths0->con;
   vec2d_u64 &paths_conflict2 = paths1->con;
 
-  // A priority queue for the indices of the top K paths in the data
-  IndicesScoresQueue indicesQ;
-  for(int j = 0; j < conf.top_k; j++)
-    indicesQ.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
+  // priority queue for the indices of the top K paths in the data
+  priority_queue<Score> scores;
+  // dummy score to avoid empty check
+  scores.push(Score());
 
   // TODO conf.nthreads
   int nthreads = 1;
-
-  // Create a priority queue which holds the top K scores per thread
-  std::vector<IndicesScoresQueue> LocalIndicesQ;
-  for(int k = 0; k < nthreads; k++){
-    IndicesScoresQueue localindicesq;
-    for(int j = 0; j < conf.top_k; j++) localindicesq.push(std::make_pair<double,std::pair<int,int> >(-INFINITY, std::pair<int, int>(-1,-1)));
-      LocalIndicesQ.push_back(localindicesq);
-  }
-
-  // Global 2D vector which holds the maximum scores per permutation for each corresponding thread
-  std::vector<std::vector<double> > max_scores(nthreads, std::vector<double>(conf.iterations, -INFINITY));
 
   int flipped_pivot_length = paths_pos2.size();
   int prev_src = -1;
@@ -69,15 +56,8 @@ joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
       // }
     }
 
-    // Find the locations and the number of the paths matching with uid
-    // int uid = trg_uids[i];
-    // std::string geneuid = std::to_string(uid);
-    // IntegerVector uid_count_loc = uids_CountLoc[geneuid];
-    // int count = uid_count_loc[0];
     if(uid.count == 0) continue;
-    // int location = uid_count_loc[1];
     int sign;
-
     if(conf.path_length > 3) sign = join_gene_signs[i];
 
     // Get the data of the first path
@@ -85,15 +65,8 @@ joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
     std::vector<uint64_t> &path_neg1 = paths_neg1[i];
     std::vector<uint64_t> &path_conflict1 = paths_conflict1[i];
 
-    // Copy the values from max_scores into a local container local_max_scores to increase performance
-    std::vector<std::vector<double> > local_max_scores(nthreads, std::vector<double>(conf.iterations));
-    for(int j = 0; j < nthreads; j++){
-      for(int k = 0; k < conf.iterations; k++)
-        local_max_scores[j][k] = max_scores[j][k];
-    }
     for(int j = uid.location; j < (uid.location + uid.count); j++){
       int tid = 0;
-      IndicesScoresQueue &tid_localindicesq = LocalIndicesQ[tid];
 
       if(conf.path_length < 3) sign = join_gene_signs[j];
 
@@ -153,22 +126,19 @@ joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
       double score = value_table[cases][controls];
       double flipped_score = value_table[controls][cases];
 
-      if(score > tid_localindicesq.top().first){
-        tid_localindicesq.push(std::pair<double, std::pair<int, int> >(score, std::pair<int,int>(i, j)));
-        tid_localindicesq.pop();
+      if(score > scores.top().score){
+        scores.push(Score(score, i, j));
+        if(scores.size() > conf.top_k)
+          scores.pop();
       }
-
-      if(flipped_score > tid_localindicesq.top().first){
-        tid_localindicesq.push(std::pair<double, std::pair<int, int> >(flipped_score, std::pair<int,int>(i, j + flipped_pivot_length)));
-        tid_localindicesq.pop();
+      if(flipped_score > scores.top().score){
+        scores.push(Score(flipped_score, i, j + flipped_pivot_length));
+        if(scores.size() > conf.top_k)
+          scores.pop();
       }
-
-      std::vector<double> &tid_max_scores = local_max_scores[tid];
 
       for(int m = 0; m < conf.iterations; m++){
 
-        double &max_score = tid_max_scores[m];
-        double max_score2 = tid_max_scores[m];
         double perm_score = 0;
         double perm_flipped_score = 0;
 
@@ -177,6 +147,7 @@ joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
         int controls_pos_m = 0;
         int cases_neg_m = 0;
         int controls_neg_m = 0;
+
         for(int k = 0; k < vlen; k++){
           uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
           cases_pos_m += __builtin_popcountll(permuted_path_k);
@@ -194,58 +165,25 @@ joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
         int new_controls = controls_pos_m + controls_neg_m + (cases_pos - cases_pos_m) + (cases_neg - cases_neg_m);
 
         perm_score = value_table[new_cases][new_controls];
-        if(perm_score > max_score2){
-          max_score = perm_score;
-          max_score2 = perm_score;
-        }
         perm_flipped_score = value_table[new_controls][new_cases];
-        if(perm_flipped_score > max_score2){
-          max_score = perm_flipped_score;
-        }
       }
     }
 
-    // Update the values in max_scores given the values of local_max_scores
-    for(int j = 0; j < nthreads; j++){
-      for(int k = 0; k < conf.iterations; k++)
-        if(max_scores[j][k] < local_max_scores[j][k]) max_scores[j][k] = local_max_scores[j][k];
-    }
   }
 
   joined_res* res = new joined_res;
 
-  res->permuted_scores.resize(conf.iterations);
-  for(int i = 0; i < nthreads; i++){
-    for(int j = 0; j < conf.iterations; j++){
-      if(i == 0){
-        res->permuted_scores[j] = max_scores[i][j];
-      }else if(max_scores[i][j] > res->permuted_scores[j]){
-        res->permuted_scores[j] = max_scores[i][j];
-      }
-    }
-  }
+  res->permuted_scores.resize(conf.iterations, 0);
 
-  for(unsigned int j = 0; j < LocalIndicesQ.size(); j++){
-    IndicesScoresQueue &localqueue = LocalIndicesQ[j];
-    while(localqueue.size() != 0) {
-      indicesQ.push(localqueue.top());
-      localqueue.pop();
-      indicesQ.pop();
-    }
-  }
-
-  // Create a vector for the indices of the k paths with the highest scores
-  // IntegerMatrix ids(indicesQ.size(),2);
-  // TODO move to R wrapper
-  res->ids.resize(indicesQ.size(), vec_u64(2));
-  res->scores.resize(indicesQ.size());
+  res->ids.resize(scores.size(), vec_u64(2));
+  res->scores.resize(scores.size());
   int j = 0;
-  while(indicesQ.size() != 0){
-    ScoreIndices temp = indicesQ.top();
-    res->scores[j] = temp.first;
-    res->ids[j][0] = temp.second.first + 1; // Add 1 because it will be used as an index in the R code
-    res->ids[j][1] = temp.second.second + 1;
-    indicesQ.pop();
+  while(!scores.empty()){
+    const Score& score = scores.top();
+    res->scores[j] = score.score;
+    res->ids[j][0] = score.src + 1; // Add 1 because it will be used as an index in the R code
+    res->ids[j][1] = score.trg + 1;
+    scores.pop();
     j++;
   }
 

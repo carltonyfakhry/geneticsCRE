@@ -1,6 +1,5 @@
-#include <fstream>
-#include "gcre.h"
 #include <Rcpp.h>
+#include "gcre.h"
 
 using namespace std;
 using namespace Rcpp;

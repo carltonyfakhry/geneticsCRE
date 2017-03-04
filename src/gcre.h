@@ -1,8 +1,13 @@
 #ifndef GCRE_H
 #define GCRE_H
 
-#include <vector>
 #include <inttypes.h>
+#include <cmath>
+#include <limits>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <fstream>
 
 // these are types visible to R; keeping that minimal
 #include "geneticsCRE_types.h"
@@ -30,10 +35,15 @@ struct uid_ref {
   int location;
 };
 
-struct score_t {
-  int src_uid;
-  int trg_uid;
-  double score;
+class Score {
+public:
+  double score = -numeric_limits<double>::infinity();
+  int src = -1;
+  int trg = -1;
+  inline Score() {}
+  inline Score(double score, int src, int trg) : score(score), src(src), trg(trg) {}
+  // reverse sort for priority queue
+  friend bool operator<(Score a, Score b) { return a.score > b.score; }
 };
 
 class JoinMethod {
