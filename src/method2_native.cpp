@@ -102,9 +102,9 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
     pathsr->resize(total_paths, paths1->width_ul, conf.num_cases);
 
   // dump out test data to run outside of rcpp
-  if(0 && conf.path_length == 4) {
+  if(conf.path_length == 0) {
 
-    FILE* fp = std::fopen("/data/gcre/ser_len4", "w");
+    FILE* fp = std::fopen("/data/gcre/ser_len5", "w");
     if(!fp) {
       std::perror("File opening failed");
       exit(EXIT_FAILURE);

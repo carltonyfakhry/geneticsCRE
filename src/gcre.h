@@ -2,6 +2,8 @@
 #define GCRE_H
 
 #include <inttypes.h>
+#include <stdio.h>
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <vector>

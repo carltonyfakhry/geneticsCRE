@@ -1,0 +1,29 @@
+CC=gcc
+CXX=g++
+RM=rm -f
+CXX1XFLAGS=-std=c++11 -g -O2 -march=native -mpopcnt -I../src
+CXXFLAGS=$(CXX1XFLAGS)
+LDFLAGS=-g,-Wl,-O2,--sort-common,--as-needed,-z,relro
+LDLIBS=
+
+SRCS=harness.cpp $(wildcard ../src/method*.cpp)
+OBJS=$(subst .cpp,.o,$(SRCS))
+
+all: bench
+
+bench: $(OBJS)
+	$(CXX) $(LDFLAGS) -o bench $(OBJS) $(LDLIBS) 
+
+depend: .depend
+
+.depend: $(SRCS)
+	$(RM) ./.depend
+	$(CXX) $(CXXFLAGS) -MM $^>>./.depend;
+
+clean:
+	$(RM) $(OBJS) bench
+
+distclean: clean
+	$(RM) *~ .depend
+
+include .depend

@@ -97,7 +97,18 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
   printf("  method      : %s\n", method_name.c_str());
   printf("  path_length : %d\n", path_length);
   printf("  uid size    : %d\n", r_trg_uids.size());
-  printf("################################\n\n");
+  printf("\n");
+
+  // for(int k = 0; k < min(4, r_cases.nrow()); k++){
+  //   int c = 0;
+  //   for(int i = 0; i < r_cases.ncol(); i++){
+  //     if(r_cases(k, i) > 0)
+  //       c += 1;
+  //   }
+  //   printf("[%d] case count: %d\n", k, c);
+  // }
+
+  printf("\n################################\n\n");
 
   if(r_trg_uids.size() != r_src_uids.size())
     stop("uid size mismatch");
