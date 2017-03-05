@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "gcre.h"
 
 // 16 byte aligned
@@ -83,7 +84,6 @@ paths_type* JoinMethod2Native::createPathSet(vec2d_i& data, int num_cases, int n
 joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr, uint64_t total_paths) const {
 
   int vlen = vector_width_ul(conf.num_cases + conf.num_controls);
-
   // not safe, but don't see a better way with R
   paths_vect* paths0 = (paths_vect*) p_paths0;
   paths_vect* paths1 = (paths_vect*) p_paths1;
@@ -100,6 +100,79 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
 
   if(keep_paths)
     pathsr->resize(total_paths, paths1->width_ul, conf.num_cases);
+
+  // dump out test data to run outside of rcpp
+  if(0 && conf.path_length == 4) {
+
+    FILE* fp = std::fopen("/data/gcre/ser_len4", "w");
+    if(!fp) {
+      std::perror("File opening failed");
+      exit(EXIT_FAILURE);
+    }
+
+    std::fprintf(fp, "PATH %d\n", conf.path_length);
+    std::fprintf(fp, "CASE %d\n", conf.num_cases);
+    std::fprintf(fp, "CTRL %d\n", conf.num_controls);
+    std::fprintf(fp, "TOTL %d\n", total_paths);
+
+    std::fprintf(fp, "UIDS");
+    for(int k = 0; k < uids.size(); k++){
+      uid_ref& u = uids[k];
+      std::fprintf(fp, " %d:%d:%d:%d", u.src, u.trg, u.count, u.location);
+    }
+    std::fprintf(fp, "\n");
+
+    std::fprintf(fp, "SIGN");
+    for(int k = 0; k < join_gene_signs.size(); k++)
+      std::fprintf(fp, " %d", join_gene_signs[k]);
+    std::fprintf(fp, "\n");
+
+    std::fprintf(fp, "VALS");
+    for(int k = 0; k < value_table.size(); k++){
+      for(int i = 0; i < value_table[k].size(); i++)
+        std::fprintf(fp, " %f", value_table[k][i]);
+    }
+    std::fprintf(fp, "\n");
+
+    std::fprintf(fp, "MASK");
+    for(int k = 0; k < cases.size(); k++){
+      for(int i = 0; i < cases[k].size(); i++)
+        std::fprintf(fp, " %d", cases[k][i]);
+    }
+    std::fprintf(fp, "\n");
+
+    std::fprintf(fp, "PT0P");
+    for(int k = 0; k < paths0->pos.size(); k++){
+      for(int i = 0; i < paths0->pos[k].size(); i++)
+        std::fprintf(fp, " %lu", paths0->pos[k][i]);
+    }
+    std::fprintf(fp, "\n");
+
+    std::fprintf(fp, "PT0N");
+    for(int k = 0; k < paths0->neg.size(); k++){
+      for(int i = 0; i < paths0->neg[k].size(); i++)
+        std::fprintf(fp, " %lu", paths0->neg[k][i]);
+    }
+    std::fprintf(fp, "\n");
+
+    std::fprintf(fp, "PT1P");
+    for(int k = 0; k < paths1->pos.size(); k++){
+      for(int i = 0; i < paths1->pos[k].size(); i++)
+        std::fprintf(fp, " %lu", paths1->pos[k][i]);
+    }
+    std::fprintf(fp, "\n");
+
+    std::fprintf(fp, "PT1N");
+    for(int k = 0; k < paths1->neg.size(); k++){
+      for(int i = 0; i < paths1->neg[k].size(); i++)
+        std::fprintf(fp, " %lu", paths1->neg[k][i]);
+    }
+    std::fprintf(fp, "\n");
+
+    std::fclose(fp);
+    exit(0);
+  }
+
 
   // vec2d_u64 case_mask = create_case_mask(cases, conf.num_cases, conf.num_controls);
 
