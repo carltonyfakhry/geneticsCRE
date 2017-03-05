@@ -75,8 +75,7 @@ struct paths_block : paths_base {
 };
 
 struct joined_res {
-  vec2d_u64 ids;
-  vec_d scores;
+  vector<Score> scores;
   vec_d permuted_scores;
 };
 

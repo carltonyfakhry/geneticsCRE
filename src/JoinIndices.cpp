@@ -204,18 +204,18 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
 
     joined_res* res = join_method2_new(conf, uids, join_gene_signs, value_table, case_mask, paths0, paths1, paths_res, total_paths);
 
-    NumericVector scores(res->scores.size());
-    for(int k = 0; k < res->scores.size(); k++)
-      scores[k] = res->scores[k];
-
     NumericVector permuted_scores(res->permuted_scores.size());
     for(int k = 0; k < res->permuted_scores.size(); k++)
       permuted_scores[k] = res->permuted_scores[k];
 
-    IntegerMatrix ids(res->ids.size(),2);
-    for(int k = 0; k < res->ids.size(); k++){
-      ids(k,0) = res->ids[k][0];
-      ids(k,1) = res->ids[k][1];
+    NumericVector scores(res->scores.size());
+    IntegerMatrix ids(res->scores.size(), 2);
+    for(int k = 0; k < res->scores.size(); k++){
+      Score& score = res->scores[k];
+      scores[k] = score.score;
+      // add 1 because it will be used as an index in R
+      ids(k,0) = score.src + 1;
+      ids(k,1) = score.trg + 1;
     }
 
     return List::create(Named("scores") = scores, Named("ids") = ids, Named("TestScores") = permuted_scores);
