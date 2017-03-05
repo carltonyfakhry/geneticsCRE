@@ -69,10 +69,15 @@ paths_type* JoinMethod2Vector::createPathSet(vec2d_i& data, int num_cases, int n
   return paths;
 }
 
-joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, uint64_t total_paths) const {
+joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const {
 
   int vlenc = vector_width_ul(conf.num_cases);
   int vlent = vector_width_ul(conf.num_controls);
+
+  // not safe, but don't see a better way with R
+  paths_vec* paths0 = (paths_vec*) p_paths0;
+  paths_vec* paths1 = (paths_vec*) p_paths1;
+  paths_vec* paths_res = (paths_vec*) p_paths_res;
 
   // will be deallocated automatically
   paths_vec tpaths;

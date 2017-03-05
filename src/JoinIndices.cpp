@@ -127,15 +127,15 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
   }
 
   // pointers to method-specific bitset data
-  paths_vec* paths1 = (paths_vec*) XPtr<paths_type>(xp_paths1).get();
+  paths_type* paths1 = XPtr<paths_type>(xp_paths1).get();
 
-  paths_vec* paths0 = NULL;
+  paths_type* paths0 = NULL;
   if(!Rf_isNull(xp_paths0))
-    paths0 = (paths_vec*) XPtr<paths_type>(xp_paths0).get();
+    paths0 = XPtr<paths_type>(xp_paths0).get();
 
-  paths_vec* paths_res = NULL;
+  paths_type* paths_res = NULL;
   if(!Rf_isNull(xp_paths_res))
-    paths_res = (paths_vec*) XPtr<paths_type>(xp_paths_res).get();
+    paths_res = XPtr<paths_type>(xp_paths_res).get();
 
   // get appropriate method type
   JoinMethod& method = create_method(method_name);
