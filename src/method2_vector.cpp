@@ -120,9 +120,6 @@ joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vec
   int total_srcs = 0;
   int path_idx = 0;
 
-  long total_comps = 0;
-  long zero_comps = 0;
-
   for(int i = 0; i < uids.size(); i++){
     // Check if source node has changed
     uid_ref& uid = uids[i];
@@ -168,11 +165,6 @@ joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vec
 
         uint64_t temp_pos = path_pos1[k] | path_pos2[k];
         uint64_t temp_neg = path_neg1[k] | path_neg2[k];
-
-        total_comps += 1;
-        if(temp_pos == 0 || temp_neg == 0)
-          zero_comps += 1;
-
 
         uint64_t temp_conflict = (path_conflict1[k] | path_conflict2[k]) | (temp_pos & temp_neg);
         joined_conflict[k] = temp_conflict;

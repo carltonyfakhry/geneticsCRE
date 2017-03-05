@@ -37,6 +37,9 @@ vec2d_i copy_rmatrix(IntegerMatrix& matrix) {
 
 JoinMethod& create_method(string name) {
   if(name == "method2") {
+    static JoinMethod2Native method;
+    return method;
+  } else if(name == "method2-vec") {
     static JoinMethod2Vector method;
     return method;
   } else {
