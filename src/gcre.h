@@ -93,7 +93,7 @@ struct joined_res {
 //   printf("i am destructed\n");
 // }
 
-joined_res* join_method2_new(join_config& conf, vector<uid_ref>& uids,
+joined_res join_method2_new(join_config& conf, vector<uid_ref>& uids,
   vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u64& case_mask,
   paths_vec* paths0, paths_vec* paths1, paths_vec* paths_res, uint64_t total_paths);
 

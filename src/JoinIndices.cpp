@@ -202,16 +202,16 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
 
   if(method == "method2") {
 
-    joined_res* res = join_method2_new(conf, uids, join_gene_signs, value_table, case_mask, paths0, paths1, paths_res, total_paths);
+    joined_res res = join_method2_new(conf, uids, join_gene_signs, value_table, case_mask, paths0, paths1, paths_res, total_paths);
 
-    NumericVector permuted_scores(res->permuted_scores.size());
-    for(int k = 0; k < res->permuted_scores.size(); k++)
-      permuted_scores[k] = res->permuted_scores[k];
+    NumericVector permuted_scores(res.permuted_scores.size());
+    for(int k = 0; k < res.permuted_scores.size(); k++)
+      permuted_scores[k] = res.permuted_scores[k];
 
-    NumericVector scores(res->scores.size());
-    IntegerMatrix ids(res->scores.size(), 2);
-    for(int k = 0; k < res->scores.size(); k++){
-      Score& score = res->scores[k];
+    NumericVector scores(res.scores.size());
+    IntegerMatrix ids(res.scores.size(), 2);
+    for(int k = 0; k < res.scores.size(); k++){
+      Score& score = res.scores[k];
       scores[k] = score.score;
       // add 1 because it will be used as an index in R
       ids(k,0) = score.src + 1;
