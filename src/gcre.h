@@ -44,24 +44,6 @@ struct paths_base : paths_type {
   int num_cases = 0;
 };
 
-struct paths_vec : paths_base {
-  vec2d_u64 pos;
-  vec2d_u64 neg;
-  vec2d_u64 con;
-  void resize(int size, int width_ul, int num_cases);
-};
-
-struct paths_block : paths_base {
-  struct path {
-    uint64_t hash = 0;
-    short lengh = 0;
-    short* index = NULL;
-    uint64_t* pos;
-    uint64_t* neg;
-    uint64_t* con;
-  };
-};
-
 class Score {
 public:
   double score = -numeric_limits<double>::infinity();
@@ -94,6 +76,10 @@ public:
 };
 
 class JoinMethod2Native : public JoinMethod {
+public:
+  virtual paths_type* createPathSet() const;
+  virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const;
+  virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
 };
 
 #endif

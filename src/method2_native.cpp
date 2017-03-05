@@ -4,10 +4,28 @@ static int vector_width_ul(int count) {
   return (int) ceil(count / 64.0);
 }
 
-void paths_vec::resize(int size, int width_ul, int num_cases) {
-  paths_vec::size = size;
-  paths_vec::width_ul = width_ul;
-  paths_vec::num_cases = num_cases;
+struct paths_vect : paths_base {
+  vec2d_u64 pos;
+  vec2d_u64 neg;
+  vec2d_u64 con;
+  void resize(int size, int width_ul, int num_cases);
+};
+
+struct paths_block : paths_base {
+  struct path {
+    uint64_t hash = 0;
+    short lengh = 0;
+    short* index = NULL;
+    uint64_t* pos;
+    uint64_t* neg;
+    uint64_t* con;
+  };
+};
+
+void paths_vect::resize(int size, int width_ul, int num_cases) {
+  paths_vect::size = size;
+  paths_vect::width_ul = width_ul;
+  paths_vect::num_cases = num_cases;
   pos.clear();
   neg.clear();
   con.clear();
@@ -39,20 +57,20 @@ static vec2d_u64 create_case_mask(vec2d_i& cases, int num_cases, int num_control
   return mask;
 }
 
-paths_type* JoinMethod2Vector::createPathSet() const {
-  paths_vec* paths = new paths_vec;
+paths_type* JoinMethod2Native::createPathSet() const {
+  paths_vect* paths = new paths_vect;
   paths->size = 0;
   paths->width_ul = 0;
   return paths;
 }
 
-paths_type* JoinMethod2Vector::createPathSet(vec2d_i& data, int num_cases, int num_controls) const {
+paths_type* JoinMethod2Native::createPathSet(vec2d_i& data, int num_cases, int num_controls) const {
 
   int vlenc = vector_width_ul(num_cases);
   int vlent = vector_width_ul(num_controls);
 
   // allocate on heap
-  paths_vec* paths = new paths_vec;
+  paths_vect* paths = new paths_vect;
   paths->resize(data.size(), vlenc + vlent, num_cases);
 
   for(int r = 0; r < data.size(); r++){
@@ -69,18 +87,18 @@ paths_type* JoinMethod2Vector::createPathSet(vec2d_i& data, int num_cases, int n
   return paths;
 }
 
-joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const {
+joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const {
 
   int vlenc = vector_width_ul(conf.num_cases);
   int vlent = vector_width_ul(conf.num_controls);
 
   // not safe, but don't see a better way with R
-  paths_vec* paths0 = (paths_vec*) p_paths0;
-  paths_vec* paths1 = (paths_vec*) p_paths1;
-  paths_vec* paths_res = (paths_vec*) p_paths_res;
+  paths_vect* paths0 = (paths_vect*) p_paths0;
+  paths_vect* paths1 = (paths_vect*) p_paths1;
+  paths_vect* paths_res = (paths_vect*) p_paths_res;
 
   // will be deallocated automatically
-  paths_vec tpaths;
+  paths_vect tpaths;
   if(paths0 == NULL){
     tpaths.resize(uids.size(), vlenc + vlent, conf.num_cases);
     paths0 = &tpaths;
