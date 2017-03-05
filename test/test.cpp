@@ -9,6 +9,7 @@ using namespace std;
 struct path_set {
   int len;
   vector<int> v;
+  path_set(){}
   path_set(int len);
   ~path_set();
 };
@@ -33,12 +34,15 @@ path_set::~path_set(){
 int main()
 {
 
-  vector<uid_ref> u(2, uid_ref());
-  uid_ref& r = * new uid_ref;
-  u.push_back(r);
-  for(int k = 0; k < u.size(); k++)
-    printf(" %d", u[k].trg);
-  printf("\n");
+  path_set a;
+  path_set b(78);
+
+  // vector<uid_ref> u(2, uid_ref());
+  // uid_ref& r = * new uid_ref;
+  // u.push_back(r);
+  // for(int k = 0; k < u.size(); k++)
+  //   printf(" %d", u[k].trg);
+  // printf("\n");
 
   printf("done\n");
 }
