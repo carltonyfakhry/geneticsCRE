@@ -86,6 +86,26 @@ int getTotalCountsCountLoc(List uids_CountLoc){
 
 
 /**
+ *
+ * Copy ValueTable into a C++ 2D vector.
+ *
+ */
+
+std::vector<std::vector<double> > copyValueTable(NumericMatrix ValueTable){
+
+  std::vector<std::vector<double> > ValueTable2(ValueTable.nrow(), std::vector<double>(ValueTable.ncol()));
+
+  for(int i = 0; i < ValueTable.nrow(); i++)
+    for(int j = 0; j < ValueTable.ncol(); j++)
+      ValueTable2[i][j] = ValueTable(i,j);
+
+  return ValueTable2;
+
+}
+
+
+
+/**
 *
 * This function returns a 2D vector filled with zeros.
 *
@@ -523,15 +543,15 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
   std::vector<std::vector<uint64_t> > temp_paths_pos2;
   std::vector<std::vector<uint64_t> > temp_paths_neg2;
   std::vector<std::vector<uint64_t> > temp_paths_neg22;
-  std::vector<std::vector<uint64_t> > temp_paths_conflict2;
-  std::vector<std::vector<uint64_t> > temp_paths_conflict22;
+  // std::vector<std::vector<uint64_t> > temp_paths_conflict2;
+  // std::vector<std::vector<uint64_t> > temp_paths_conflict22;
   int total_srcuidsRels2 = getTotalCountsCountLoc(uids_CountLoc);
   std::vector<std::vector<uint64_t> > paths_pos1 = (pos_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(pos_path1); // Only empty paths for paths of length 1
   std::vector<std::vector<uint64_t> > &paths_pos2 = (pathLength == 5) ? paths_pos1 : temp_paths_pos2 = readPaths(pos_path2);
   std::vector<std::vector<uint64_t> > paths_neg1 = (neg_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(neg_path1); // Only empty paths for paths of length 1
   std::vector<std::vector<uint64_t> > &paths_neg2 = (neg_path2 == "") ? temp_paths_neg2 = getZeroMatrix(total_srcuidsRels2, vlen + vlen2) : temp_paths_neg2 = (pathLength == 5) ? paths_neg1 : temp_paths_neg22 = readPaths(neg_path2); // Only empty paths for paths of length 1
-  std::vector<std::vector<uint64_t> > paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
-  std::vector<std::vector<uint64_t> > &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_srcuidsRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
+  // std::vector<std::vector<uint64_t> > paths_conflict1 = (conflict_path1 == "") ? getZeroMatrix(trguids2.size(), vlen + vlen2) : readPaths(conflict_path1); // Only empty paths for paths of length 1
+  // std::vector<std::vector<uint64_t> > &paths_conflict2 = (conflict_path2 == "") ? temp_paths_conflict2 = getZeroMatrix(total_srcuidsRels2, vlen + vlen2) : temp_paths_conflict2 = (pathLength == 5) ? paths_conflict1 : temp_paths_conflict22 = readPaths(conflict_path2); // Only empty paths for paths of length 1
 
   // A priority queue for the indices of the top K paths in the data
   IndicesScoresQueue indicesQ;
@@ -585,7 +605,7 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
     // Get the data of the first path
     std::vector<uint64_t> &path_pos1 = paths_pos1[i];
     std::vector<uint64_t> &path_neg1 = paths_neg1[i];
-    std::vector<uint64_t> &path_conflict1 = paths_conflict1[i];
+    // std::vector<uint64_t> &path_conflict1 = paths_conflict1[i];
 
     // Copy the values from max_scores into a local container local_max_scores to increase performance
     std::vector<std::vector<double> > local_max_scores(nthreads, std::vector<double>(iterations));
@@ -593,7 +613,8 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
       for(int k = 0; k < iterations; k++)
         local_max_scores[j][k] = max_scores[j][k];
 
-    #pragma omp parallel for shared(path_pos1,path_neg1,path_conflict1,paths_pos2,paths_neg2,paths_conflict2,flipped_pivot_length,location,count,ValueTable2,LocalIndicesQ,local_max_scores,CaseORControl22,vlen,vlen2,nCases,nControls,iterations) if(pathLength > 3)
+    // #pragma omp parallel for shared(path_pos1,path_neg1,path_conflict1,paths_pos2,paths_neg2,paths_conflict2,flipped_pivot_length,location,count,ValueTable2,LocalIndicesQ,local_max_scores,CaseORControl22,vlen,vlen2,nCases,nControls,iterations) if(pathLength > 3)
+    #pragma omp parallel for shared(path_pos1,path_neg1,paths_pos2,paths_neg2,flipped_pivot_length,location,count,ValueTable2,LocalIndicesQ,local_max_scores,CaseORControl22,vlen,vlen2,nCases,nControls,iterations) if(pathLength > 3)
     for(int j = location; j < (location + count); j++){
 
       int tid = omp_get_thread_num();
@@ -613,38 +634,60 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
       std::vector<uint64_t> &path_pos2 = (sign == 1) ? paths_pos2[j] : paths_neg2[j];
       std::vector<uint64_t> &path_neg2 = (sign == 1) ? paths_neg2[j] : paths_pos2[j];
-      std::vector<uint64_t> &path_conflict2 = paths_conflict2[j];
-
-      for(int k = 0; k < vlen + vlen2; k++){
-        uint64_t temp_pos = path_pos1[k] | path_pos2[k];
-        uint64_t temp_neg = path_neg1[k] | path_neg2[k];
-        uint64_t temp_conflict = (path_conflict1[k] | path_conflict2[k]) | (temp_pos & temp_neg);
-        joined_conflict[k] = temp_conflict;
-        joined_pos[k] = temp_pos ^ (temp_conflict & temp_pos);
-        joined_neg[k] = temp_neg ^ (temp_conflict & temp_neg);
-      }
-
-      if(pathLength <= 3){
-        for(int k = 0; k < vlen + vlen2; k++){
-          joined_paths_pos[total_paths][k] = joined_pos[k];
-          joined_paths_neg[total_paths][k] = joined_neg[k];
-          joined_paths_conflict[total_paths][k] = joined_conflict[k];
-        }
-        total_paths++;
-      }
+      // std::vector<uint64_t> &path_conflict2 = paths_conflict2[j];
 
       int cases_pos = 0;
       int cases_neg = 0;
       int controls_pos = 0;
       int controls_neg = 0;
-      for(int k = 0; k < vlen; k++){
-        cases_pos += __builtin_popcountll(joined_pos[k]);
-        controls_neg += __builtin_popcountll(joined_neg[k]);
+
+      for(int k = 0; k < vlen + vlen2; k++){
+        uint64_t temp_pos = path_pos1[k] | path_pos2[k];
+        uint64_t temp_neg = path_neg1[k] | path_neg2[k];
+        uint64_t temp_conflict = temp_neg & temp_pos;
+        uint64_t temp_pos2 = temp_pos ^ temp_conflict;
+        uint64_t temp_neg2 = temp_neg ^ temp_conflict;
+        if(k < vlen){
+          cases_pos += __builtin_popcountll(temp_pos2);
+          controls_neg += __builtin_popcountll(temp_neg2);
+        }else{
+          controls_pos += __builtin_popcountll(temp_pos2);
+          cases_neg += __builtin_popcountll(temp_neg2);
+        }
+        joined_pos[k] = temp_pos2;
+        joined_neg[k] = temp_neg2;
+        // joined_conflict[k] = temp_conflict;
+        if(pathLength <= 3){
+          joined_paths_pos[total_paths][k] = temp_pos;
+          joined_paths_neg[total_paths][k] = temp_neg;
+        }
+        // uint64_t temp_conflict = (path_conflict1[k] | path_conflict2[k]) | (temp_pos & temp_neg);
+        // joined_conflict[k] = temp_conflict;
+        // joined_pos[k] = temp_pos ^ (temp_conflict & temp_pos);
+        // joined_neg[k] = temp_neg ^ (temp_conflict & temp_neg);
       }
-      for(int k = vlen; k < vlen + vlen2; k++){
-        controls_pos += __builtin_popcountll(joined_pos[k]);
-        cases_neg += __builtin_popcountll(joined_neg[k]);
+
+      if(pathLength <= 3){
+        // for(int k = 0; k < vlen + vlen2; k++){
+        //   joined_paths_pos[total_paths][k] = joined_pos[k] ^ joined_conflict[k];
+        //   joined_paths_neg[total_paths][k] = joined_neg[k] ^ joined_conflict[k];
+        //   // joined_paths_conflict[total_paths][k] = joined_conflict[k];
+        // }
+        total_paths++;
       }
+
+      // int cases_pos = 0;
+      // int cases_neg = 0;
+      // int controls_pos = 0;
+      // int controls_neg = 0;
+      // for(int k = 0; k < vlen; k++){
+      //   cases_pos += __builtin_popcountll(joined_pos[k]);
+      //   controls_neg += __builtin_popcountll(joined_neg[k]);
+      // }
+      // for(int k = vlen; k < vlen + vlen2; k++){
+      //   controls_pos += __builtin_popcountll(joined_pos[k]);
+      //   cases_neg += __builtin_popcountll(joined_neg[k]);
+      // }
 
       int cases = cases_pos + cases_neg;
       int controls = controls_pos + controls_neg;
@@ -778,7 +821,7 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
   if(dest_path_pos != ""){
     StorePaths(joined_paths_pos, dest_path_pos);
     StorePaths(joined_paths_neg, dest_path_neg);
-    StorePaths(joined_paths_conflict, dest_path_conflict);
+    // StorePaths(joined_paths_conflict, dest_path_conflict);
   }
 
   return List::create(Named("scores") = scores,
@@ -788,4 +831,136 @@ List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_
 
 }
 
+
+
+// std::vector<std::vector<uint64_t> > parseData(IntegerMatrix data, int nCases, int nControls, int vlen, int vlen2){
+//
+//   std::vector<std::vector<uint64_t> > parseddata(data.nrow(), std::vector<uint64_t>(vlen + vlen2));
+//
+//   for(int i = 0; data.nrow(); i++){
+//
+//     for(int j = 0; data.ncol(); j++){
+//
+//       if(data(i,j) != 0){
+//
+//         if(j < nCases)
+//           parseddata[i][j/64] |= one_64bit << j % 64;
+//         else
+//           parseddata[i][vlen + (j-nCases)/64] |= one_64bit << (j-nCases) % 64;
+//
+//       }
+//
+//     }
+//
+//   }
+//
+//   return parseddata;
+//
+// }
+//
+//
+// // std::vector<std::vector<uint64_t> > matchdata(const std::vector<std::vector<uint64_t> > &parseddata, IntegerVector data_inds){
+// //
+// //   std::vector<std::vector<uint64_t> > matcheddata(data_inds.size(), std::vector<uint64_t>(parseddata[0].size(),0));
+// //
+// //   for(int i = 0; data_inds.size(); i++){
+// //
+// //     int data_index = data_inds[i];
+// //     matcheddata[i] = parseddata[data_index];
+// //
+// //   }
+// //
+// //   return matcheddata;
+// //
+// // }
+//
+//
+// uint64_t* matchdata(const std::vector<std::vector<uint64_t> > &parsed_data, IntegerVector data_inds, int vlen, int vlen2){
+//
+//   int data_size = parseddata.size() * (vlen + vlen2);
+//   uint64 matched_data[data_size] __attribute__ ((aligned (16))) = malloc(data_size);
+//   int total = 0;
+//
+//   for(unsigned int i = 0; i < data_inds.size(); i++){
+//
+//     int index = data_inds[i];
+//
+//     for(int j = 0; j < vlen + vlen2; j++){
+//
+//       matched_data[total] = parsed_data[index];
+//
+//     }
+//
+//   }
+//
+//   return matcheddata;
+//
+// }
+//
+//
+// // List JoinPathsMethod1(std::vector<std::vector<uint64_t> > paths_pos1, std::vector<std::vector<uint64_t> > paths_pos1,
+// //                       IntegerVector srcuid, IntegerVector trguids, List uids_CountLoc, IntegerVector joining_gene_sign,
+// //                       const std::vector<std::vector<double> > &ValueTable, uint64_t *p_caseorcontrol,
+// //                       int nCases, int nControls, int K, int iterations, int method, int pathLength, int nthreads){
+// //
+// // }
+//
+//
+//
+// List ProcessPaths(IntegerVector srcuid1, IntegerVector trguids1, List uids_CountLoc1, IntegerVector joining_gene_sign1,
+//                   IntegerVector srcuid2, IntegerVector trguids2, List uids_CountLoc2, IntegerVector joining_gene_sign2,
+//                   IntegerVector srcuid3, IntegerVector trguids3, List uids_CountLoc3, IntegerVector joining_gene_sign3,
+//                   IntegerVector data_inds1, IntegerVector data_inds2, IntegerVector data_inds3,
+//                   IntegerMatrix data, NumericMatrix ValueTable, int nCases, int nControls, int K,
+//                   int iterations, IntegerMatrix CaseORControl, int method, int pathLength, int nthreads){
+//
+//
+//   int vlen = (int) ceil(nCases/64.0);
+//   int vlen2 = (int) ceil(nControls/64.0);
+//
+//   // Copy ValueTable into a C++ 2D vector to be used in an openmp for loop
+//   static const std::vector<std::vector<double> > ValueTable2 = copyValueTable(ValueTable);
+//
+//   // Parse CaseORControl matrix into a single aligned vector
+//   std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
+//   uint64_t CaseORControl22[iterations*(vlen+vlen2)] __attribute__ ((aligned (16)));
+//   for(int i = 0, k = 0; i < iterations; i++)
+//     for(int j = 0; j < vlen + vlen2; j++, k++)
+//       CaseORControl22[k] = CaseORControl2[i][j];
+//
+//   // Get the parsed data
+//   std::vector<std::vector<uint64_t> > parsed_data = parseData(data, nCases, nControls, vlen, vlen2);
+//
+//   // Process paths of length 1
+//   List lst1;
+//   std::vector<std::vector<uint64_t> > paths_pos1;
+//   std::vector<std::vector<uint64_t> > paths_neg1;
+//   if(method == 1){
+//
+//   }else{
+//     // int total_paths = getTotalPaths(trguids1, uids_CountLoc1);
+//     // paths_pos1 = getZeroMatrix(total_paths, vlen + vlen2);
+//     // paths_neg1 = getZeroMatrix(total_paths, vlen + vlen2);
+//     // std::vector<std::vector<uint64_t> > paths_data_pos = ;
+//     // std::vector<std::vector<uint64_t> > paths_data_neg = ;
+//     // lst1 = JoinPathsMethod2();
+//   }
+//
+//   // Process Paths of length 2
+//
+//
+//   // Process Paths of length 3
+//
+//
+//   // Process Paths of length 4
+//
+//
+//   // Process Paths of length 5
+//
+//
+//
+//
+//   return List::create();
+//
+// }
 
