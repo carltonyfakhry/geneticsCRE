@@ -46,12 +46,14 @@ void paths_block::resize(int size, int width_ul, int num_cases) {
 }
 
 paths_type* JoinMethod2Native::createPathSet() const {
-  paths_vect* paths = new paths_vect;
+  paths_block* paths = new paths_block;
   paths->size = 0;
   paths->width_ul = 0;
+  paths->num_cases = 0;
   return paths;
 }
 
+// TODO
 paths_type* JoinMethod2Native::createPathSet(vec2d_i& data, int num_cases, int num_controls) const {
 
   int vlen = vector_width_ul(num_cases + num_controls);
@@ -75,25 +77,30 @@ paths_type* JoinMethod2Native::createPathSet(vec2d_i& data, int num_cases, int n
 paths_type* JoinMethod2Native::createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const {
 
   int vlen = vector_width_ul(num_cases + num_controls);
-  printf("len: %d, %d %d\n", vlen, pos.front().size(), neg.front().size());
 
   // allocate on heap
-  paths_vect* paths = new paths_vect;
-  paths->pos = pos;
-  paths->neg = neg;
+  paths_block* paths = new paths_block;
+  paths->resize(pos.size(), pos.front().size(), num_cases);
+  for(int r = 0; r < paths->size; r++){
+    for(int k = 0; k < paths->width_ul; k++){
+      paths->pos[r * vlen + k] = pos[r][k];
+      paths->neg[r * vlen + k] = neg[r][k];
+    }
+  }
   return paths;
 }
 
-joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr, uint64_t total_paths) const {
+joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases,
+  paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr, uint64_t total_paths) const {
 
   int vlen = vector_width_ul(conf.num_cases + conf.num_controls);
   // not safe, but don't see a better way with R
-  paths_vect* paths0 = (paths_vect*) p_paths0;
-  paths_vect* paths1 = (paths_vect*) p_paths1;
-  paths_vect* pathsr = (paths_vect*) p_pathsr;
+  paths_block* paths0 = (paths_block*) p_paths0;
+  paths_block* paths1 = (paths_block*) p_paths1;
+  paths_block* pathsr = (paths_block*) p_pathsr;
 
   // will be deallocated automatically
-  paths_vect tpaths;
+  paths_block tpaths;
   if(paths0 == NULL){
     tpaths.resize(uids.size(), vlen, conf.num_cases);
     paths0 = &tpaths;
@@ -119,12 +126,18 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
   // TODO conf.nthreads
   int nthreads = 1;
 
-  int flipped_pivot_length = paths1->pos.size();
+  int flipped_pivot_length = paths1->size;
   int prev_src = -1;
   int total_srcs = 0;
   int path_idx = 0;
 
+  uint64_t joined_pos[vlen];
+  uint64_t joined_neg[vlen];
+  uint64_t joined_tp[vlen];
+  uint64_t joined_tn[vlen];
+
   for(int i = 0; i < uids.size(); i++){
+
     // Check if source node has changed
     uid_ref& uid = uids[i];
     if(uid.src != prev_src){
@@ -132,44 +145,36 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
       total_srcs++;
     }
 
-    if(uid.count == 0) continue;
-    int sign;
-    if(conf.path_length > 3) sign = join_gene_signs[i];
+    if(uid.count == 0)
+      continue;
 
-    vec_u64 &path_pos0 = paths0->pos[i];
-    vec_u64 &path_neg0 = paths0->neg[i];
+    uint64_t* path_pos0 = paths0->pos + i * vlen;
+    uint64_t* path_neg0 = paths0->neg + i * vlen;
 
     for(int j = uid.location; j < (uid.location + uid.count); j++){
 
-      if(conf.path_length < 3) sign = join_gene_signs[j];
+      int sign = 0;
+      if(conf.path_length > 3)
+        sign = join_gene_signs[i];
+      else if(conf.path_length < 3)
+        sign = join_gene_signs[j];
+      else if(conf.path_length == 3)
+        sign = (join_gene_signs[i] + join_gene_signs[j] == 0) ? -1 : 1;
 
-      if(conf.path_length == 3){
-        int sign2 = join_gene_signs[i];
-        int sign3 = join_gene_signs[j];
-        sign = ((sign2 == -1 && sign3 == 1) || (sign2 == 1 && sign3 == -1)) ? -1 : 1;
-      }
-
-      vec_u64 joined_pos(path_pos0.size());
-      vec_u64 joined_neg(path_neg0.size());
-
-      // TODO ??
-      vec_u64 &path_pos1 = (sign == 1) ? paths1->pos[j] : paths1->neg[j];
-      vec_u64 &path_neg1 = (sign == 1) ? paths1->neg[j] : paths1->pos[j];
+      uint64_t* path_pos1 = (sign == 1 ? paths1->pos : paths1->neg) + j * vlen;
+      uint64_t* path_neg1 = (sign == 1 ? paths1->neg : paths1->pos) + j * vlen;
 
       for(int k = 0; k < vlen; k++){
         joined_pos[k] = path_pos0[k] | path_pos1[k];
         joined_neg[k] = path_neg0[k] | path_neg1[k];
       }
 
-      if(keep_paths){
-        pathsr->pos[path_idx] = joined_pos;
-        pathsr->neg[path_idx] = joined_neg;
-      }
+      // if(keep_paths){
+      //   pathsr->pos[path_idx] = joined_pos;
+      //   pathsr->neg[path_idx] = joined_neg;
+      // }
 
       path_idx += 1;
-
-      vec_u64 joined_tp(path_pos0.size(), 0);
-      vec_u64 joined_tn(path_neg0.size(), 0);
 
       for(int k = 0; k < vlen; k++) {
         joined_tp[k] = joined_pos[k] & ~(joined_pos[k] & joined_neg[k]);
