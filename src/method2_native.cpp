@@ -7,28 +7,11 @@ static int vector_width_ul(int count) {
   return 2 * (int) ceil(count / 128.0);
 }
 
-struct paths_vect : paths_base {
-  vec2d_u64 pos;
-  vec2d_u64 neg;
-  void resize(int size, int width_ul, int num_cases);
-};
-
 struct paths_block : paths_base {
   uint64_t* pos = NULL;
   uint64_t* neg = NULL;
   void resize(int size, int width_ul, int num_cases);
 };
-
-void paths_vect::resize(int size, int width_ul, int num_cases) {
-  paths_vect::size = size;
-  paths_vect::width_ul = width_ul;
-  paths_vect::num_cases = num_cases;
-  pos.clear();
-  neg.clear();
-  pos.resize(size, vec_u64(width_ul, 0));
-  neg.resize(size, vec_u64(width_ul, 0));
-  printf("  ** resized and zeroed matrix: %d x %d\n", size, width_ul);
-}
 
 void paths_block::resize(int size, int width_ul, int num_cases) {
   paths_block::size = size;
@@ -54,7 +37,6 @@ paths_type* JoinMethod2Native::createPathSet() const {
   return paths;
 }
 
-// TODO
 paths_type* JoinMethod2Native::createPathSet(vec2d_i& data, int num_cases, int num_controls) const {
 
   int vlen = vector_width_ul(num_cases + num_controls);
