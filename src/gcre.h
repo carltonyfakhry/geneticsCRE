@@ -81,6 +81,7 @@ class JoinMethod2Native : public JoinMethod {
 public:
   virtual paths_type* createPathSet() const;
   virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const;
+  virtual paths_type* createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const;
   virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
 };
 

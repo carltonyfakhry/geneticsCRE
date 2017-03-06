@@ -1,3 +1,4 @@
+#include <time.h>
 #include <typeinfo>
 #include <sstream>
 #include "gcre.h"
@@ -45,6 +46,17 @@ int main(int argc, char* argv[]) {
   }
   cout << "using data file: " << file << endl;
 
+  int repeat = 5;
+  if(has_opt(argv, arge, "-r"))
+    repeat = stoi(get_opt(argv, arge, "-r"));
+
+// JoinMethod2Native::join(join_config& conf,  paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr
+
+  join_config conf;
+  conf.top_k = 4;
+  conf.iterations = 10;
+  conf.nthreads = 1;
+
   // PATH 4
   // CASE 1537
   // CTRL 1537
@@ -56,18 +68,18 @@ int main(int argc, char* argv[]) {
   ifstream fdata(file);
 
   getline(fdata, line);
-  int path_length = stoi(line.substr(5));
+  conf.path_length = stoi(line.substr(5));
   getline(fdata, line);
-  int num_cases = stoi(line.substr(5));
+  conf.num_cases = stoi(line.substr(5));
   getline(fdata, line);
-  int num_controls = stoi(line.substr(5));
+  conf.num_controls = stoi(line.substr(5));
   getline(fdata, line);
   uint64_t total_paths = stoul(line.substr(5));
 
   printf("\nheader:\n\n");
-  printf("   path_length : %d\n", path_length);
-  printf("     num_cases : %d\n", num_cases);
-  printf("  num_controls : %d\n", num_controls);
+  printf("   path_length : %d\n", conf.path_length);
+  printf("     num_cases : %d\n", conf.num_cases);
+  printf("  num_controls : %d\n", conf.num_controls);
   printf("   total_paths : %lu\n", total_paths);
   printf("\n");
 
@@ -133,6 +145,7 @@ int main(int argc, char* argv[]) {
     cases.back().push_back(stoi(val));
   }
   cout << cases.size() << endl;
+  conf.iterations = cases.size();
 
   vec2d_u64 paths0pos;
   read_vec(fdata, paths0pos);
@@ -146,8 +159,32 @@ int main(int argc, char* argv[]) {
   vec2d_u64 paths1neg;
   read_vec(fdata, paths1neg);
 
-  getline(fdata, line);
-  cout << line << endl;
+  JoinMethod2Native method;
 
+  paths_type* paths0 = method.createPathSet(paths0pos, paths0neg, conf.num_cases, conf.num_controls);
+  paths_type* paths1 = method.createPathSet(paths1pos, paths1neg, conf.num_cases, conf.num_controls);
+
+  joined_res tres;
+  joined_res& res = tres;
+
+  printf("\n");
+  for(int r = 0; r < repeat; r++){
+    clock_t time = clock();
+    res = method.join(conf, uids, signs, value_table, cases, paths0, paths1, NULL, total_paths);
+    time = clock() - time;
+    printf("[%d] time: %d (%f ms)\n", r, time, time / (double) CLOCKS_PER_SEC * 1000);
+  }
+  printf("\n");
+
+  printf("\n################################\n");
+  printf("  length: %d  paths: %lu  width: %d  iter: %d  thread: %d\n", conf.path_length, total_paths, 0, conf.iterations, conf.nthreads);
+  printf("  results: %d |", res.scores.size());
+  for(int k = 0; k < res.scores.size(); k++){
+    Score s = res.scores[k];
+    printf(" %f[%d:%d]", s.score, s.src, s.trg);
+  }
+  printf("\n");
+  printf("################################\n\n");
+  
   printf("done\n");
 }

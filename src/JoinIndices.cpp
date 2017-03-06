@@ -156,6 +156,12 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
 
   joined_res res = method.join(conf, uids, join_gene_signs, value_table, cases, paths0, paths1, paths_res, total_paths);
 
+  printf("results: %d\n", res.scores.size());
+  for(int k = 0; k < res.scores.size(); k++){
+    Score s = res.scores[k];
+    printf("  [%d:%d] %f\n", s.src, s.trg, s.score);
+  }
+
   NumericVector permuted_scores(res.permuted_scores.size());
   for(int k = 0; k < res.permuted_scores.size(); k++)
     permuted_scores[k] = res.permuted_scores[k];

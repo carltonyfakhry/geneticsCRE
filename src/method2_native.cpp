@@ -81,6 +81,19 @@ paths_type* JoinMethod2Native::createPathSet(vec2d_i& data, int num_cases, int n
   return paths;
 }
 
+// create directly from bitset vectors
+paths_type* JoinMethod2Native::createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const {
+
+  int vlen = vector_width_ul(num_cases + num_controls);
+  printf("len: %d, %d %d\n", vlen, pos.front().size(), neg.front().size());
+
+  // allocate on heap
+  paths_vect* paths = new paths_vect;
+  paths->pos = pos;
+  paths->neg = neg;
+  return paths;
+}
+
 joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr, uint64_t total_paths) const {
 
   int vlen = vector_width_ul(conf.num_cases + conf.num_controls);
@@ -102,7 +115,7 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
     pathsr->resize(total_paths, paths1->width_ul, conf.num_cases);
 
   // dump out test data to run outside of rcpp
-  if(conf.path_length > 1) {
+  if(conf.path_length == 0) {
     string fname = "/data/gcre/ser_len" + to_string(conf.path_length);
     FILE* fp = std::fopen(fname.c_str(), "w");
     if(!fp) {
