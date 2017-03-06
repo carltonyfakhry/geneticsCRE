@@ -102,9 +102,9 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
     pathsr->resize(total_paths, paths1->width_ul, conf.num_cases);
 
   // dump out test data to run outside of rcpp
-  if(conf.path_length == 0) {
-
-    FILE* fp = std::fopen("/data/gcre/ser_len5", "w");
+  if(conf.path_length > 1) {
+    string fname = "/data/gcre/ser_len" + to_string(conf.path_length);
+    FILE* fp = std::fopen(fname.c_str(), "w");
     if(!fp) {
       std::perror("File opening failed");
       exit(EXIT_FAILURE);
@@ -127,42 +127,42 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
       std::fprintf(fp, " %d", join_gene_signs[k]);
     std::fprintf(fp, "\n");
 
-    std::fprintf(fp, "VALS");
+    std::fprintf(fp, "VALS:%d", value_table[0].size());
     for(int k = 0; k < value_table.size(); k++){
       for(int i = 0; i < value_table[k].size(); i++)
         std::fprintf(fp, " %f", value_table[k][i]);
     }
     std::fprintf(fp, "\n");
 
-    std::fprintf(fp, "MASK");
+    std::fprintf(fp, "MASK:%d", cases[0].size());
     for(int k = 0; k < cases.size(); k++){
       for(int i = 0; i < cases[k].size(); i++)
         std::fprintf(fp, " %d", cases[k][i]);
     }
     std::fprintf(fp, "\n");
 
-    std::fprintf(fp, "PT0P");
+    std::fprintf(fp, "PT0P:%d", paths0->width_ul);
     for(int k = 0; k < paths0->pos.size(); k++){
       for(int i = 0; i < paths0->pos[k].size(); i++)
         std::fprintf(fp, " %lu", paths0->pos[k][i]);
     }
     std::fprintf(fp, "\n");
 
-    std::fprintf(fp, "PT0N");
+    std::fprintf(fp, "PT0N:%d", paths0->width_ul);
     for(int k = 0; k < paths0->neg.size(); k++){
       for(int i = 0; i < paths0->neg[k].size(); i++)
         std::fprintf(fp, " %lu", paths0->neg[k][i]);
     }
     std::fprintf(fp, "\n");
 
-    std::fprintf(fp, "PT1P");
+    std::fprintf(fp, "PT1P:%d", paths1->width_ul);
     for(int k = 0; k < paths1->pos.size(); k++){
       for(int i = 0; i < paths1->pos[k].size(); i++)
         std::fprintf(fp, " %lu", paths1->pos[k][i]);
     }
     std::fprintf(fp, "\n");
 
-    std::fprintf(fp, "PT1N");
+    std::fprintf(fp, "PT1N:%d", paths1->width_ul);
     for(int k = 0; k < paths1->neg.size(); k++){
       for(int i = 0; i < paths1->neg[k].size(); i++)
         std::fprintf(fp, " %lu", paths1->neg[k][i]);
@@ -170,7 +170,6 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
     std::fprintf(fp, "\n");
 
     std::fclose(fp);
-    exit(0);
   }
 
 
