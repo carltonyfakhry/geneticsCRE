@@ -169,6 +169,8 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
       int case_neg = 0;
       int ctrl_pos = 0;
       int ctrl_neg = 0;
+      int total_pos = 0;
+      int total_neg = 0;
 
       uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
 
@@ -185,6 +187,8 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
         true_neg = bit_neg & ~bit_con;
         mask = case_mask[k];
 
+        total_pos += __builtin_popcountl(true_pos);
+        total_neg += __builtin_popcountl(true_neg);
         case_pos += __builtin_popcountl(true_pos &  mask);
         case_neg += __builtin_popcountl(true_neg & ~mask);
         ctrl_pos += __builtin_popcountl(true_neg &  mask);
@@ -227,14 +231,12 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
         int p_ctrl_neg = 0;
 
         for(int k = 0; k < vlen; k++){
-          p_case_pos += __builtin_popcountl(comp_pos[k] &  p_mask[k]);
-          p_case_neg += __builtin_popcountl(comp_neg[k] & ~p_mask[k]);
-          p_ctrl_pos += __builtin_popcountl(comp_neg[k] &  p_mask[k]);
-          p_ctrl_neg += __builtin_popcountl(comp_pos[k] & ~p_mask[k]);
+          p_case_pos += __builtin_popcountl(comp_pos[k] & p_mask[k]);
+          p_ctrl_pos += __builtin_popcountl(comp_neg[k] & p_mask[k]);
         }
 
-        int p_cases = p_case_pos + p_case_neg;
-        int p_ctrls = p_ctrl_pos + p_ctrl_neg;
+        int p_cases = p_case_pos + (total_neg - p_ctrl_pos);
+        int p_ctrls = p_ctrl_pos + (total_pos - p_case_pos);
 
         double p_score = value_table[p_cases][p_ctrls];
         if(p_score > perm_score[r])
