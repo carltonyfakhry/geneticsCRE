@@ -197,13 +197,18 @@ int main(int argc, char* argv[]) {
   printf("\n");
 
   printf("\n################################\n");
-  printf("  length: %d  paths: %lu  width: %d  iter: %d  thread: %d\n", conf.path_length, total_paths, 0, conf.iterations, conf.nthreads);
-  printf("  results: %lu |", res.scores.size());
+  printf("   length : %d  paths: %lu  width: %d  iter: %d  thread: %d\n", conf.path_length, total_paths, 0, conf.iterations, conf.nthreads);
+  printf("  results : %lu |", res.scores.size());
   for(int k = 0; k < res.scores.size(); k++){
     Score s = res.scores[k];
     printf(" %f[%d:%d]", s.score, s.src, s.trg);
   }
   printf("\n");
+  printf("    perms :");
+  for(auto ps : res.permuted_scores)
+    printf(" %0.2f", ps);
+  printf("\n");
+
   printf("################################\n\n");
   
   printf("done\n");

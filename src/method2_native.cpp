@@ -116,7 +116,6 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
       permute_mask[k * vlen + m] = ZERO_UL;
     for(auto i : permute_cases[k])
       set_bit(permute_mask + k * vlen, (int) i);
-    printf("\n");
   }
 
   // priority queue for the indices of the top K paths in the data
@@ -132,6 +131,13 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
   int total_srcs = 0;
   int path_idx = 0;
 
+  double perm_score[conf.iterations];
+  double perm_flips[conf.iterations];
+  for(int k = 0; k < conf.iterations; k++){
+    perm_score[k] = 0;
+    perm_flips[k] = 0;
+  }
+
   uint64_t joined_pos[vlen];
   uint64_t joined_neg[vlen];
   uint64_t joined_tp[vlen];
@@ -139,13 +145,7 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
 
   for(int i = 0; i < uids.size(); i++){
 
-    // Check if source node has changed
     uid_ref& uid = uids[i];
-    if(uid.src != prev_src){
-      prev_src = uid.src;
-      total_srcs++;
-    }
-
     if(uid.count == 0)
       continue;
 
@@ -165,30 +165,36 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
       uint64_t* path_pos1 = (sign == 1 ? paths1->pos : paths1->neg) + j * vlen;
       uint64_t* path_neg1 = (sign == 1 ? paths1->neg : paths1->pos) + j * vlen;
 
-      int cpos = 0;
-      int cneg = 0;
-      int tpos = 0;
-      int tneg = 0;
+      int case_pos = 0;
+      int case_neg = 0;
+      int ctrl_pos = 0;
+      int ctrl_neg = 0;
 
-      uint64_t p, n, tp, tn, c, m;
+      uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
+
+      uint64_t comp_pos[vlen];
+      uint64_t comp_neg[vlen];
 
       for(int k = 0; k < vlen; k++){
 
-        p = path_pos0[k] | path_pos1[k];
-        n = path_neg0[k] | path_neg1[k];
+        bit_pos = path_pos0[k] | path_pos1[k];
+        bit_neg = path_neg0[k] | path_neg1[k];
 
-        c = p & n;
-        tp = p & ~c;
-        tn = n & ~c;
-        m = case_mask[k];
+        bit_con = bit_pos & bit_neg;
+        true_pos = bit_pos & ~bit_con;
+        true_neg = bit_neg & ~bit_con;
+        mask = case_mask[k];
 
-        cpos += __builtin_popcountl(tp & m);
-        cneg += __builtin_popcountl(tn & ~m);
-        tpos += __builtin_popcountl(tn & m);
-        tneg += __builtin_popcountl(tp & ~m);
+        case_pos += __builtin_popcountl(true_pos &  mask);
+        case_neg += __builtin_popcountl(true_neg & ~mask);
+        ctrl_pos += __builtin_popcountl(true_neg &  mask);
+        ctrl_neg += __builtin_popcountl(true_pos & ~mask);
 
-        joined_pos[k] = p;
-        joined_neg[k] = n;
+        joined_pos[k] = bit_pos;
+        joined_neg[k] = bit_neg;
+
+        comp_pos[k] = true_pos;
+        comp_neg[k] = true_neg;
 
       }
 
@@ -199,59 +205,60 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
 
       path_idx += 1;
 
-      int cases = cpos + cneg;
-      int controls = tpos + tneg;
+      int cases = case_pos + case_neg;
+      int ctrls = ctrl_pos + ctrl_neg;
 
-      double score = value_table[cases][controls];
-      double flipped_score = value_table[controls][cases];
+      double score = value_table[cases][ctrls];
+      double flips = value_table[ctrls][cases];
 
-      if(score > scores.top().score){
+      if(score > scores.top().score)
         scores.push(Score(score, i, j));
-        if(scores.size() > conf.top_k)
-          scores.pop();
+      if(flips > scores.top().score)
+        scores.push(Score(flips, i, j + flipped_pivot_length));
+      while(scores.size() > conf.top_k)
+        scores.pop();
+
+      for(int r = 0; r < conf.iterations; r++){
+
+        uint64_t* p_mask = permute_mask + r * vlen;
+        int p_case_pos = 0;
+        int p_ctrl_pos = 0;
+        int p_case_neg = 0;
+        int p_ctrl_neg = 0;
+
+        for(int k = 0; k < vlen; k++){
+          p_case_pos += __builtin_popcountl(comp_pos[k] &  p_mask[k]);
+          p_case_neg += __builtin_popcountl(comp_neg[k] & ~p_mask[k]);
+          p_ctrl_pos += __builtin_popcountl(comp_neg[k] &  p_mask[k]);
+          p_ctrl_neg += __builtin_popcountl(comp_pos[k] & ~p_mask[k]);
+        }
+
+        int p_cases = p_case_pos + p_case_neg;
+        int p_ctrls = p_ctrl_pos + p_ctrl_neg;
+
+        double p_score = value_table[p_cases][p_ctrls];
+        if(p_score > perm_score[r])
+          perm_score[r] = p_score;
+        double p_flips = value_table[p_ctrls][p_cases];
+        if(p_flips > perm_flips[r])
+          perm_flips[r] = p_flips;
       }
-      if(flipped_score > scores.top().score){
-        scores.push(Score(flipped_score, i, j + flipped_pivot_length));
-        if(scores.size() > conf.top_k)
-          scores.pop();
-      }
 
-    //   for(int m = 0; m < conf.iterations; m++){
+      if(score > scores.top().score)
+        scores.push(Score(score, i, j));
+      if(flips > scores.top().score)
+        scores.push(Score(flips, i, j + flipped_pivot_length));
+      while(scores.size() > conf.top_k)
+        scores.pop();
 
-    //     double perm_score = 0;
-    //     double perm_flipped_score = 0;
-
-    //     vec_u64& caseorcontrol = case_mask[m];
-    //     int cases_pos_m = 0;
-    //     int controls_pos_m = 0;
-    //     int cases_neg_m = 0;
-    //     int controls_neg_m = 0;
-
-    //     for(int k = 0; k < vlenc; k++){
-    //       uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-    //       cases_pos_m += __builtin_popcountll(permuted_path_k);
-    //       permuted_path_k = joined_neg[k] & caseorcontrol[k];
-    //       controls_neg_m += __builtin_popcountll(permuted_path_k);
-    //     }
-    //     for(int k = vlenc; k < vlenc + vlent; k++){
-    //       uint64_t permuted_path_k = joined_pos[k] & caseorcontrol[k];
-    //       controls_pos_m += __builtin_popcountll(permuted_path_k);
-    //       permuted_path_k = joined_neg[k] & caseorcontrol[k];
-    //       cases_neg_m += __builtin_popcountll(permuted_path_k);
-    //     }
-
-    //     int new_cases = cases_pos_m + cases_neg_m + (controls_pos - controls_pos_m) + (controls_neg - controls_neg_m);
-    //     int new_controls = controls_pos_m + controls_neg_m + (cases_pos - cases_pos_m) + (cases_neg - cases_neg_m);
-
-    //     perm_score = value_table[new_cases][new_controls];
-    //     perm_flipped_score = value_table[new_controls][new_cases];
-    //   }
     }
 
   }
 
   joined_res res;
   res.permuted_scores.resize(conf.iterations, 0);
+  for(int k = 0; k < conf.iterations; k++)
+    res.permuted_scores[k] = max(perm_score[k], perm_flips[k]);
   res.scores.clear();
   while(!scores.empty()){
     res.scores.push_back(scores.top());
