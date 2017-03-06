@@ -1,6 +1,9 @@
-#include <time.h>
 #include <typeinfo>
 #include <sstream>
+#include <cstdlib>
+#include <ctime>
+#include <set>
+#include <time.h>
 #include "gcre.h"
 
 using namespace std;
@@ -46,16 +49,23 @@ int main(int argc, char* argv[]) {
   }
   cout << "using data file: " << file << endl;
 
-  int repeat = 5;
-  if(has_opt(argv, arge, "-r"))
-    repeat = stoi(get_opt(argv, arge, "-r"));
-
-// JoinMethod2Native::join(join_config& conf,  paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr
-
   join_config conf;
   conf.top_k = 4;
   conf.iterations = 10;
   conf.nthreads = 1;
+
+  if(has_opt(argv, arge, "-k"))
+    conf.top_k = stoi(get_opt(argv, arge, "-k"));
+
+  if(has_opt(argv, arge, "-p"))
+    conf.iterations = stoi(get_opt(argv, arge, "-p"));
+
+  if(has_opt(argv, arge, "-t"))
+    conf.nthreads = stoi(get_opt(argv, arge, "-t"));
+
+  int repeat = 5;
+  if(has_opt(argv, arge, "-r"))
+    repeat = stoi(get_opt(argv, arge, "-r"));
 
   // PATH 4
   // CASE 1537
@@ -131,7 +141,6 @@ int main(int argc, char* argv[]) {
   }
   cout << value_table.size() << endl;
 
-  vec2d_i cases;
   getline(fdata, line, ':');
   cout << line << ": ";
   getline(fdata, line, ' ');
@@ -139,13 +148,10 @@ int main(int argc, char* argv[]) {
   getline(fdata, line);
   buf.str(line);
   buf.clear();
+  // don't need to read the permuted case mask
   while (getline(buf, val, ' ')) {
-    if(cases.size() == 0 || cases.back().size() == width)
-      cases.push_back(vector<int>());
-    cases.back().push_back(stoi(val));
   }
-  cout << cases.size() << endl;
-  conf.iterations = cases.size();
+  cout << endl;
 
   vec2d_u64 paths0pos;
   read_vec(fdata, paths0pos);
@@ -167,18 +173,32 @@ int main(int argc, char* argv[]) {
   joined_res tres;
   joined_res& res = tres;
 
+  printf("generating simplified case masks for permutation (it = %d)\n", conf.iterations);
+  srand((unsigned) time(0));
+
+  vec2d_u16 permute_cases;
+  for(int k = 0; k < conf.iterations; k++){
+    set<int> cases;
+    permute_cases.push_back(vector<uint16_t>());
+    while(cases.size() < conf.num_cases)
+      cases.insert(rand() % (conf.num_cases + conf.num_controls));
+    for(auto c : cases)
+      permute_cases.back().push_back(c);
+  }
+  printf("permuted_cases: %lu (%lu)\n", permute_cases.size(), permute_cases.back().size());
+
   printf("\n");
   for(int r = 0; r < repeat; r++){
     clock_t time = clock();
-    res = method.join(conf, uids, signs, value_table, cases, paths0, paths1, NULL, total_paths);
+    res = method.join(conf, uids, signs, value_table, permute_cases, paths0, paths1, NULL, total_paths);
     time = clock() - time;
-    printf("[%d] time: %d (%f ms)\n", r, time, time / (double) CLOCKS_PER_SEC * 1000);
+    printf("[%d] time: %lu (%f ms)\n", r, time, time / (double) CLOCKS_PER_SEC * 1000);
   }
   printf("\n");
 
   printf("\n################################\n");
   printf("  length: %d  paths: %lu  width: %d  iter: %d  thread: %d\n", conf.path_length, total_paths, 0, conf.iterations, conf.nthreads);
-  printf("  results: %d |", res.scores.size());
+  printf("  results: %lu |", res.scores.size());
   for(int k = 0; k < res.scores.size(); k++){
     Score s = res.scores[k];
     printf(" %f[%d:%d]", s.score, s.src, s.trg);

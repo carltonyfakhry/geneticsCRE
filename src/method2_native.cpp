@@ -7,6 +7,10 @@ static int vector_width_ul(int count) {
   return 2 * (int) ceil(count / 128.0);
 }
 
+static inline void set_bit(uint64_t* vec, int idx){
+  vec[idx/64] |= ONE_UL << idx % 64;      
+}
+
 struct paths_block : paths_base {
   uint64_t* pos = NULL;
   uint64_t* neg = NULL;
@@ -73,7 +77,7 @@ paths_type* JoinMethod2Native::createPathSet(vec2d_u64& pos, vec2d_u64& neg, int
   return paths;
 }
 
-joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases,
+joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases,
   paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr, uint64_t total_paths) const {
 
   int vlen = vector_width_ul(conf.num_cases + conf.num_controls);
@@ -97,9 +101,23 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
   // vec2d_u64 case_mask = create_case_mask(cases, conf.num_cases, conf.num_controls);
 
   // TODO temp
-  vec_u64 case_mask(vlen, 0);
+  // no clean way to init dynamic allocation
+  uint64_t case_mask[vlen];
+  for(int k = 0; k < vlen; k++)
+    case_mask[k] = ZERO_UL;
+
   for(int k = 0; k < conf.num_cases; k++)
     case_mask[k/64] |= ONE_UL << k % 64;
+
+  // TODO too big for the stack?
+  uint64_t permute_mask[conf.iterations * vlen];
+  for(int k = 0; k < permute_cases.size(); k++){
+    for(int m = 0; m < vlen; m++)
+      permute_mask[k * vlen + m] = ZERO_UL;
+    for(auto i : permute_cases[k])
+      set_bit(permute_mask + k * vlen, (int) i);
+    printf("\n");
+  }
 
   // priority queue for the indices of the top K paths in the data
   // add dummy score to avoid empty check
@@ -158,6 +176,7 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
 
         p = path_pos0[k] | path_pos1[k];
         n = path_neg0[k] | path_neg1[k];
+
         c = p & n;
         tp = p & ~c;
         tn = n & ~c;

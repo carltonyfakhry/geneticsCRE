@@ -24,7 +24,7 @@ void paths_vec::resize(int size, int width_ul, int num_cases) {
   printf("  ** resized and zeroed matrix: %d x %d\n", size, width_ul);
 }
 
-static vec2d_u64 create_case_mask(vec2d_i& cases, int num_cases, int num_controls){
+static vec2d_u64 create_case_mask(vec2d_u16& cases, int num_cases, int num_controls){
 
   int vlenc = vector_width_ul(num_cases);
   int vlent = vector_width_ul(num_controls);
@@ -76,7 +76,7 @@ paths_type* JoinMethod2Vector::createPathSet(vec2d_i& data, int num_cases, int n
   return paths;
 }
 
-joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_i& cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const {
+joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const {
 
   int vlenc = vector_width_ul(conf.num_cases);
   int vlent = vector_width_ul(conf.num_controls);
@@ -105,7 +105,7 @@ joined_res JoinMethod2Vector::join(join_config& conf, vector<uid_ref>& uids, vec
   vec2d_u64 &paths_conflict1 = paths0->con;
   vec2d_u64 &paths_conflict2 = paths1->con;
 
-  vec2d_u64 case_mask = create_case_mask(cases, conf.num_cases, conf.num_controls);
+  vec2d_u64 case_mask = create_case_mask(permute_cases, conf.num_cases, conf.num_controls);
 
   // priority queue for the indices of the top K paths in the data
   // add dummy score to avoid empty check
