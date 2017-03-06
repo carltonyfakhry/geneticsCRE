@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 #include "gcre.h"
 
 // 16 byte aligned
@@ -36,11 +37,11 @@ void paths_block::resize(int size, int width_ul, int num_cases) {
 
   if(pos != NULL)
     delete[] pos;
-  if(pos != NULL)
-    delete[] pos;
+  if(neg != NULL)
+    delete[] neg;
 
-  pos = new uint64_t[size * width_ul];
-  neg = new uint64_t[size * width_ul];
+  pos = new uint64_t[size * width_ul]();
+  neg = new uint64_t[size * width_ul]();
 
   printf("  ** resized and zeroed array: %d x %d\n", size, width_ul);
 }
@@ -59,13 +60,13 @@ paths_type* JoinMethod2Native::createPathSet(vec2d_i& data, int num_cases, int n
   int vlen = vector_width_ul(num_cases + num_controls);
 
   // allocate on heap
-  paths_vect* paths = new paths_vect;
+  paths_block* paths = new paths_block;
   paths->resize(data.size(), vlen, num_cases);
 
   for(int r = 0; r < data.size(); r++) {
     for(int c = 0; c < data[r].size(); c++) {
       if(data[r][c] != 0) {
-        paths->pos[r][c/64] |= ONE_UL << c % 64;
+        paths->pos[r * vlen + c/64] |= ONE_UL << c % 64;
       }
     }
   }
@@ -164,34 +165,39 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
       uint64_t* path_pos1 = (sign == 1 ? paths1->pos : paths1->neg) + j * vlen;
       uint64_t* path_neg1 = (sign == 1 ? paths1->neg : paths1->pos) + j * vlen;
 
-      for(int k = 0; k < vlen; k++){
-        joined_pos[k] = path_pos0[k] | path_pos1[k];
-        joined_neg[k] = path_neg0[k] | path_neg1[k];
-      }
-
-      // if(keep_paths){
-      //   pathsr->pos[path_idx] = joined_pos;
-      //   pathsr->neg[path_idx] = joined_neg;
-      // }
-
-      path_idx += 1;
-
-      for(int k = 0; k < vlen; k++) {
-        joined_tp[k] = joined_pos[k] & ~(joined_pos[k] & joined_neg[k]);
-        joined_tn[k] = joined_neg[k] & ~(joined_pos[k] & joined_neg[k]);
-      }
-
       int cpos = 0;
       int cneg = 0;
       int tpos = 0;
       int tneg = 0;
 
-      for(int k = 0; k < vlen; k++) {
-        cpos += __builtin_popcountl(joined_tp[k] & case_mask[k]);
-        cneg += __builtin_popcountl(joined_tn[k] & ~case_mask[k]);
-        tpos += __builtin_popcountl(joined_tn[k] & case_mask[k]);
-        tneg += __builtin_popcountl(joined_tp[k] & ~case_mask[k]);
+      uint64_t p, n, tp, tn, c, m;
+
+      for(int k = 0; k < vlen; k++){
+
+        p = path_pos0[k] | path_pos1[k];
+        n = path_neg0[k] | path_neg1[k];
+        c = p & n;
+        tp = p & ~c;
+        tn = n & ~c;
+        m = case_mask[k];
+
+        cpos += __builtin_popcountl(tp & m);
+        cneg += __builtin_popcountl(tn & ~m);
+        tpos += __builtin_popcountl(tn & m);
+        tneg += __builtin_popcountl(tp & ~m);
+
+        joined_pos[k] = p;
+        joined_neg[k] = n;
+
       }
+
+      if(keep_paths){
+        memcpy(pathsr->pos + path_idx * vlen, joined_pos, vlen * sizeof(uint64_t));
+        memcpy(pathsr->neg + path_idx * vlen, joined_neg, vlen * sizeof(uint64_t));
+      }
+
+      path_idx += 1;
+
       int cases = cpos + cneg;
       int controls = tpos + tneg;
 

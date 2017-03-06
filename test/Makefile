@@ -1,9 +1,9 @@
 CC=gcc
 CXX=g++
 RM=rm -f
-CXX1XFLAGS=-std=c++11 -g -O2 -march=native -mpopcnt -I../src
+CXX1XFLAGS=-std=c++11 -g -O3 -march=native -mpopcnt -I../src
 CXXFLAGS=$(CXX1XFLAGS)
-LDFLAGS=-g,-Wl,-O2,--sort-common,--as-needed,-z,relro
+LDFLAGS=-g,-Wl,-O3,--sort-common,--as-needed,-z,relro
 LDLIBS=
 
 SRCS=harness.cpp $(wildcard ../src/method*.cpp)
