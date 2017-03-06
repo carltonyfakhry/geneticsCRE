@@ -1,13 +1,18 @@
 CC=clang
 CXX=clang++
-RM=rm -f
-CXX1XFLAGS=-std=c++11 -g -O3 -march=native -mno-avx -mno-avx2 -mpopcnt -I../src -Rpass=loop-vectorize
-CXXFLAGS=$(CXX1XFLAGS)
-# LDFLAGS=-g,-Wl,-O3,--sort-common,--as-needed,-z,relro
+CXX1XFLAGS=-I../src -std=c++11 -g -O3 -march=native -mno-avx -mno-avx2 -mpopcnt -Rpass=loop-vectorize
 LDFLAGS=-g -Wl -O3
+
+# CC=gcc
+# CXX=g++
+# CXX1XFLAGS=-I../src -std=c++11 -g -O3 -march=native -mpopcnt
+# LDFLAGS=-g -Wall -O3
+
+CXXFLAGS=$(CXX1XFLAGS)
+RM=rm -f
 LDLIBS=
 
-# -Rpass=loop-vectorize -Rpass-missed=loop-vectorize 
+# -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 
 SRCS=harness.cpp $(wildcard ../src/method*.cpp)
 OBJS=$(subst .cpp,.o,$(SRCS))

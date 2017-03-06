@@ -35,6 +35,16 @@ vec2d_i copy_rmatrix(IntegerMatrix& matrix) {
   return table;
 }
 
+vec2d_u16 copy_rmatrix_u16(IntegerMatrix& matrix) {
+  vec2d_u16 table(matrix.nrow(), vector<uint16_t>(matrix.ncol()));
+  for(int r = 0; r < matrix.nrow(); r += 1){
+    for(int c = 0; c < matrix.ncol(); c += 1)
+      table[r][c] = matrix(r,c);
+  }
+  printf("copied value matrix: %d x %d\n", matrix.nrow(), matrix.ncol());
+  return table;
+}
+
 JoinMethod& create_method(string name) {
   if(name == "method2") {
     static JoinMethod2Native method;
@@ -114,7 +124,7 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
     stop("uid size mismatch");
 
   // convert some common datatypes
-  vec2d_i cases = copy_rmatrix(r_cases);
+  vec2d_u16 cases = copy_rmatrix_u16(r_cases);
   vec2d_d value_table = copy_rmatrix(r_value_table);
   vector<int> join_gene_signs = copy_rvector(r_join_gene_signs);
 
