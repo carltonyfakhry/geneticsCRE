@@ -13,14 +13,9 @@ struct paths_vect : paths_base {
 };
 
 struct paths_block : paths_base {
-  struct path {
-    uint64_t hash = 0;
-    short lengh = 0;
-    short* index = NULL;
-    uint64_t* pos;
-    uint64_t* neg;
-    uint64_t* con;
-  };
+  uint64_t* pos = NULL;
+  uint64_t* neg = NULL;
+  void resize(int size, int width_ul, int num_cases);
 };
 
 void paths_vect::resize(int size, int width_ul, int num_cases) {
@@ -34,26 +29,21 @@ void paths_vect::resize(int size, int width_ul, int num_cases) {
   printf("  ** resized and zeroed matrix: %d x %d\n", size, width_ul);
 }
 
-// static vec2d_u64 create_case_mask(vec2d_i& cases, int num_cases, int num_controls){
+void paths_block::resize(int size, int width_ul, int num_cases) {
+  paths_block::size = size;
+  paths_block::width_ul = width_ul;
+  paths_block::num_cases = num_cases;
 
-//   int vlen = vector_width_ul(num_cases + num_controls);
+  if(pos != NULL)
+    delete[] pos;
+  if(pos != NULL)
+    delete[] pos;
 
-//   vec2d_u64 mask(cases.size(), vec_u64(vlen, 0));
-//   for(int i = 0; i < cases.size(); i++){
-//     for(int j = 0; j < num_cases; j++){
-//       int index = j / 64;
-//       if(cases[i][j] == 1)
-//         mask[i][index] |= ONE_UL << j % 64;
-//     }
-//     for(int j = num_cases; j < num_cases + num_controls; j++){
-//       int index = vlenc + (j-num_cases) / 64;
-//       if(cases[i][j] == 1)
-//         mask[i][index] |= ONE_UL << (j-num_cases) % 64;
-//     }
-//   }
+  pos = new uint64_t[size * width_ul];
+  neg = new uint64_t[size * width_ul];
 
-//   return mask;
-// }
+  printf("  ** resized and zeroed array: %d x %d\n", size, width_ul);
+}
 
 paths_type* JoinMethod2Native::createPathSet() const {
   paths_vect* paths = new paths_vect;
@@ -113,78 +103,6 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
 
   if(keep_paths)
     pathsr->resize(total_paths, paths1->width_ul, conf.num_cases);
-
-  // dump out test data to run outside of rcpp
-  if(conf.path_length == 0) {
-    string fname = "/data/gcre/ser_len" + to_string(conf.path_length);
-    FILE* fp = std::fopen(fname.c_str(), "w");
-    if(!fp) {
-      std::perror("File opening failed");
-      exit(EXIT_FAILURE);
-    }
-
-    std::fprintf(fp, "PATH %d\n", conf.path_length);
-    std::fprintf(fp, "CASE %d\n", conf.num_cases);
-    std::fprintf(fp, "CTRL %d\n", conf.num_controls);
-    std::fprintf(fp, "TOTL %d\n", total_paths);
-
-    std::fprintf(fp, "UIDS");
-    for(int k = 0; k < uids.size(); k++){
-      uid_ref& u = uids[k];
-      std::fprintf(fp, " %d:%d:%d:%d", u.src, u.trg, u.count, u.location);
-    }
-    std::fprintf(fp, "\n");
-
-    std::fprintf(fp, "SIGN");
-    for(int k = 0; k < join_gene_signs.size(); k++)
-      std::fprintf(fp, " %d", join_gene_signs[k]);
-    std::fprintf(fp, "\n");
-
-    std::fprintf(fp, "VALS:%d", value_table[0].size());
-    for(int k = 0; k < value_table.size(); k++){
-      for(int i = 0; i < value_table[k].size(); i++)
-        std::fprintf(fp, " %f", value_table[k][i]);
-    }
-    std::fprintf(fp, "\n");
-
-    std::fprintf(fp, "MASK:%d", cases[0].size());
-    for(int k = 0; k < cases.size(); k++){
-      for(int i = 0; i < cases[k].size(); i++)
-        std::fprintf(fp, " %d", cases[k][i]);
-    }
-    std::fprintf(fp, "\n");
-
-    std::fprintf(fp, "PT0P:%d", paths0->width_ul);
-    for(int k = 0; k < paths0->pos.size(); k++){
-      for(int i = 0; i < paths0->pos[k].size(); i++)
-        std::fprintf(fp, " %lu", paths0->pos[k][i]);
-    }
-    std::fprintf(fp, "\n");
-
-    std::fprintf(fp, "PT0N:%d", paths0->width_ul);
-    for(int k = 0; k < paths0->neg.size(); k++){
-      for(int i = 0; i < paths0->neg[k].size(); i++)
-        std::fprintf(fp, " %lu", paths0->neg[k][i]);
-    }
-    std::fprintf(fp, "\n");
-
-    std::fprintf(fp, "PT1P:%d", paths1->width_ul);
-    for(int k = 0; k < paths1->pos.size(); k++){
-      for(int i = 0; i < paths1->pos[k].size(); i++)
-        std::fprintf(fp, " %lu", paths1->pos[k][i]);
-    }
-    std::fprintf(fp, "\n");
-
-    std::fprintf(fp, "PT1N:%d", paths1->width_ul);
-    for(int k = 0; k < paths1->neg.size(); k++){
-      for(int i = 0; i < paths1->neg[k].size(); i++)
-        std::fprintf(fp, " %lu", paths1->neg[k][i]);
-    }
-    std::fprintf(fp, "\n");
-
-    std::fclose(fp);
-  }
-
 
   // vec2d_u64 case_mask = create_case_mask(cases, conf.num_cases, conf.num_controls);
 
