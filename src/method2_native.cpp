@@ -211,12 +211,18 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
           joined_pos[k] = bit_pos;
           joined_neg[k] = bit_neg;
 
-          for(int r = 0; r < conf.iterations; r++){
-            uint64_t* p_mask = permute_mask + r * vlen;
-            if(true_pos != 0)
-              p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
-            if(true_neg != 0)
-              p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
+          if(true_pos != 0){
+            uint64_t* p_mask = permute_mask + k * vlen;
+            for(int r = 0; r < conf.iterations; r++){
+              p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[r]);
+            }
+          }
+
+          if(true_neg != 0){
+            uint64_t* p_mask = permute_mask + k * vlen;
+            for(int r = 0; r < conf.iterations; r++){
+              p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[r]);
+            }
           }
 
         }
