@@ -227,53 +227,51 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
 
         }
 
-      }
+        if(keep_paths){
+          memcpy(pathsr->pos + path_idx * vlen, joined_pos, vlen * sizeof(uint64_t));
+          memcpy(pathsr->neg + path_idx * vlen, joined_neg, vlen * sizeof(uint64_t));
+        }
 
-      if(keep_paths){
-        memcpy(pathsr->pos + path_idx * vlen, joined_pos, vlen * sizeof(uint64_t));
-        memcpy(pathsr->neg + path_idx * vlen, joined_neg, vlen * sizeof(uint64_t));
-      }
+        path_idx += 1;
 
-      path_idx += 1;
+        int cases = case_pos + case_neg;
+        int ctrls = ctrl_pos + ctrl_neg;
 
-      int cases = case_pos + case_neg;
-      int ctrls = ctrl_pos + ctrl_neg;
+        double score = value_table[cases][ctrls];
+        double flips = value_table[ctrls][cases];
 
-      double score = value_table[cases][ctrls];
-      double flips = value_table[ctrls][cases];
+        if(score > scores.top().score)
+          scores.push(Score(score, i, j));
+        if(flips > scores.top().score)
+          scores.push(Score(flips, i, j + flipped_pivot_length));
+        while(scores.size() > conf.top_k)
+          scores.pop();
 
-      if(score > scores.top().score)
-        scores.push(Score(score, i, j));
-      if(flips > scores.top().score)
-        scores.push(Score(flips, i, j + flipped_pivot_length));
-      while(scores.size() > conf.top_k)
-        scores.pop();
+        for(int r = 0; r < conf.iterations; r++){
+          int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
+          int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
 
-      for(int r = 0; r < conf.iterations; r++){
-        int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
-        int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
+          double p_score = value_table[p_cases][p_ctrls];
+          if(p_score > perm_score[r])
+            perm_score[r] = p_score;
+          double p_flips = value_table[p_ctrls][p_cases];
+          if(p_flips > perm_flips[r])
+            perm_flips[r] = p_flips;
+        }
 
-        double p_score = value_table[p_cases][p_ctrls];
-        if(p_score > perm_score[r])
-          perm_score[r] = p_score;
-        double p_flips = value_table[p_ctrls][p_cases];
-        if(p_flips > perm_flips[r])
-          perm_flips[r] = p_flips;
       }
 
     }
 
-  }
+    joined_res res;
+    res.permuted_scores.resize(conf.iterations, 0);
+    for(int k = 0; k < conf.iterations; k++)
+      res.permuted_scores[k] = max(perm_score[k], perm_flips[k]);
+    res.scores.clear();
+    while(!scores.empty()){
+      res.scores.push_back(scores.top());
+      scores.pop();
+    }
 
-  joined_res res;
-  res.permuted_scores.resize(conf.iterations, 0);
-  for(int k = 0; k < conf.iterations; k++)
-    res.permuted_scores[k] = max(perm_score[k], perm_flips[k]);
-  res.scores.clear();
-  while(!scores.empty()){
-    res.scores.push_back(scores.top());
-    scores.pop();
+    return res;
   }
-
-  return res;
-}
