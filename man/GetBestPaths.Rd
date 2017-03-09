@@ -20,9 +20,6 @@ in the patient.}
 
 \item{nControls}{The number of controls (Must be greater than 1).}
 
-\item{path}{The path where the package will write and read from files
-created by the package.}
-
 \item{method}{The method to be invoked. The value 1 calls the unsigned method
 while the value 2 calls the signed method.}
 
@@ -54,6 +51,9 @@ threads that can be created. If \emph{nthreads} is greater
 than the maximum number of threads that can be created, then
 \emph{nthreads} will default back to the maximum number of threads
 that can be created.}
+
+\item{path}{The path where the package will write and read from files
+created by the package.}
 }
 \value{
 This function returns a list with the following items:

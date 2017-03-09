@@ -5,29 +5,42 @@
 
 using namespace Rcpp;
 
-// parsePaths
-void parsePaths(IntegerMatrix data, int nCases, int nControls, std::string file_path);
-RcppExport SEXP geneticsCRE_parsePaths(SEXP dataSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP file_pathSEXP) {
+// ProcessPaths
+List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_CountLoc1, IntegerVector joining_gene_sign1, IntegerVector srcuids1_2, IntegerVector trguids1_2, List uids_CountLoc1_2, IntegerVector joining_gene_sign1_2, IntegerVector srcuids2, IntegerVector trguids2, List uids_CountLoc2, IntegerVector joining_gene_sign2, IntegerVector srcuids3, IntegerVector trguids3, List uids_CountLoc3, IntegerVector joining_gene_sign3, IntegerVector srcuids4, IntegerVector trguids4, List uids_CountLoc4, IntegerVector joining_gene_sign4, IntegerVector srcuids5, IntegerVector trguids5, List uids_CountLoc5, IntegerVector joining_gene_sign5, IntegerVector data_inds1, IntegerVector data_inds1_2, IntegerVector data_inds2, IntegerVector data_inds3, IntegerMatrix data, IntegerMatrix data2, NumericMatrix ValueTable, int nCases, int nControls, int K, int iterations, IntegerMatrix CaseORControl, int method, int pathLength, int nthreads);
+RcppExport SEXP geneticsCRE_ProcessPaths(SEXP srcuids1SEXP, SEXP trguids1SEXP, SEXP uids_CountLoc1SEXP, SEXP joining_gene_sign1SEXP, SEXP srcuids1_2SEXP, SEXP trguids1_2SEXP, SEXP uids_CountLoc1_2SEXP, SEXP joining_gene_sign1_2SEXP, SEXP srcuids2SEXP, SEXP trguids2SEXP, SEXP uids_CountLoc2SEXP, SEXP joining_gene_sign2SEXP, SEXP srcuids3SEXP, SEXP trguids3SEXP, SEXP uids_CountLoc3SEXP, SEXP joining_gene_sign3SEXP, SEXP srcuids4SEXP, SEXP trguids4SEXP, SEXP uids_CountLoc4SEXP, SEXP joining_gene_sign4SEXP, SEXP srcuids5SEXP, SEXP trguids5SEXP, SEXP uids_CountLoc5SEXP, SEXP joining_gene_sign5SEXP, SEXP data_inds1SEXP, SEXP data_inds1_2SEXP, SEXP data_inds2SEXP, SEXP data_inds3SEXP, SEXP dataSEXP, SEXP data2SEXP, SEXP ValueTableSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP CaseORControlSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerVector >::type srcuids1(srcuids1SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type trguids1(trguids1SEXP);
+    Rcpp::traits::input_parameter< List >::type uids_CountLoc1(uids_CountLoc1SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign1(joining_gene_sign1SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type srcuids1_2(srcuids1_2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type trguids1_2(trguids1_2SEXP);
+    Rcpp::traits::input_parameter< List >::type uids_CountLoc1_2(uids_CountLoc1_2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign1_2(joining_gene_sign1_2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type srcuids2(srcuids2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type trguids2(trguids2SEXP);
+    Rcpp::traits::input_parameter< List >::type uids_CountLoc2(uids_CountLoc2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign2(joining_gene_sign2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type srcuids3(srcuids3SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type trguids3(trguids3SEXP);
+    Rcpp::traits::input_parameter< List >::type uids_CountLoc3(uids_CountLoc3SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign3(joining_gene_sign3SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type srcuids4(srcuids4SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type trguids4(trguids4SEXP);
+    Rcpp::traits::input_parameter< List >::type uids_CountLoc4(uids_CountLoc4SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign4(joining_gene_sign4SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type srcuids5(srcuids5SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type trguids5(trguids5SEXP);
+    Rcpp::traits::input_parameter< List >::type uids_CountLoc5(uids_CountLoc5SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign5(joining_gene_sign5SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type data_inds1(data_inds1SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type data_inds1_2(data_inds1_2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type data_inds2(data_inds2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type data_inds3(data_inds3SEXP);
     Rcpp::traits::input_parameter< IntegerMatrix >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< int >::type nCases(nCasesSEXP);
-    Rcpp::traits::input_parameter< int >::type nControls(nControlsSEXP);
-    Rcpp::traits::input_parameter< std::string >::type file_path(file_pathSEXP);
-    parsePaths(data, nCases, nControls, file_path);
-    return R_NilValue;
-END_RCPP
-}
-// JoinIndicesMethod1
-List JoinIndicesMethod1(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLoc, IntegerVector joining_gene_sign, NumericMatrix ValueTable, int nCases, int nControls, int K, int iterations, IntegerMatrix CaseORControl, int method, int pathLength, int nthreads, std::string pos_path1, std::string pos_path2, std::string dest_path_pos);
-RcppExport SEXP geneticsCRE_JoinIndicesMethod1(SEXP srcuidSEXP, SEXP trguids2SEXP, SEXP uids_CountLocSEXP, SEXP joining_gene_signSEXP, SEXP ValueTableSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP CaseORControlSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP, SEXP pos_path1SEXP, SEXP pos_path2SEXP, SEXP dest_path_posSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< IntegerVector >::type srcuid(srcuidSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type trguids2(trguids2SEXP);
-    Rcpp::traits::input_parameter< List >::type uids_CountLoc(uids_CountLocSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign(joining_gene_signSEXP);
+    Rcpp::traits::input_parameter< IntegerMatrix >::type data2(data2SEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type ValueTable(ValueTableSEXP);
     Rcpp::traits::input_parameter< int >::type nCases(nCasesSEXP);
     Rcpp::traits::input_parameter< int >::type nControls(nControlsSEXP);
@@ -37,42 +50,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type method(methodSEXP);
     Rcpp::traits::input_parameter< int >::type pathLength(pathLengthSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< std::string >::type pos_path1(pos_path1SEXP);
-    Rcpp::traits::input_parameter< std::string >::type pos_path2(pos_path2SEXP);
-    Rcpp::traits::input_parameter< std::string >::type dest_path_pos(dest_path_posSEXP);
-    rcpp_result_gen = Rcpp::wrap(JoinIndicesMethod1(srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, pos_path2, dest_path_pos));
-    return rcpp_result_gen;
-END_RCPP
-}
-// JoinIndicesMethod2
-List JoinIndicesMethod2(IntegerVector srcuid, IntegerVector trguids2, List uids_CountLoc, IntegerVector joining_gene_sign, NumericMatrix ValueTable, int nCases, int nControls, int K, int iterations, IntegerMatrix CaseORControl, int method, int pathLength, int nthreads, std::string pos_path1, std::string neg_path1, std::string conflict_path1, std::string pos_path2, std::string neg_path2, std::string conflict_path2, std::string dest_path_pos, std::string dest_path_neg, std::string dest_path_conflict);
-RcppExport SEXP geneticsCRE_JoinIndicesMethod2(SEXP srcuidSEXP, SEXP trguids2SEXP, SEXP uids_CountLocSEXP, SEXP joining_gene_signSEXP, SEXP ValueTableSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP CaseORControlSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP, SEXP pos_path1SEXP, SEXP neg_path1SEXP, SEXP conflict_path1SEXP, SEXP pos_path2SEXP, SEXP neg_path2SEXP, SEXP conflict_path2SEXP, SEXP dest_path_posSEXP, SEXP dest_path_negSEXP, SEXP dest_path_conflictSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< IntegerVector >::type srcuid(srcuidSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type trguids2(trguids2SEXP);
-    Rcpp::traits::input_parameter< List >::type uids_CountLoc(uids_CountLocSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type joining_gene_sign(joining_gene_signSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type ValueTable(ValueTableSEXP);
-    Rcpp::traits::input_parameter< int >::type nCases(nCasesSEXP);
-    Rcpp::traits::input_parameter< int >::type nControls(nControlsSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
-    Rcpp::traits::input_parameter< int >::type iterations(iterationsSEXP);
-    Rcpp::traits::input_parameter< IntegerMatrix >::type CaseORControl(CaseORControlSEXP);
-    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
-    Rcpp::traits::input_parameter< int >::type pathLength(pathLengthSEXP);
-    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< std::string >::type pos_path1(pos_path1SEXP);
-    Rcpp::traits::input_parameter< std::string >::type neg_path1(neg_path1SEXP);
-    Rcpp::traits::input_parameter< std::string >::type conflict_path1(conflict_path1SEXP);
-    Rcpp::traits::input_parameter< std::string >::type pos_path2(pos_path2SEXP);
-    Rcpp::traits::input_parameter< std::string >::type neg_path2(neg_path2SEXP);
-    Rcpp::traits::input_parameter< std::string >::type conflict_path2(conflict_path2SEXP);
-    Rcpp::traits::input_parameter< std::string >::type dest_path_pos(dest_path_posSEXP);
-    Rcpp::traits::input_parameter< std::string >::type dest_path_neg(dest_path_negSEXP);
-    Rcpp::traits::input_parameter< std::string >::type dest_path_conflict(dest_path_conflictSEXP);
-    rcpp_result_gen = Rcpp::wrap(JoinIndicesMethod2(srcuid, trguids2, uids_CountLoc, joining_gene_sign, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads, pos_path1, neg_path1, conflict_path1, pos_path2, neg_path2, conflict_path2, dest_path_pos, dest_path_neg, dest_path_conflict));
+    rcpp_result_gen = Rcpp::wrap(ProcessPaths(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1, srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2, srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2, srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3, srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4, srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5, data_inds1, data_inds1_2, data_inds2, data_inds3, data, data2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, pathLength, nthreads));
     return rcpp_result_gen;
 END_RCPP
 }
