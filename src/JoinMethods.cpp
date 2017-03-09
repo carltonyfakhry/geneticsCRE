@@ -630,6 +630,7 @@ List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_Coun
 
 
   List lst1_2;
+
   total_paths = getTotalPaths(trguids1_2, uids_CountLoc1_2);
   std::vector<std::vector<uint64_t> > paths_pos1_2 = getZeroMatrix(total_paths, vlen + vlen2);
   std::vector<std::vector<uint64_t> > paths_neg1_2;
@@ -650,59 +651,77 @@ List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_Coun
 
   // Process Paths of length 2
   List lst2;
-  total_paths = getTotalPaths(trguids2, uids_CountLoc2);
-  std::vector<std::vector<uint64_t> > paths_pos2 = getZeroMatrix(total_paths, vlen + vlen2);
+  std::vector<std::vector<uint64_t> > paths_pos2;
   std::vector<std::vector<uint64_t> > paths_neg2;
-  if(method == 2) paths_neg2 = getZeroMatrix(total_paths, vlen + vlen2);
-  paths_data_pos = matchData(parsed_data, data_inds2);
-  if(method == 2) paths_data_neg = getZeroMatrix(data_inds2.size(), vlen + vlen2);
-  int nnodes2 = unique(srcuids2).size();
 
-  std::cout << nnodes2 << " source nodes for paths of length " << 2 << " and their permutations will be processed!" << std::endl;
+  if(pathLength >= 2){
 
-  lst2 = JoinPaths(paths_pos1, paths_neg1, paths_data_pos, paths_data_neg, paths_pos2, paths_neg2,
-                   srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2, ValueTable2,
-                   CaseORControl22, nCases, nControls, K, iterations, method, 2, nthreads);
+    total_paths = getTotalPaths(trguids2, uids_CountLoc2);
+    paths_pos2 = getZeroMatrix(total_paths, vlen + vlen2);
+    if(method == 2) paths_neg2 = getZeroMatrix(total_paths, vlen + vlen2);
+    paths_data_pos = matchData(parsed_data, data_inds2);
+    if(method == 2) paths_data_neg = getZeroMatrix(data_inds2.size(), vlen + vlen2);
+    int nnodes2 = unique(srcuids2).size();
+
+    std::cout << nnodes2 << " source nodes for paths of length " << 2 << " and their permutations will be processed!" << std::endl;
+
+    lst2 = JoinPaths(paths_pos1, paths_neg1, paths_data_pos, paths_data_neg, paths_pos2, paths_neg2,
+                     srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2, ValueTable2,
+                     CaseORControl22, nCases, nControls, K, iterations, method, 2, nthreads);
+  }
 
   // Process Paths of length 3
   List lst3;
-  total_paths = getTotalPaths(trguids3, uids_CountLoc3);
-  std::vector<std::vector<uint64_t> > paths_pos3 = getZeroMatrix(total_paths, vlen + vlen2);
+  std::vector<std::vector<uint64_t> > paths_pos3;
   std::vector<std::vector<uint64_t> > paths_neg3;
-  if(method == 2) paths_neg3 = getZeroMatrix(total_paths, vlen + vlen2);
-  paths_data_pos = matchData(parsed_data, data_inds3);
-  if(method == 2) paths_data_neg = getZeroMatrix(data_inds3.size(), vlen + vlen2);
-  int nnodes3 = unique(srcuids3).size();
 
-  std::cout << nnodes3 << " source nodes for paths of length " << 3 << " and their permutations will be processed!" << std::endl;
+  if(pathLength >= 3){
 
-  lst3 = JoinPaths(paths_pos2, paths_neg2, paths_data_pos, paths_data_neg, paths_pos3, paths_neg3,
-                     srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3, ValueTable2,
-                     CaseORControl22, nCases, nControls, K, iterations, method, 3, nthreads);
+    total_paths = getTotalPaths(trguids3, uids_CountLoc3);
+    paths_pos3 = getZeroMatrix(total_paths, vlen + vlen2);
+    if(method == 2) paths_neg3 = getZeroMatrix(total_paths, vlen + vlen2);
+    paths_data_pos = matchData(parsed_data, data_inds3);
+    if(method == 2) paths_data_neg = getZeroMatrix(data_inds3.size(), vlen + vlen2);
+    int nnodes3 = unique(srcuids3).size();
+
+    std::cout << nnodes3 << " source nodes for paths of length " << 3 << " and their permutations will be processed!" << std::endl;
+
+    lst3 = JoinPaths(paths_pos2, paths_neg2, paths_data_pos, paths_data_neg, paths_pos3, paths_neg3,
+                       srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3, ValueTable2,
+                       CaseORControl22, nCases, nControls, K, iterations, method, 3, nthreads);
+  }
 
   // Process Paths of length 4
   List lst4;
-  std::vector<std::vector<uint64_t> > paths_pos4;
-  std::vector<std::vector<uint64_t> > paths_neg4;
-  int nnodes4 = unique(srcuids4).size();
 
-  std::cout << nnodes4 << " source nodes for paths of length " << 4 << " and their permutations will be processed!" << std::endl;
+  if(pathLength >= 4){
+    std::vector<std::vector<uint64_t> > paths_pos4;
+    std::vector<std::vector<uint64_t> > paths_neg4;
+    int nnodes4 = unique(srcuids4).size();
 
-  lst4 = JoinPaths(paths_pos3, paths_neg3, paths_pos2, paths_neg2, paths_pos4, paths_neg4,
-                   srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4, ValueTable2,
-                   CaseORControl22, nCases, nControls, K, iterations, method, 4, nthreads);
+    std::cout << nnodes4 << " source nodes for paths of length " << 4 << " and their permutations will be processed!" << std::endl;
+
+    lst4 = JoinPaths(paths_pos3, paths_neg3, paths_pos2, paths_neg2, paths_pos4, paths_neg4,
+                     srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4, ValueTable2,
+                     CaseORControl22, nCases, nControls, K, iterations, method, 4, nthreads);
+  }
 
   // Process Paths of length 5
   List lst5;
-  std::vector<std::vector<uint64_t> > paths_pos5;
-  std::vector<std::vector<uint64_t> > paths_neg5;
-  int nnodes5 = unique(srcuids5).size();
 
-  std::cout << nnodes5 << " source nodes for paths of length " << 5 << " and their permutations will be processed!" << std::endl;
+  if(pathLength >= 5){
 
-  lst5 = JoinPaths(paths_pos3, paths_neg3, paths_pos3, paths_neg3, paths_pos5, paths_neg5,
-                   srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5, ValueTable2,
-                   CaseORControl22, nCases, nControls, K, iterations, method, 5, nthreads);
+    std::vector<std::vector<uint64_t> > paths_pos5;
+    std::vector<std::vector<uint64_t> > paths_neg5;
+    int nnodes5 = unique(srcuids5).size();
+
+    std::cout << nnodes5 << " source nodes for paths of length " << 5 << " and their permutations will be processed!" << std::endl;
+
+    lst5 = JoinPaths(paths_pos3, paths_neg3, paths_pos3, paths_neg3, paths_pos5, paths_neg5,
+                     srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5, ValueTable2,
+                     CaseORControl22, nCases, nControls, K, iterations, method, 5, nthreads);
+
+  }
 
   return List::create(Named("lst1") = lst1_2,
                       Named("lst2") = lst2,
