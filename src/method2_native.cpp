@@ -2,6 +2,8 @@
 #include <cstring>
 #include "gcre.h"
 
+#define ALIGN __attribute__ (( aligned(16) ))
+
 // 16 byte aligned
 static int vector_width_ul(int count) {
   return 2 * (int) ceil(count / 128.0);
@@ -81,6 +83,11 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
   paths_type* p_paths0, paths_type* p_paths1, paths_type* p_pathsr, uint64_t total_paths) const {
 
   int vlen = vector_width_ul(conf.num_cases + conf.num_controls);
+  int iters = 8 * ceil(max(1, conf.iterations) / 8.0);
+
+  printf("adjusting width: %d -> %d\n", conf.num_cases + conf.num_controls, vlen * 64);
+  printf("adjusting iterations: %d -> %d\n\n", conf.iterations, iters);
+
   // not safe, but don't see a better way with R
   paths_block* paths0 = (paths_block*) p_paths0;
   paths_block* paths1 = (paths_block*) p_paths1;
@@ -113,10 +120,26 @@ joined_res JoinMethod2Native::join(join_config& conf, vector<uid_ref>& uids, vec
     case_mask[k/64] |= ONE_UL << k % 64;
 
   // TODO too big for the stack?
-  uint64_t permute_mask[conf.iterations * vlen];
+  uint64_t permute_mask[iters * vlen] ALIGN;
+  for(int m = 0; m < vlen * iters; m++)
+    permute_mask[m] = ZERO_UL;
+
+  // ignoring input from R for now and just generating random permutations
+  printf("generating simplified case masks for permutation (it = %d)\n", conf.iterations);
+  srand((unsigned) time(0));
+
+  permute_cases.clear();
+  for(int k = 0; k < conf.iterations; k++){
+    set<int> cases;
+    permute_cases.push_back(vector<uint16_t>());
+    while(cases.size() < conf.num_cases)
+      cases.insert(rand() % (conf.num_cases + conf.num_controls));
+    for(auto c : cases)
+      permute_cases.back().push_back(c);
+  }
+  printf("permuted_cases: %lu (%lu)\n", permute_cases.size(), permute_cases.back().size());
+
   for(int k = 0; k < permute_cases.size(); k++){
-    for(int m = 0; m < vlen; m++)
-      permute_mask[k * vlen + m] = ZERO_UL;
     for(auto i : permute_cases[k])
       set_bit(permute_mask + k * vlen, (int) i);
   }

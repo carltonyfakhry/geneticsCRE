@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     conf.top_k = stoi(get_opt(argv, arge, "-k"));
 
   if(has_opt(argv, arge, "-p"))
-    conf.iterations = stoi(get_opt(argv, arge, "-p"));
+    conf.iterations = max(1, stoi(get_opt(argv, arge, "-p")));
 
   if(has_opt(argv, arge, "-t"))
     conf.nthreads = stoi(get_opt(argv, arge, "-t"));
