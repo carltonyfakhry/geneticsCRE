@@ -219,6 +219,31 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   double score = ValueTable[cases][controls];
   double flipped_score = ValueTable[controls][cases];
 
+  // if(i == 0 && (pathLength == 1 || pathLength == 2)){
+  //
+  //   for(int k = 0; k < vlen + vlen2; k++){
+  //     std::cout << joined_pos[k] << " ";
+  //   }
+  //   std::cout << std::endl;
+  //
+  //   for(int k = 0; k < vlen + vlen2; k++){
+  //     std::cout << path_pos1[k] << " ";
+  //   }
+  //   std::cout << std::endl;
+  //
+  //   for(int k = 0; k < vlen + vlen2; k++){
+  //     std::cout << path_pos2[k] << " ";
+  //   }
+  //   std::cout << std::endl;
+  //
+  //   std::cout << score << std::endl;
+  //
+  // }
+
+  if(pathLength <= 3){
+    total_paths++;
+  }
+
   if(score > tid_localindicesq.top().first){
     tid_localindicesq.push(std::pair<double, std::pair<int, int> >(score, std::pair<int,int>(i, j)));
     tid_localindicesq.pop();
@@ -511,6 +536,8 @@ List JoinPaths(std::vector<std::vector<uint64_t> > &paths_pos1, std::vector<std:
 
       }else{
 
+        // CFTR (+) -> ANXA1 (-) -> CFTR (+) -> ANXA1 (+)
+
         if(pathLength < 3) sign = joining_gene_sign[j];
 
         if(pathLength == 3){
@@ -695,6 +722,7 @@ List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_Coun
   List lst4;
 
   if(pathLength >= 4){
+
     std::vector<std::vector<uint64_t> > paths_pos4;
     std::vector<std::vector<uint64_t> > paths_neg4;
     int nnodes4 = unique(srcuids4).size();
