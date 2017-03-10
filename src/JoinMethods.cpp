@@ -205,8 +205,8 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   uint64_t joined_pos[path_pos1.size()] __attribute__ ((aligned (16)));
 
   // Join the paths
-  int cases = 0;
-  int controls = 0;
+  unsigned cases = 0;
+  unsigned controls = 0;
   for(int k = 0; k < vlen + vlen2; k++){
     uint64_t temp_pos = path_pos1[k] | path_pos2[k];
     joined_pos[k] = temp_pos;
@@ -247,80 +247,86 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   }
 
   if(score > tid_localindicesq.top().first){
-    tid_localindicesq.push(std::pair<double, std::pair<int, int> >(score, std::pair<int,int>(i, j)));
-    tid_localindicesq.pop();
+    #pragma omp critical(dataupdate)
+    {
+      tid_localindicesq.push(std::pair<double, std::pair<int, int> >(score, std::pair<int,int>(i, j)));
+      tid_localindicesq.pop();
+    }
   }
 
   if(flipped_score > tid_localindicesq.top().first){
-    tid_localindicesq.push(std::pair<double, std::pair<int, int> >(flipped_score, std::pair<int,int>(i, j + flipped_pivot_length)));
-    tid_localindicesq.pop();
+    #pragma omp critical(dataupdate)
+    {
+      tid_localindicesq.push(std::pair<double, std::pair<int, int> >(flipped_score, std::pair<int,int>(i, j + flipped_pivot_length)));
+      tid_localindicesq.pop();
+    }
   }
 
   __m128i *p_caseorcontrol2 = (__m128i*) p_caseorcontrol;
 
-  for(int m = 0; m < iterations; m++){
-
-    // #pragma omp flush
-    double &max_score = tid_max_scores[m];
-
-    #pragma omp flush
-    double max_score2 = tid_max_scores[m];
-
-    double perm_score = 0;
-    double perm_flipped_score = 0;
-
-    __m128i *p_joined_pos = (__m128i*) joined_pos;
-
-    int cases_m = 0;
-    int controls_m = 0;
-
-    int k = 0;
-    for(; k < ROUND_DOWN(vlen,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
-      __m128i val1_4 = _mm_load_si128(p_joined_pos);
-      __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
-      __m128i val = _mm_and_si128(val1_4, val2_4);
-      cases_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
-      cases_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
-    }
-    if(k < vlen){
-      cases_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
-      controls_m += __builtin_popcountll(joined_pos[k + 1] & *(p_caseorcontrol + m*(vlen + vlen2) + k + 1));
-      k+=2;
-      p_joined_pos++;
-      p_caseorcontrol2++;
-    }
-
-    for(; k < ROUND_DOWN(vlen + vlen2,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
-      __m128i val1_4 = _mm_load_si128(p_joined_pos);
-      __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
-      __m128i val = _mm_and_si128(val1_4, val2_4);
-      controls_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
-      controls_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
-    }
-    if(k < vlen + vlen2){
-      controls_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
-    }
-
-    int new_cases_m = cases_m + (controls - controls_m);
-    int new_controls_m = controls_m + (cases - cases_m);
-
-    perm_score = ValueTable[new_cases_m][new_controls_m];
-    if(perm_score > max_score2){
-
-      #pragma omp critical
-      max_score = perm_score;
-
-      max_score2 = perm_score;
-    }
-    perm_flipped_score = ValueTable[new_controls_m][new_cases_m];
-    if(perm_flipped_score > max_score2){
-
-      #pragma omp critical
-      max_score = perm_flipped_score;
-
-    }
-
-  }
+  // for(int m = 0; m < iterations; m++){
+  //
+  //   // #pragma omp flush
+  //   double &max_score = tid_max_scores[m];
+  //
+  //   #pragma omp flush
+  //   double max_score2 = tid_max_scores[m];
+  //
+  //   double perm_score = 0;
+  //   double perm_flipped_score = 0;
+  //
+  //   __m128i *p_joined_pos = (__m128i*) joined_pos;
+  //
+  //   unsigned cases_m = 0;
+  //   unsigned controls_m = 0;
+  //
+  //   int k = 0;
+  //   for(; k < ROUND_DOWN(vlen,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
+  //     __m128i val1_4 = _mm_load_si128(p_joined_pos);
+  //     __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
+  //     __m128i val = _mm_and_si128(val1_4, val2_4);
+  //     cases_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
+  //     cases_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
+  //   }
+  //   if(k < vlen){
+  //     cases_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
+  //     controls_m += __builtin_popcountll(joined_pos[k + 1] & *(p_caseorcontrol + m*(vlen + vlen2) + k + 1));
+  //     k+=2;
+  //     p_joined_pos++;
+  //     p_caseorcontrol2++;
+  //   }
+  //
+  //   for(; k < ROUND_DOWN(vlen + vlen2,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
+  //     __m128i val1_4 = _mm_load_si128(p_joined_pos);
+  //     __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
+  //     __m128i val = _mm_and_si128(val1_4, val2_4);
+  //     controls_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
+  //     controls_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
+  //   }
+  //   if(k < vlen + vlen2){
+  //     controls_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
+  //   }
+  //
+  //   int new_cases_m = cases_m + (controls - controls_m);
+  //   int new_controls_m = controls_m + (cases - cases_m);
+  //
+  //   perm_score = ValueTable[new_cases_m][new_controls_m];
+  //   if(perm_score > max_score2){
+  //
+  //     #pragma omp critical
+  //     max_score = perm_score;
+  //
+  //     max_score2 = perm_score;
+  //   }
+  //   perm_flipped_score = ValueTable[new_controls_m][new_cases_m];
+  //   if(perm_flipped_score > max_score2){
+  //
+  //     #pragma omp critical
+  //     max_score = perm_flipped_score;
+  //
+  //   }
+  //
+  // }
 
 }
 
@@ -336,10 +342,10 @@ inline void Method2(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   uint64_t joined_pos[path_pos1.size()] __attribute__ ((aligned (16)));
   uint64_t joined_neg[path_pos1.size()] __attribute__ ((aligned (16)));
 
-  int cases_pos = 0;
-  int cases_neg = 0;
-  int controls_pos = 0;
-  int controls_neg = 0;
+  unsigned cases_pos = 0;
+  unsigned cases_neg = 0;
+  unsigned controls_pos = 0;
+  unsigned controls_neg = 0;
 
   for(int k = 0; k < vlen + vlen2; k++){
     uint64_t temp_pos = path_pos1[k] | path_pos2[k];
@@ -366,20 +372,26 @@ inline void Method2(int i, int j, int &total_paths, std::vector<uint64_t> &path_
     total_paths++;
   }
 
-  int cases = cases_pos + cases_neg;
-  int controls = controls_pos + controls_neg;
+  unsigned cases = cases_pos + cases_neg;
+  unsigned controls = controls_pos + controls_neg;
 
   double score = ValueTable[cases][controls];
   double flipped_score = ValueTable[controls][cases];
 
   if(score > tid_localindicesq.top().first){
-    tid_localindicesq.push(std::pair<double, std::pair<int, int> >(score, std::pair<int,int>(i, j)));
-    tid_localindicesq.pop();
+    #pragma omp critical(dataupdate)
+    {
+      tid_localindicesq.push(std::pair<double, std::pair<int, int> >(score, std::pair<int,int>(i, j)));
+      tid_localindicesq.pop();
+    }
   }
 
   if(flipped_score > tid_localindicesq.top().first){
-    tid_localindicesq.push(std::pair<double, std::pair<int, int> >(flipped_score, std::pair<int,int>(i, j + flipped_pivot_length)));
-    tid_localindicesq.pop();
+    #pragma omp critical(dataupdate)
+    {
+      tid_localindicesq.push(std::pair<double, std::pair<int, int> >(flipped_score, std::pair<int,int>(i, j + flipped_pivot_length)));
+      tid_localindicesq.pop();
+    }
   }
 
   __m128i *p_caseorcontrol2 = (__m128i*) p_caseorcontrol;
@@ -397,8 +409,8 @@ inline void Method2(int i, int j, int &total_paths, std::vector<uint64_t> &path_
     __m128i *p_joined_pos = (__m128i*) joined_pos;
     __m128i *p_joined_neg = (__m128i*) joined_neg;
 
-    int cases_m = 0;
-    int controls_m = 0;
+    unsigned cases_m = 0;
+    unsigned controls_m = 0;
 
     int k = 0;
     for(; k < ROUND_DOWN(vlen,2); k+=2,p_joined_pos++,p_joined_neg++,p_caseorcontrol2++){
@@ -439,8 +451,8 @@ inline void Method2(int i, int j, int &total_paths, std::vector<uint64_t> &path_
       cases_m += __builtin_popcountll(joined_neg[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
     }
 
-    int new_cases_m = cases_m + (controls - controls_m);
-    int new_controls_m = controls_m + (cases - cases_m);
+    unsigned new_cases_m = cases_m + (controls - controls_m);
+    unsigned new_controls_m = controls_m + (cases - cases_m);
 
     perm_score = ValueTable[new_cases_m][new_controls_m];
     if(perm_score > max_score2){
