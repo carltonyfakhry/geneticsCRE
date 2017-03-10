@@ -264,69 +264,69 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
 
   __m128i *p_caseorcontrol2 = (__m128i*) p_caseorcontrol;
 
-  // for(int m = 0; m < iterations; m++){
-  //
-  //   // #pragma omp flush
-  //   double &max_score = tid_max_scores[m];
-  //
-  //   #pragma omp flush
-  //   double max_score2 = tid_max_scores[m];
-  //
-  //   double perm_score = 0;
-  //   double perm_flipped_score = 0;
-  //
-  //   __m128i *p_joined_pos = (__m128i*) joined_pos;
-  //
-  //   unsigned cases_m = 0;
-  //   unsigned controls_m = 0;
-  //
-  //   int k = 0;
-  //   for(; k < ROUND_DOWN(vlen,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
-  //     __m128i val1_4 = _mm_load_si128(p_joined_pos);
-  //     __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
-  //     __m128i val = _mm_and_si128(val1_4, val2_4);
-  //     cases_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
-  //     cases_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
-  //   }
-  //   if(k < vlen){
-  //     cases_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
-  //     controls_m += __builtin_popcountll(joined_pos[k + 1] & *(p_caseorcontrol + m*(vlen + vlen2) + k + 1));
-  //     k+=2;
-  //     p_joined_pos++;
-  //     p_caseorcontrol2++;
-  //   }
-  //
-  //   for(; k < ROUND_DOWN(vlen + vlen2,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
-  //     __m128i val1_4 = _mm_load_si128(p_joined_pos);
-  //     __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
-  //     __m128i val = _mm_and_si128(val1_4, val2_4);
-  //     controls_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
-  //     controls_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
-  //   }
-  //   if(k < vlen + vlen2){
-  //     controls_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
-  //   }
-  //
-  //   int new_cases_m = cases_m + (controls - controls_m);
-  //   int new_controls_m = controls_m + (cases - cases_m);
-  //
-  //   perm_score = ValueTable[new_cases_m][new_controls_m];
-  //   if(perm_score > max_score2){
-  //
-  //     #pragma omp critical
-  //     max_score = perm_score;
-  //
-  //     max_score2 = perm_score;
-  //   }
-  //   perm_flipped_score = ValueTable[new_controls_m][new_cases_m];
-  //   if(perm_flipped_score > max_score2){
-  //
-  //     #pragma omp critical
-  //     max_score = perm_flipped_score;
-  //
-  //   }
-  //
-  // }
+  for(int m = 0; m < iterations; m++){
+
+    // #pragma omp flush
+    double &max_score = tid_max_scores[m];
+
+    #pragma omp flush
+    double max_score2 = tid_max_scores[m];
+
+    double perm_score = 0;
+    double perm_flipped_score = 0;
+
+    __m128i *p_joined_pos = (__m128i*) joined_pos;
+
+    unsigned cases_m = 0;
+    unsigned controls_m = 0;
+
+    int k = 0;
+    for(; k < ROUND_DOWN(vlen,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
+      __m128i val1_4 = _mm_load_si128(p_joined_pos);
+      __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
+      __m128i val = _mm_and_si128(val1_4, val2_4);
+      cases_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
+      cases_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
+    }
+    if(k < vlen){
+      cases_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
+      controls_m += __builtin_popcountll(joined_pos[k + 1] & *(p_caseorcontrol + m*(vlen + vlen2) + k + 1));
+      k+=2;
+      p_joined_pos++;
+      p_caseorcontrol2++;
+    }
+
+    for(; k < ROUND_DOWN(vlen + vlen2,2); k+=2,p_joined_pos++,p_caseorcontrol2++){
+      __m128i val1_4 = _mm_load_si128(p_joined_pos);
+      __m128i val2_4 = _mm_load_si128(p_caseorcontrol2);
+      __m128i val = _mm_and_si128(val1_4, val2_4);
+      controls_m += __builtin_popcountll(_mm_extract_epi64(val, 0));
+      controls_m += __builtin_popcountll(_mm_extract_epi64(val, 1));
+    }
+    if(k < vlen + vlen2){
+      controls_m += __builtin_popcountll(joined_pos[k] & *(p_caseorcontrol + m*(vlen + vlen2) + k));
+    }
+
+    int new_cases_m = cases_m + (controls - controls_m);
+    int new_controls_m = controls_m + (cases - cases_m);
+
+    perm_score = ValueTable[new_cases_m][new_controls_m];
+    if(perm_score > max_score2){
+
+      #pragma omp critical
+      max_score = perm_score;
+
+      max_score2 = perm_score;
+    }
+    perm_flipped_score = ValueTable[new_controls_m][new_cases_m];
+    if(perm_flipped_score > max_score2){
+
+      #pragma omp critical
+      max_score = perm_flipped_score;
+
+    }
+
+  }
 
 }
 
@@ -654,7 +654,7 @@ List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_Coun
   int vlen2 = (int) ceil(nControls/64.0);
 
   // Copy ValueTable into a C++ 2D vector to be used in an openmp for loop
-  static const std::vector<std::vector<double> > ValueTable2 = copyValueTable(ValueTable);
+  const std::vector<std::vector<double> > ValueTable2 = copyValueTable(ValueTable);
 
   // Parse CaseORControl matrix into a single aligned vector
   std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
