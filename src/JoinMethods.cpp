@@ -219,7 +219,7 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   double score = ValueTable[cases][controls];
   double flipped_score = ValueTable[controls][cases];
 
-  // if(i == 0 && (pathLength == 1 || pathLength == 2)){
+  // if(i == 503 && pathLength == 1){
   //
   //   for(int k = 0; k < vlen + vlen2; k++){
   //     std::cout << joined_pos[k] << " ";
@@ -236,6 +236,8 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   //   }
   //   std::cout << std::endl;
   //
+  //   std::cout << cases << std::endl;
+  //   std::cout << controls << std::endl;
   //   std::cout << score << std::endl;
   //
   // }
@@ -258,8 +260,12 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
 
   for(int m = 0; m < iterations; m++){
 
+    // #pragma omp flush
     double &max_score = tid_max_scores[m];
+
+    #pragma omp flush
     double max_score2 = tid_max_scores[m];
+
     double perm_score = 0;
     double perm_flipped_score = 0;
 
@@ -300,12 +306,18 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
 
     perm_score = ValueTable[new_cases_m][new_controls_m];
     if(perm_score > max_score2){
+
+      #pragma omp critical
       max_score = perm_score;
+
       max_score2 = perm_score;
     }
     perm_flipped_score = ValueTable[new_controls_m][new_cases_m];
     if(perm_flipped_score > max_score2){
+
+      #pragma omp critical
       max_score = perm_flipped_score;
+
     }
 
   }
@@ -375,7 +387,10 @@ inline void Method2(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   for(int m = 0; m < iterations; m++){
 
     double &max_score = tid_max_scores[m];
+
+    #pragma omp flush
     double max_score2 = tid_max_scores[m];
+
     double perm_score = 0;
     double perm_flipped_score = 0;
 
@@ -429,13 +444,19 @@ inline void Method2(int i, int j, int &total_paths, std::vector<uint64_t> &path_
 
     perm_score = ValueTable[new_cases_m][new_controls_m];
     if(perm_score > max_score2){
+
+      #pragma omp critical
       max_score = perm_score;
+
       max_score2 = perm_score;
     }
 
     perm_flipped_score = ValueTable[new_controls_m][new_cases_m];
     if(perm_flipped_score > max_score2){
+
+      #pragma omp critical
       max_score = perm_flipped_score;
+
     }
 
   }
