@@ -91,9 +91,9 @@ int getTotalCountsCountLoc(List uids_CountLoc){
  *
  */
 
-static std::vector<std::vector<double> > copyValueTable(NumericMatrix ValueTable){
+std::vector<std::vector<double> > copyValueTable(NumericMatrix ValueTable){
 
-  static std::vector<std::vector<double> > ValueTable2(ValueTable.nrow(), std::vector<double>(ValueTable.ncol()));
+  std::vector<std::vector<double> > ValueTable2(ValueTable.nrow(), std::vector<double>(ValueTable.ncol()));
 
   for(int i = 0; i < ValueTable.nrow(); i++)
     for(int j = 0; j < ValueTable.ncol(); j++)
@@ -652,7 +652,7 @@ List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_Coun
   int vlen2 = (int) ceil(nControls/64.0);
 
   // Copy ValueTable into a C++ 2D vector to be used in an openmp for loop
-  static const std::vector<std::vector<double> > ValueTable2 = copyValueTable(ValueTable);
+  const std::vector<std::vector<double> > ValueTable2 = copyValueTable(ValueTable);
 
   // Parse CaseORControl matrix into a single aligned vector
   std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
