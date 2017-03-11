@@ -46,12 +46,12 @@ vec2d_u16 copy_rmatrix_u16(IntegerMatrix& matrix) {
 }
 
 JoinMethod& create_method(string name) {
-  if(name == "method2") {
-    static JoinMethod2Native method;
-    return method;
-  } else if(name == "method2-vec") {
-    static JoinMethod2Vector method;
-    return method;
+  if(name == "method1") {
+    static JoinMethod1Native method1;
+    return method1;
+  } else if(name == "method2") {
+    static JoinMethod2Native method2;
+    return method2;
   } else {
     stop("unknown method: " + name);
   }
@@ -61,6 +61,9 @@ JoinMethod& create_method(string name) {
 
 // [[Rcpp::export]]
 XPtr<paths_type> createPathSet(IntegerMatrix& r_data, int num_cases, int num_controls, std::string method_name){
+
+  printf("create set\n");
+
 
   if(r_data.ncol() != num_cases + num_cases)
     stop("data width does not match case/control counts: " + to_string(r_data.ncol()));
@@ -166,11 +169,11 @@ List JoinIndices(IntegerVector r_src_uids, IntegerVector r_trg_uids, List r_uid_
 
   joined_res res = method.join(conf, uids, join_gene_signs, value_table, cases, paths0, paths1, paths_res, total_paths);
 
-  printf("results: %d\n", res.scores.size());
-  for(int k = 0; k < res.scores.size(); k++){
-    Score s = res.scores[k];
-    printf("  [%d:%d] %f\n", s.src, s.trg, s.score);
-  }
+  // printf("results: %d\n", res.scores.size());
+  // for(int k = 0; k < res.scores.size(); k++){
+  //   Score s = res.scores[k];
+  //   printf("  [%d:%d] %f\n", s.src, s.trg, s.score);
+  // }
 
   NumericVector permuted_scores(res.permuted_scores.size());
   for(int k = 0; k < res.permuted_scores.size(); k++)
