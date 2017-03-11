@@ -274,8 +274,8 @@ getCaseORControl <- function(RandIndicesMat, nCases, nControls){
     for(j in 1:nCases){
       CaseORControl[i,j] = ifelse(RandIndicesMat[i,j] < nCases, 1, 0)
     }
-    for(j in (nCases+1):nControls){
-      CaseORControl[i,j] = ifelse(RandIndicesMat[i,j] >= nControls, 1, 0)
+    for(j in (nCases+1):(nCases+nControls)){
+      CaseORControl[i,j] = ifelse(RandIndicesMat[i,j] >= nCases, 1, 0)
     }
 
   }

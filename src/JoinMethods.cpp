@@ -219,29 +219,6 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   double score = ValueTable[cases][controls];
   double flipped_score = ValueTable[controls][cases];
 
-  // if(i == 503 && pathLength == 1){
-  //
-  //   for(int k = 0; k < vlen + vlen2; k++){
-  //     std::cout << joined_pos[k] << " ";
-  //   }
-  //   std::cout << std::endl;
-  //
-  //   for(int k = 0; k < vlen + vlen2; k++){
-  //     std::cout << path_pos1[k] << " ";
-  //   }
-  //   std::cout << std::endl;
-  //
-  //   for(int k = 0; k < vlen + vlen2; k++){
-  //     std::cout << path_pos2[k] << " ";
-  //   }
-  //   std::cout << std::endl;
-  //
-  //   std::cout << cases << std::endl;
-  //   std::cout << controls << std::endl;
-  //   std::cout << score << std::endl;
-  //
-  // }
-
   if(pathLength <= 3){
     total_paths++;
   }
@@ -264,7 +241,9 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
 
   __m128i *p_caseorcontrol2 = (__m128i*) p_caseorcontrol;
 
+
   for(int m = 0; m < iterations; m++){
+
 
     // #pragma omp flush
     double &max_score = tid_max_scores[m];
@@ -665,7 +644,6 @@ List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_Coun
   std::vector<std::vector<uint64_t> > parsed_data = parseData(data, nCases, nControls, vlen, vlen2);
   std::vector<std::vector<uint64_t> > parsed_data2 = parseData(data2, nCases, nControls, vlen, vlen2);
 
-
   // Process paths of length 1
   List lst1;
   int total_paths = getTotalPaths(trguids1, uids_CountLoc1);
@@ -685,7 +663,6 @@ List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_Coun
   lst1 = JoinPaths(paths_pos0, paths_neg0, paths_data_pos, paths_data_neg, paths_pos1, paths_neg1,
                      srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1, ValueTable2, CaseORControl22,
                      nCases, nControls, K, iterations, method, 1, nthreads);
-
 
   List lst1_2;
 
