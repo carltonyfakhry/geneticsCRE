@@ -56,13 +56,13 @@
 #'             Epub 2012 Nov 29'.
 #'
 #'@export
-GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
+GetBestPaths <- function(dataset, nCases, nControls, method = 1, threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
 
   # Check the input parameters
   geneticsCRE:::check_input(nCases, nControls, method, threshold_percent, K, pathLength, iterations, nthreads)
   if(is.na(nthreads)) nthreads <- -1
-  path <- normalizePath(path)
-  if(substr(path, nchar(path),1) != "/") path <- paste(path, "/", sep = "")
+  # path <- normalizePath(path)
+  # if(substr(path, nchar(path),1) != "/") path <- paste(path, "/", sep = "")
 
   # Precompute values table
   print("Computing Values Table...")
@@ -172,103 +172,85 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
   third_gene_sign[Rels3$sign == -1 & Rels3$sign2 == 1] <- -1
   third_gene_sign[Rels3$sign == 1 & Rels3$sign2 == -1] <- -1
 
-  timeStart <- as.numeric(Sys.time()) * 1000
+  srcuids1 <- Rels_data$srcuid
+  trguids1 <- Rels_data$srcuid
+  joining_gene_sign1 <- rep(1,length(Ents$uid))
+  uids_CountLoc1 <- geneticsCRE:::getUidsCountsLocations(srcuids1, Rels_data$srcuid)
+  data_inds1 <- geneticsCRE:::matchDataIndices(genes_data, Rels_data$srcuid) - 1
 
-  paths <- list()
+  srcuids1_2 <-Rels_data2$srcuid
+  trguids1_2 <- Rels_data2$srcuid
+  joining_gene_sign1_2  <- rep(1, length(Ents2$uid))
+  uids_CountLoc1_2 <- geneticsCRE:::getUidsCountsLocations(srcuids1_2, Rels_data2$srcuid)
+  data_inds1_2 <- geneticsCRE:::matchDataIndices(genes_data2, Rels_data2$srcuid) - 1
 
-  # Processing the paths
+  srcuids2 <- Rels_data$srcuid
+  trguids2 <- Rels_data$srcuid
+  joining_gene_sign2 <- Rels$sign
+  uids_CountLoc2 <- geneticsCRE:::getUidsCountsLocations(srcuids2, Rels$srcuid)
+  data_inds2 <- geneticsCRE:::matchDataIndices(genes_data, Rels$trguid) - 1
+
+  srcuids3 <- Rels$srcuid
+  trguids3 <- Rels$trguid
+  joining_gene_sign3 <- Rels$sign
+  uids_CountLoc3 <- geneticsCRE:::getUidsCountsLocations(trguids3, Rels$srcuid)
+  data_inds3 <- geneticsCRE:::matchDataIndices(genes_data, Rels$trguid) - 1
+
+  srcuids4 <- Rels3$srcuid
+  trguids4 <- Rels3$trguid2
+  joining_gene_sign4 <- third_gene_sign
+  uids_CountLoc4 <- geneticsCRE:::getUidsCountsLocations(trguids4, Rels$srcuid)
+
+
+  srcuids5 <- Rels3$srcuid
+  trguids5 <- Rels3$trguid2
+  joining_gene_sign5 <- third_gene_sign
+  uids_CountLoc5 <- geneticsCRE:::getUidsCountsLocations(trguids5, Rels3$srcuid)
+
+
+  lsts <- geneticsCRE:::ProcessPaths(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1,
+                                     srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,
+                                     srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2,
+                                     srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3,
+                                     srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4,
+                                     srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5,
+                                     data_inds1, data_inds1_2, data_inds2, data_inds3,
+                                     data, data2, ValueTable, nCases, nControls, K,
+                                     iterations, CaseORControl, method, pathLength, nthreads)
+
   for(path_length in 1:pathLength){
 
-    timeStartLoop <- as.numeric(Sys.time()) * 1000
+    lst <- NULL
+    lst_paths <- NULL
 
     if(path_length == 1){
-
-      # print("Processing paths of length 1...")
-
-      # opaque pointer to path data
-      paths$dest1 <- geneticsCRE:::createEmptyPathSet(method)
-      paths$dest2 <- geneticsCRE:::createEmptyPathSet(method)
-      paths$dest3 <- geneticsCRE:::createEmptyPathSet(method)
-
-      paths$data <- geneticsCRE:::createPathSet(data, nCases, nControls, method)
-      rm(data)
-
-      lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
-                                         1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         NULL, paths$data, paths$dest1)
-
-      paths$data2 <- geneticsCRE:::createPathSet(data2, nCases, nControls, method)
-      rm(data2)
-
-      lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
-                                        1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                        NULL, paths$data2, NULL)
-
+      lst <- lsts$lst1
+      lst_paths <- geneticsCRE:::getPaths(lst, path_length, Rels_data2, Rels_data2)
     }else if(path_length == 2){
-
-      # print("Processing paths of length 2...")
-
-      data3 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
-      paths$data3 <- geneticsCRE:::createPathSet(data3, nCases, nControls, method)
-      rm(data3)
-
-      lst2 <- geneticsCRE:::ProcessPaths(Rels_data, Rels, Rels_data$srcuid, Rels_data$srcuid, Rels$sign, Rels$srcuid,
-                                         2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         paths$dest1, paths$data3, paths$dest2)
-      lst <- lst2
-
+      lst <- lsts$lst2
+      lst_paths <- geneticsCRE:::getPaths(lst, path_length, Rels_data, Rels)
     }else if(path_length == 3){
-
-      # print("Processing paths of length 3...")
-
-      data4 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
-      paths$data4 <- geneticsCRE:::createPathSet(data4, nCases, nControls, method)
-      rm(data4)
-
-      lst3 <- geneticsCRE:::ProcessPaths(Rels, Rels, Rels$srcuid, Rels$trguid, Rels$sign, Rels$srcuid,
-                                         3, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-                                         paths$dest2, paths$data4, paths$dest3)
-
-      lst <- lst3
-
-    }
-    else if(path_length == 4){
-
-      # print("Processing paths of length 4...")
-
-      lst4 <- geneticsCRE:::ProcessPaths(Rels3, Rels, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels$srcuid,
-                                         4, ValueTable, nCases, nControls, K, iterations,
-                                         CaseORControl, method, nthreads,
-                                         paths$dest3, paths$dest2, NULL)
-      lst <- lst4
-    }
-    else if(path_length == 5){
-
-
-      # print("Processing paths of length 5...")
-
-      lst5 <- geneticsCRE:::ProcessPaths(Rels3, Rels3, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels3$srcuid,
-                                         5, ValueTable, nCases, nControls, K, iterations,
-                                         CaseORControl, method, nthreads,
-                                         paths$dest3, paths$dest3, NULL)
-      lst <- lst5
-
-    }
-
-    print(sprintf("  time for lengh %d: %f", path_length, as.numeric(Sys.time()) * 1000 - timeStartLoop, digits=15))
-
-    UserScores <- c(UserScores, lst$scores)
-    UserKpaths <- c(UserKpaths, lst$path)
-    if(path_length == 1){
-      UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents2, lst$path))
+      lst <- lsts$lst3
+      lst_paths <- geneticsCRE:::getPaths(lst, path_length, Rels, Rels)
+    }else if(path_length == 4){
+      lst <- lsts$lst4
+      lst_paths <- geneticsCRE:::getPaths(lst, path_length, Rels3, Rels)
     }else{
-      UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents, lst$path))
+      lst <- lsts$lst5
+      lst_paths <- geneticsCRE:::getPaths(lst, path_length, Rels3, Rels3)
+    }
+    UserScores <- c(UserScores, lst$scores)
+    UserKpaths <- c(UserKpaths, lst_paths$path)
+    if(path_length == 1){
+      UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents2, lst_paths$path))
+    }else{
+      UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents, lst_paths$path))
     }
     UserKsignpaths <- c(UserKsignpaths, lst$signpath)
     if(path_length == 1){
-      UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents2, lst$signpath))
+      UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents2, lst_paths$signpath))
     }else{
-      UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents, lst$signpath))
+      UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents, lst_paths$signpath))
     }
     TestScores <- lst$TestScores
 
@@ -278,12 +260,9 @@ GetBestPaths <- function(dataset, nCases, nControls, path = ".", method = 1, thr
 
   }
 
-  print(sprintf("total time: %f", as.numeric(Sys.time()) * 1000 - timeStart, digits=15))
-
   BestPaths <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, stringsAsFactors = F)
   BestPaths <- BestPaths[order(BestPaths$UserPvalues),]
   names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues")
-
   return(BestPaths)
 
 }
