@@ -39,16 +39,18 @@ static void read_vec(istream& fdata, vec2d_u64& vec){
 
 int main(int argc, char* argv[]) {
   printf("hello\n\n");
-  PathSet_BlockM1 p(8, 4);
-  for(int k = 0; k < p.size; k++) {
-    for(int v = 0; v < p.width_ul; v++){
-      printf(" %lu", p[k][v]);
-    }
-    printf("\n");
-  }
-  printf("\n");
 
-  PathSet_BlockM2 p2(8, 4);
+  JoinExec m(4, 8);
+  PathSet& p = m.createPathSet(8);
+
+  // for(int k = 0; k < p.size; k++) {
+  //   for(int v = 0; v < p.width_ul; v++){
+  //     printf(" %lu", p[k][v]);
+  //   }
+  //   printf("\n");
+  // }
+  // printf("\n");
+
   printf("\ndone\n");
   return 0;
 }

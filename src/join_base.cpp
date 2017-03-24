@@ -33,3 +33,19 @@ const uint64_t* PathSet_BlockM2::operator[](int idx) const {
 }
 
 void PathSet_BlockM2::load(vec_i data) {}
+
+JoinExec::~JoinExec() {
+  for(auto p : paths)
+    delete p; 
+}
+
+// TODO better pointer type
+PathSet& JoinExec::createPathSet(int size) const {
+  PathSet* set = new PathSet_BlockM2(size, num_cases + num_ctrls);
+  paths.push_back(set);
+  return *set;
+}
+
+joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+  return joined_res();
+}
