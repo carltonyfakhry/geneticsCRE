@@ -38,6 +38,23 @@ static void read_vec(istream& fdata, vec2d_u64& vec){
 }
 
 int main(int argc, char* argv[]) {
+  printf("hello\n\n");
+  PathSet_BlockM1 p(8, 4);
+  for(int k = 0; k < p.size; k++) {
+    for(int v = 0; v < p.width_ul; v++){
+      printf(" %lu", p[k][v]);
+    }
+    printf("\n");
+  }
+  printf("\n");
+
+  PathSet_BlockM2 p2(8, 4);
+  printf("\ndone\n");
+  return 0;
+}
+
+/*
+int main(int argc, char* argv[]) {
   char** arge = argc + argv;
   
   string file;
@@ -213,3 +230,4 @@ int main(int argc, char* argv[]) {
   
   printf("done\n");
 }
+*/

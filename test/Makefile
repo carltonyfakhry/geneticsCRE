@@ -1,6 +1,7 @@
 CC=clang
 CXX=clang++
-CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize
+CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt
+# CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize
 # CXX1XFLAGS=-I../src -std=c++11 -g -O3 -march=native -fno-vectorize -mno-avx -mno-avx2 -mpopcnt -Rpass=loop-vectorize
 LDFLAGS=-Wl -O3
 
@@ -15,7 +16,7 @@ LDLIBS=
 
 # -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 
-SRCS=harness.cpp $(wildcard ../src/method*.cpp)
+SRCS=harness.cpp $(wildcard ../src/method*.cpp) $(wildcard ../src/join_*.cpp)
 OBJS=$(subst .cpp,.o,$(SRCS))
 
 all: bench

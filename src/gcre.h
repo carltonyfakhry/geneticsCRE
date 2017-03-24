@@ -5,11 +5,13 @@
 #include <stdio.h>
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <cmath>
 #include <limits>
 #include <vector>
 #include <set>
 #include <queue>
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 
@@ -21,6 +23,7 @@ using namespace std;
 const uint64_t ZERO_UL = 0;
 const uint64_t ONE_UL = 1;
 
+typedef std::vector<int> vec_i;
 typedef std::vector<double> vec_d;
 typedef std::vector<uint64_t> vec_u64;
 
@@ -50,6 +53,40 @@ struct paths_base : paths_type {
   int size = 0;
   int width_ul = 0;
   int num_cases = 0;
+};
+
+class PathSet {
+
+public:
+
+  const int size;
+  const int width_ul;
+
+  PathSet(const int size, const int width_ul) : size(size), width_ul(width_ul) {};
+
+  virtual const uint64_t* operator[](int idx) const = 0;
+  virtual void load(vec_i data) = 0;
+
+protected:
+
+  uint64_t* block = nullptr;
+
+};
+
+class PathSet_BlockM1 : public PathSet {
+public:
+  PathSet_BlockM1(const int size, const int width_ul);
+  ~PathSet_BlockM1();
+  virtual const uint64_t* operator[](int idx) const;
+  virtual void load(vec_i data);
+};
+
+class PathSet_BlockM2 : public PathSet {
+public:
+  PathSet_BlockM2(const int size, const int width_ul);
+  ~PathSet_BlockM2();
+  virtual const uint64_t* operator[](int idx) const;
+  virtual void load(vec_i data);
 };
 
 class Score {
