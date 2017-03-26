@@ -20,44 +20,106 @@ static bool has_opt(char** begin, char** end, const string& option) {
   return find(begin, end, option) != end;
 }
 
-static void read_vec(istream& fdata, vec2d_u64& vec){
-  string line, val;
-
-  getline(fdata, line, ':');
-  cout << line << ": ";
+static string read_line(ifstream& fdata){
+  string line;
   getline(fdata, line, ' ');
-  int width = stoi(line);
+  cout << line << " (";
   getline(fdata, line);
-  stringstream buf(line);
+  cout << line.size() << ")" << endl;
+  return line;
+}
+
+static vector<uid_ref> read_uids(ifstream& fdata){
+  string line, val, v;
+  stringstream buf, ub;
+  vector<uid_ref> uids;
+
+  getline(fdata, line, ' ');
+  cout << line << ": ";
+  getline(fdata, line);
+  buf.str(line);
+  buf.clear();
   while (getline(buf, val, ' ')) {
-    if(vec.size() == 0 || vec.back().size() == width)
-      vec.push_back(vec_u64());
-    vec.back().push_back(stoul(val));
+    uid_ref uid;
+    ub.str(val);
+    ub.clear();
+    getline(ub, v, ':');
+    uid.src = stoi(v);
+    getline(ub, v, ':');
+    uid.trg = stoi(v);
+    getline(ub, v, ':');
+    uid.count = stoi(v);
+    getline(ub, v, ':');
+    uid.location = stoi(v);
+    uids.push_back(uid);
   }
-  cout << vec.size() << endl;
+  cout << uids.size() << endl;
+  return uids;
+}
+
+static vector<int> read_ints(ifstream& fdata){
+  string line, val;
+  stringstream buf;
+  vector<int> data;
+  getline(fdata, line, ' ');
+  cout << line << ": ";
+  getline(fdata, line);
+  buf.str(line);
+  buf.clear();
+  while (getline(buf, val, ' ')) {
+    data.push_back(stoi(val));
+  }
+  cout << data.size() << endl;
+  return data;
+}
+
+static vec2d_i read_data(ifstream& fdata){
+  string line, val, v;
+  stringstream buf, ub;
+  vec2d_i data;
+
+  getline(fdata, line, ' ');
+  cout << line << ": ";
+  getline(fdata, line);
+  buf.str(line);
+  buf.clear();
+
+  while (getline(buf, val, ' ')) {
+    data.push_back(vector<int>());
+    ub.str(val);
+    ub.clear();
+    while (getline(ub, v, ','))
+      data.back().push_back(stoi(v));
+  }
+  cout << data.size() << " x " << data.front().size() << endl;
+  return data;
+}
+
+
+static vec2d_d read_vals(ifstream& fdata){
+  string line, val, v;
+  stringstream buf, ub;
+  vec2d_d data;
+
+  getline(fdata, line, ' ');
+  cout << line << ": ";
+  getline(fdata, line);
+  buf.str(line);
+  buf.clear();
+
+  while (getline(buf, val, ' ')) {
+    data.push_back(vector<double>());
+    ub.str(val);
+    ub.clear();
+    while (getline(ub, v, ','))
+      data.back().push_back(stod(v));
+  }
+  cout << data.size() << " x " << data.front().size() << endl;
+  return data;
 }
 
 int main(int argc, char* argv[]) {
-  printf("hello\n\n");
 
-  JoinExec m(4, 8);
-  auto p = m.createPathSet(8);
-  
-
-  // for(int k = 0; k < p.size; k++) {
-  //   for(int v = 0; v < p.width_ul; v++){
-  //     printf(" %lu", p[k][v]);
-  //   }
-  //   printf("\n");
-  // }
-  // printf("\n");
-
-  printf("\ndone\n");
-  return 0;
-}
-
-/*
-int main(int argc, char* argv[]) {
   char** arge = argc + argv;
   
   string file;
@@ -90,101 +152,42 @@ int main(int argc, char* argv[]) {
   // PATH 4
   // CASE 1537
   // CTRL 1537
-  // TOTL 1276368
 
   int width;
   string line, val, v;
   stringstream buf, ub;
+
   ifstream fdata(file);
 
-  getline(fdata, line);
-  conf.path_length = stoi(line.substr(5));
-  getline(fdata, line);
-  conf.num_cases = stoi(line.substr(5));
-  getline(fdata, line);
-  conf.num_controls = stoi(line.substr(5));
-  getline(fdata, line);
-  uint64_t total_paths = stoul(line.substr(5));
+  conf.path_length = stoi(read_line(fdata));
+  conf.num_cases = stoi(read_line(fdata));
+  conf.num_controls = stoi(read_line(fdata));
 
   printf("\nheader:\n\n");
   printf("   path_length : %d\n", conf.path_length);
   printf("     num_cases : %d\n", conf.num_cases);
   printf("  num_controls : %d\n", conf.num_controls);
-  printf("   total_paths : %lu\n", total_paths);
   printf("\n");
 
-  vector<uid_ref> uids;
-  getline(fdata, line, ' ');
-  cout << line << ": ";
-  getline(fdata, line);
-  buf.str(line);
-  buf.clear();
-  while (getline(buf, val, ' ')) {
-    uid_ref uid;
-    ub.str(val);
-    ub.clear();
-    getline(ub, v, ':');
-    uid.src = stoi(v);
-    getline(ub, v, ':');
-    uid.trg = stoi(v);
-    getline(ub, v, ':');
-    uid.count = stoi(v);
-    getline(ub, v, ':');
-    uid.location = stoi(v);
-    uids.push_back(uid);
-  }
-  cout << uids.size() << endl;
 
-  vector<int> signs;
-  getline(fdata, line, ' ');
-  cout << line << ": ";
-  getline(fdata, line);
-  buf.str(line);
-  buf.clear();
-  while (getline(buf, val, ' ')) {
-    signs.push_back(stoi(val));
-  }
-  cout << signs.size() << endl;
+  vector<uid_ref> uids0 = read_uids(fdata); vector<int> signs0 = read_ints(fdata);
+  vector<uid_ref> uids1 = read_uids(fdata); vector<int> signs1 = read_ints(fdata);
+  vector<uid_ref> uids2 = read_uids(fdata); vector<int> signs2 = read_ints(fdata);
+  vector<uid_ref> uids3 = read_uids(fdata); vector<int> signs3 = read_ints(fdata);
+  vector<uid_ref> uids4 = read_uids(fdata); vector<int> signs4 = read_ints(fdata);
+  vector<uid_ref> uids5 = read_uids(fdata); vector<int> signs5 = read_ints(fdata);
 
-  vec2d_d value_table;
-  getline(fdata, line, ':');
-  cout << line << ": ";
-  getline(fdata, line, ' ');
-  width = stoi(line);
-  getline(fdata, line);
-  buf.str(line);
-  buf.clear();
-  while (getline(buf, val, ' ')) {
-    if(value_table.size() == 0 || value_table.back().size() == width)
-      value_table.push_back(vector<double>());
-    value_table.back().push_back(stod(val));
-  }
-  cout << value_table.size() << endl;
+  vector<int> data_idx0 = read_ints(fdata);
+  vector<int> data_idx1 = read_ints(fdata);
+  vector<int> data_idx2 = read_ints(fdata);
+  vector<int> data_idx3 = read_ints(fdata);
 
-  getline(fdata, line, ':');
-  cout << line << ": ";
-  getline(fdata, line, ' ');
-  width = stoi(line);
-  getline(fdata, line);
-  buf.str(line);
-  buf.clear();
-  // don't need to read the permuted case mask
-  while (getline(buf, val, ' ')) {
-  }
-  cout << endl;
+  vec2d_i data1 = read_data(fdata);
+  vec2d_i data2 = read_data(fdata);
+  vec2d_i perms = read_data(fdata);
+  vec2d_d table = read_vals(fdata);
 
-  vec2d_u64 paths0pos;
-  read_vec(fdata, paths0pos);
-
-  vec2d_u64 paths0neg;
-  read_vec(fdata, paths0neg);
-
-  vec2d_u64 paths1pos;
-  read_vec(fdata, paths1pos);
-
-  vec2d_u64 paths1neg;
-  read_vec(fdata, paths1neg);
-
+/*
   JoinMethod2Native method;
 
   paths_type* paths0 = method.createPathSet(paths0pos, paths0neg, conf.num_cases, conf.num_controls);
@@ -230,7 +233,6 @@ int main(int argc, char* argv[]) {
   printf("\n");
 
   printf("################################\n\n");
-  
+  */
   printf("done\n");
 }
-*/
