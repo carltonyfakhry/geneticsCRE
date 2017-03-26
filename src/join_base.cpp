@@ -118,6 +118,87 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
 }
 
 joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+
+
+  // TODO
+  // int iters = 8 * ceil(max(1, conf.iterations) / 8.0);
+  int iters = iterations;
+  int vlen = width_ul;
+
+  // printf("adjusting width: %d -> %d\n", conf.num_cases + conf.num_controls, vlen * 64);
+  // printf("adjusting iterations: %d -> %d\n\n", conf.iterations, iters);
+
+  bool keep_paths = paths_res.size != 0;
+
+  printf("  ****  %d\n", keep_paths);
+
+
+  // priority queue for the indices of the top K paths in the data
+  // add dummy score to avoid empty check
+  // priority_queue<Score> scores;
+  // scores.push(Score());
+
+  // TODO conf.nthreads
+  // int nthreads = 1;
+
+  int flipped_pivot_length = paths1.size;
+  int path_idx = 0;
+
+  // uint64_t joined_pos[vlen];
+  // uint64_t joined_neg[vlen];
+  // uint64_t joined_tp[vlen];
+  // uint64_t joined_tn[vlen];
+
+  for(int i = 0; i < uids.size(); i++){
+
+    // ** thread partition
+    // int i
+    // uid_ref& uid
+    // -- sign stuff
+    // uint64_t* left (1 x width_ul)
+    // uint64_t* right (uid.count x width_ul)
+    // uint64_t* to store (if keep paths)
+
+
+    const uid_ref& uid = uids[i];
+    // printf("[%06d] src: %d, trg: %d, count: %d, loc: %d\n", i, uid.src, uid.trg, uid.count, uid.location);
+    if(uid.count == 0)
+      continue;
+
+    // uint64_t* path_pos0 = paths0->pos + i * vlen;
+    // uint64_t* path_neg0 = paths0->neg + i * vlen;
+
+    for(int j = uid.location; j < (uid.location + uid.count); j++){
+
+      // printf("[%06d] src: %d, trg: %d, count: %d, loc: %d --> %d\n", i, uid.src, uid.trg, uid.count, uid.location, j);
+
+
+      int sign = 0;
+      // if(conf.path_length > 3)
+      //   sign = join_gene_signs[i];
+      // else if(conf.path_length < 3)
+      //   sign = join_gene_signs[j];
+      // else if(conf.path_length == 3)
+      //   sign = (join_gene_signs[i] + join_gene_signs[j] == 0) ? -1 : 1;
+
+      // uint64_t* path_pos1 = (sign == 1 ? paths1->pos : paths1->neg) + j * vlen;
+      // uint64_t* path_neg1 = (sign == 1 ? paths1->neg : paths1->pos) + j * vlen;
+
+
+      if(keep_paths){
+        // memcpy(pathsr->pos + path_idx * vlen, joined_pos, vlen * sizeof(uint64_t));
+        // memcpy(pathsr->neg + path_idx * vlen, joined_neg, vlen * sizeof(uint64_t));
+      }
+      path_idx += 1;
+
+      // int cases = case_pos + case_neg;
+      // int ctrls = ctrl_pos + ctrl_neg;
+
+
+    }
+
+  }
+
   return joined_res();
 }
 

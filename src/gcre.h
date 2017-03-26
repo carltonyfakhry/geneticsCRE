@@ -73,33 +73,20 @@ struct joined_res {
   vec_d permuted_scores;
 };
 
-/*
-// TODO must be a better way to define overrides
 class JoinMethod {
 public:
-  virtual paths_type* createPathSet() const = 0;
-  virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const = 0;
-  virtual paths_type* createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const = 0;
-  virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const = 0;
+  virtual joined_res join(uid_ref& uid) const = 0;
 };
 
-class JoinMethod1Native : public JoinMethod {
-public:
-  virtual paths_type* createPathSet() const;
-  virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const;
-  virtual paths_type* createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const;
-  virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
-};
+// class JoinMethod1Native : public JoinMethod {
+// public:
+//   virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
+// };
 
-class JoinMethod2Native : public JoinMethod {
-public:
-  virtual paths_type* createPathSet() const;
-  virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const;
-  virtual paths_type* createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const;
-  virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
-};
-*/
-
+// class JoinMethod2Native : public JoinMethod {
+// public:
+//   virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
+// };
 
 class PathSet {
 
@@ -180,14 +167,15 @@ public:
 
 protected:
 
-  vec2d_d value_table;
-  uint64_t* case_mask = nullptr;
-  uint64_t* perm_case_mask = nullptr;
-
   // pad to uint64_t
   static inline int vector_width_ul(int num_cases, int num_ctrls) {
     return (int) ceil((num_cases + num_ctrls) / 64.0);
   }
+
+  vec2d_d value_table;
+  uint64_t* case_mask = nullptr;
+  uint64_t* perm_case_mask = nullptr;
+
 
 };
 
