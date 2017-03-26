@@ -1,48 +1,119 @@
-#include <iostream>
-#include <vector>
 #include <typeinfo>
-#include <stdio.h>
-#include <stdint.h>
+#include <sstream>
+#include <cstdlib>
+#include "test.h"
 
 using namespace std;
 
-struct path_set {
-  int len;
-  vector<int> v;
-  path_set(){}
-  path_set(int len);
-  ~path_set();
-};
+namespace test {
 
-struct uid_ref {
-  int src;
-  int trg;
-  int count;
-  int location;
-};
+  char* get_opt(char** begin, char** end, const string& option) {
+    char** itr = find(begin, end, option);
+    if (itr != end && ++itr != end) {
+      return *itr;
+    }
+    return 0;
+  }
 
-path_set::path_set(int len) : len(len) {
-  printf("i am created: %d, %d\n", len, len);
-  v.push_back(17);
-  v.push_back(17);
-}
+  bool has_opt(char** begin, char** end, const string& option) {
+    return find(begin, end, option) != end;
+  }
 
-path_set::~path_set(){
-  printf("i am destructed\n");
-}
+  string read_line(ifstream& fdata){
+    string line;
+    getline(fdata, line, ' ');
+    cout << line << " (";
+    getline(fdata, line);
+    cout << line.size() << ")" << endl;
+    return line;
+  }
 
-int main()
-{
+  vector<uid_ref> read_uids(ifstream& fdata){
+    string line, val, v;
+    stringstream buf, ub;
+    vector<uid_ref> uids;
 
-  path_set a;
-  path_set b(78);
+    getline(fdata, line, ' ');
+    cout << line << ": ";
+    getline(fdata, line);
+    buf.str(line);
+    buf.clear();
+    while (getline(buf, val, ' ')) {
+      uid_ref uid;
+      ub.str(val);
+      ub.clear();
+      getline(ub, v, ':');
+      uid.src = stoi(v);
+      getline(ub, v, ':');
+      uid.trg = stoi(v);
+      getline(ub, v, ':');
+      uid.count = stoi(v);
+      getline(ub, v, ':');
+      uid.location = stoi(v);
+      uids.push_back(uid);
+    }
+    cout << uids.size() << endl;
+    return uids;
+  }
 
-  // vector<uid_ref> u(2, uid_ref());
-  // uid_ref& r = * new uid_ref;
-  // u.push_back(r);
-  // for(int k = 0; k < u.size(); k++)
-  //   printf(" %d", u[k].trg);
-  // printf("\n");
+  vector<int> read_ints(ifstream& fdata){
+    string line, val;
+    stringstream buf;
+    vector<int> data;
+    getline(fdata, line, ' ');
+    cout << line << ": ";
+    getline(fdata, line);
+    buf.str(line);
+    buf.clear();
+    while (getline(buf, val, ' ')) {
+      data.push_back(stoi(val));
+    }
+    cout << data.size() << endl;
+    return data;
+  }
 
-  printf("done\n");
+  vec2d_i read_data(ifstream& fdata){
+    string line, val, v;
+    stringstream buf, ub;
+    vec2d_i data;
+
+    getline(fdata, line, ' ');
+    cout << line << ": ";
+    getline(fdata, line);
+    buf.str(line);
+    buf.clear();
+
+    while (getline(buf, val, ' ')) {
+      data.push_back(vector<int>());
+      ub.str(val);
+      ub.clear();
+      while (getline(ub, v, ','))
+        data.back().push_back(stoi(v));
+    }
+    cout << data.size() << " x " << data.front().size() << endl;
+    return data;
+  }
+
+  vec2d_d read_vals(ifstream& fdata){
+    string line, val, v;
+    stringstream buf, ub;
+    vec2d_d data;
+
+    getline(fdata, line, ' ');
+    cout << line << ": ";
+    getline(fdata, line);
+    buf.str(line);
+    buf.clear();
+
+    while (getline(buf, val, ' ')) {
+      data.push_back(vector<double>());
+      ub.str(val);
+      ub.clear();
+      while (getline(ub, v, ','))
+        data.back().push_back(stod(v));
+    }
+    cout << data.size() << " x " << data.front().size() << endl;
+    return data;
+  }
+
 }

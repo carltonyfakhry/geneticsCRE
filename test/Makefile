@@ -16,7 +16,7 @@ LDLIBS=
 
 # -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 
-SRCS=harness.cpp $(wildcard ../src/method*.cpp) $(wildcard ../src/join_*.cpp)
+SRCS=harness.cpp test.cpp $(wildcard ../src/method*.cpp) $(wildcard ../src/join_*.cpp)
 OBJS=$(subst .cpp,.o,$(SRCS))
 
 all: bench
