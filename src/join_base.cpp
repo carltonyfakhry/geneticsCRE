@@ -86,6 +86,31 @@ void JoinExec::setValueTable(vec2d_d table){
   value_table = table;
 }
 
+// data comes in as perm x patient: 0=flipped, 1=unflipped
+// here converted to 1=case, 0=control
+// intermediate mask is inverted, so keep 0-padding of the vector tail from becoming mostly cases
+void JoinExec::setPermutedCases(vec2d_i& data) {
+
+  printf("loading permuted case masks: %lu x %lu (iterations: %d)\n", data.size(), data.size() > 0 ? data.front().size() : 0, iterations);
+
+  perm_case_mask = new uint64_t[iterations * width_ul];
+  for(int k = 0; k < iterations * width_ul; k++)
+    perm_case_mask[k] = bit_zero_ul;
+
+  for(int r = 0; r < data.size(); r++) {
+    uint64_t perm[width_ul];
+    for(int k = 0; k < width_ul; k++)
+      perm[k] = bit_zero_ul;
+    for(int c = 0; c < data[r].size(); c++) {
+      if(data[r][c] != 1)
+        perm[c/64] |= bit_one_ul << c % 64;
+    }
+    for(int k = 0; k < width_ul; k++) {
+      perm_case_mask[r * width_ul + k] = case_mask[k] ^ perm[k];
+    }
+  }
+
+}
 
 unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
   // std::make_unique is C++14
@@ -95,3 +120,18 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
 joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
   return joined_res();
 }
+
+// TODO method to generate case permutations
+  // printf("generating simplified case masks for permutation (it = %d)\n", conf.iterations);
+  // srand((unsigned) time(0));
+
+  // vec2d_u16 permute_cases;
+  // for(int k = 0; k < conf.iterations; k++){
+  //   set<int> cases;
+  //   permute_cases.push_back(vector<uint16_t>());
+  //   while(cases.size() < conf.num_cases)
+  //     cases.insert(rand() % (conf.num_cases + conf.num_controls));
+  //   for(auto c : cases)
+  //     permute_cases.back().push_back(c);
+  // }
+  // printf("permuted_cases: %lu (%lu)\n", permute_cases.size(), permute_cases.back().size());

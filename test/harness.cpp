@@ -70,32 +70,11 @@ int main(int argc, char* argv[]) {
   vec2d_i perms = read_data(fdata);
   vec2d_d table = read_vals(fdata);
 
-
-
-  // printf("generating simplified case masks for permutation (it = %d)\n", conf.iterations);
-  // srand((unsigned) time(0));
-
-  // vec2d_u16 permute_cases;
-  // for(int k = 0; k < conf.iterations; k++){
-  //   set<int> cases;
-  //   permute_cases.push_back(vector<uint16_t>());
-  //   while(cases.size() < conf.num_cases)
-  //     cases.insert(rand() % (conf.num_cases + conf.num_controls));
-  //   for(auto c : cases)
-  //     permute_cases.back().push_back(c);
-  // }
-  // printf("permuted_cases: %lu (%lu)\n", permute_cases.size(), permute_cases.back().size());
-
   exec.setValueTable(table);
+  exec.setPermutedCases(perms);
 
-  // CREATE DATA SETS
   auto parsed_data1 = exec.createPathSet(data1.size());
-
   parsed_data1->load(data1);
-
-  // -- FIRST ITERATION -- 
-
-  // CREATE PATH SETS
 
   auto zero_set = exec.createPathSet(0);
 

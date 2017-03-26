@@ -149,7 +149,6 @@ public:
   const int num_cases;
   const int num_ctrls;
   const int width_ul;
-  vec2d_u16 permute_cases;
   int top_k = 12;
   int iterations = 0;
   int nthreads = 0;
@@ -167,19 +166,23 @@ public:
   ~JoinExec(){
     if(case_mask)
       delete[] case_mask;
+    if(perm_case_mask)
+      delete[] perm_case_mask;
   }
 
   void setValueTable(vec2d_d table);
+
+  void setPermutedCases(vec2d_i& perm_cases);
 
   unique_ptr<PathSet> createPathSet(int size) const;
   
   joined_res join(const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
-
 protected:
 
   vec2d_d value_table;
   uint64_t* case_mask = nullptr;
+  uint64_t* perm_case_mask = nullptr;
 
   // pad to uint64_t
   static inline int vector_width_ul(int num_cases, int num_ctrls) {
