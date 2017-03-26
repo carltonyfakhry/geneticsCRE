@@ -41,7 +41,8 @@ int main(int argc, char* argv[]) {
   printf("hello\n\n");
 
   JoinExec m(4, 8);
-  PathSet& p = m.createPathSet(8);
+  auto p = m.createPathSet(8);
+  
 
   // for(int k = 0; k < p.size; k++) {
   //   for(int v = 0; v < p.width_ul; v++){

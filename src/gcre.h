@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -32,14 +33,6 @@ typedef std::vector<std::vector<int8_t>> vec2d_i8;
 typedef std::vector<std::vector<uint16_t>> vec2d_u16;
 typedef std::vector<std::vector<uint64_t>> vec2d_u64;
 
-
-struct uid_ref {
-  int src;
-  int trg;
-  int count;
-  int location;
-};
-
 class Score {
 public:
   double score = -numeric_limits<double>::infinity();
@@ -51,12 +44,62 @@ public:
   friend bool operator<(Score a, Score b) { return a.score > b.score; }
 };
 
+struct paths_type {};
+
+struct paths_base : paths_type {
+  int size = 0;
+  int width_ul = 0;
+  int num_cases = 0;
+};
+
+struct join_config {
+  int num_cases = 0;
+  int num_controls = 0;
+  int top_k = 0;
+  int path_length = 0;
+  int iterations = 0;
+  int nthreads = 0;
+};
+
+struct uid_ref {
+  int src;
+  int trg;
+  int count;
+  int location;
+};
+
 struct joined_res {
   vector<Score> scores;
   vec_d permuted_scores;
 };
 
-#include "geneticsCRE_types.h"
+/*
+// TODO must be a better way to define overrides
+class JoinMethod {
+public:
+  virtual paths_type* createPathSet() const = 0;
+  virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const = 0;
+  virtual paths_type* createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const = 0;
+  virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const = 0;
+};
+
+class JoinMethod1Native : public JoinMethod {
+public:
+  virtual paths_type* createPathSet() const;
+  virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const;
+  virtual paths_type* createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const;
+  virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
+};
+
+class JoinMethod2Native : public JoinMethod {
+public:
+  virtual paths_type* createPathSet() const;
+  virtual paths_type* createPathSet(vec2d_i& data, int num_cases, int num_controls) const;
+  virtual paths_type* createPathSet(vec2d_u64& pos, vec2d_u64& neg, int num_cases, int num_controls) const;
+  virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
+};
+*/
+
 
 class PathSet {
 
@@ -106,14 +149,9 @@ public:
   int nthreads = 0;
 
   JoinExec(const int num_cases, const int num_ctrls) : num_cases(num_cases), num_ctrls(num_ctrls) {}
-  ~JoinExec();
 
-  PathSet& createPathSet(int size) const;
+  unique_ptr<PathSet> createPathSet(int size) const;
   joined_res join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
-
-private:
-
-  mutable vector<PathSet*> paths;
 
 };
 
