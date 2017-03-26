@@ -67,19 +67,6 @@ unique_ptr<PathSet> PathSet_BlockM2::select(const vector<int>& indices) const {
   return unique_ptr<PathSet>(pset);
 }
 
-
-// std::vector<std::vector<uint64_t> > matchData(const std::vector<std::vector<uint64_t> > &parseddata, IntegerVector data_inds){
-//   std::vector<std::vector<uint64_t> > matcheddata(data_inds.size(), std::vector<uint64_t>(parseddata[0].size(),0));
-//   for(int i = 0; i < data_inds.size(); i++){
-//     int data_index = data_inds[i];
-//     matcheddata[i] = parseddata[data_index];
-//   }
-//   return matcheddata;
-// }
-// }
-
-
-
 JoinExec::JoinExec(const int num_cases, const int num_ctrls) : num_cases(num_cases), num_ctrls(num_ctrls), width_ul(vector_width_ul(num_cases, num_ctrls)) {
 
   // create case mask from case/control ranges
@@ -105,6 +92,6 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
   return unique_ptr<PathSet>(new PathSet_BlockM2(size, num_cases + num_ctrls));
 }
 
-joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
   return joined_res();
 }

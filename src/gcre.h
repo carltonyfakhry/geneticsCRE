@@ -154,6 +154,14 @@ public:
   int iterations = 0;
   int nthreads = 0;
 
+  // TODO shouldn't really be here
+  static inline unsigned count_total_paths(const vector<uid_ref>& uids) {
+    unsigned total = 0;
+    for(const auto& uid : uids)
+      total += uid.count;
+    return total;
+  }
+
   JoinExec(const int num_cases, const int num_ctrls);
 
   ~JoinExec(){
@@ -165,7 +173,8 @@ public:
 
   unique_ptr<PathSet> createPathSet(int size) const;
   
-  joined_res join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  joined_res join(const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+
 
 protected:
 
@@ -175,13 +184,6 @@ protected:
   // pad to uint64_t
   static inline int vector_width_ul(int num_cases, int num_ctrls) {
     return (int) ceil((num_cases + num_ctrls) / 64.0);
-  }
-
-  static inline unsigned count_total_paths(const vector<uid_ref>& uids) {
-    unsigned total = 0;
-    for(const auto& uid : uids)
-      total += uid.count;
-    return total;
   }
 
 };
