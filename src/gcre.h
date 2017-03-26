@@ -115,6 +115,9 @@ public:
   virtual const uint64_t* operator[](int idx) const = 0;
   virtual void load(const vec2d_i& data) = 0;
 
+  // create new path set from provided indices
+  virtual unique_ptr<PathSet> select(const vector<int>& indices) const = 0;
+
 protected:
 
   uint64_t* block = nullptr;
@@ -127,6 +130,7 @@ public:
   virtual ~PathSet_BlockM1();
   virtual const uint64_t* operator[](int idx) const;
   virtual void load(const vec2d_i& data);
+  virtual unique_ptr<PathSet> select(const vector<int>& indices) const;
 };
 
 class PathSet_BlockM2 : public PathSet {
@@ -135,6 +139,7 @@ public:
   virtual ~PathSet_BlockM2();
   virtual const uint64_t* operator[](int idx) const;
   virtual void load(const vec2d_i& data);
+  virtual unique_ptr<PathSet> select(const vector<int>& indices) const;
 };
 
 class JoinExec {

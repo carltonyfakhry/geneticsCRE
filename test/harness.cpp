@@ -101,9 +101,12 @@ int main(int argc, char* argv[]) {
   std::vector<std::vector<uint64_t> > parsed_data = parseData(data, nCases, nControls, vlen, vlen2);
   std::vector<std::vector<uint64_t> > parsed_data2 = parseData(data2, nCases, nControls, vlen, vlen2);
 */
-  // -- FIST ITERATION -- 
+  // -- FIRST ITERATION -- 
 
   // CREATE PATH SETS
+
+  unique_ptr<PathSet> paths1 = parsed_data1->select(data_idx0);
+
  /*
   List lst1;
   int total_paths = getTotalPaths(trguids1, uids_CountLoc1);

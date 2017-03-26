@@ -17,6 +17,8 @@ const uint64_t* PathSet_BlockM1::operator[](int idx) const {
 }
 
 void PathSet_BlockM1::load(const vec2d_i& data) {}
+unique_ptr<PathSet> PathSet_BlockM1::select(const vector<int>& indices) const { return nullptr; }
+
 
 PathSet_BlockM2::PathSet_BlockM2(const int size, const int width_ul) : PathSet(size, width_ul, width_ul * 2) {
   block = new uint64_t[size * vlen] {};
@@ -51,6 +53,18 @@ void PathSet_BlockM2::load(const vec2d_i& data) {
   for(int k = 0; k < size * vlen; k++)
     count_set += __builtin_popcountl(block[k]);
   printf("total set: %d (input: %d)\n", count_set, count_in);
+}
+
+unique_ptr<PathSet> PathSet_BlockM2::select(const vector<int>& indices) const {
+  PathSet_BlockM2* pset = new PathSet_BlockM2(indices.size(), width_ul);
+  for(int k = 0; k < pset->size; k++) {
+    memcpy(pset->block + vlen * k, block + vlen * indices[k], vlen * sizeof(uint64_t));
+  }
+  int count_set = 0;
+  for(int k = 0; k < pset->size * vlen; k++)
+    count_set += __builtin_popcountl(pset->block[k]);
+  printf("copied path set by index selection, indices: %lu; total set: %d\n", indices.size(), count_set);
+  return unique_ptr<PathSet>(pset);
 }
 
 
