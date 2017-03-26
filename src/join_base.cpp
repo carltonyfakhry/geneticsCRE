@@ -34,6 +34,11 @@ const uint64_t* PathSet_BlockM2::operator[](int idx) const {
 
 void PathSet_BlockM2::load(vec_i data) {}
 
+
+JoinExec::JoinExec(const int num_cases, const int num_ctrls) : num_cases(num_cases), num_ctrls(num_ctrls), width_ul(vector_width_ul(num_cases, num_ctrls)) {
+  printf("init exec: %d x %d (width: %d ul)\n", num_cases, num_ctrls, width_ul);
+}
+
 unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
   // std::make_unique is C++14
   return unique_ptr<PathSet>(new PathSet_BlockM2(size, num_cases + num_ctrls));
