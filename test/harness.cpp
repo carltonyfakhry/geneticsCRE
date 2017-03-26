@@ -71,6 +71,7 @@ int main(int argc, char* argv[]) {
   vec2d_d table = read_vals(fdata);
 
 
+
   // printf("generating simplified case masks for permutation (it = %d)\n", conf.iterations);
   // srand((unsigned) time(0));
 
@@ -85,10 +86,15 @@ int main(int argc, char* argv[]) {
   // }
   // printf("permuted_cases: %lu (%lu)\n", permute_cases.size(), permute_cases.back().size());
 
+  exec.setValueTable(table);
 
-  // PARSE CASE CONTROL
-  // std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
-  // uint64_t CaseORControl22[iterations*(vlen+vlen2)] __attribute__ ((aligned (16)));
+  unique_ptr<PathSet> parsed_data1 = exec.createPathSet(data1.size());
+  unique_ptr<PathSet> parsed_data2 = exec.createPathSet(data2.size());
+
+  printf("meh22\n");
+
+  parsed_data1->load(data1);
+  parsed_data2->load(data2);
 
   // CREATE DATA SETS
 /*

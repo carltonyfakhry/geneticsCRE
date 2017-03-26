@@ -20,8 +20,8 @@
 
 using namespace std;
 
-const uint64_t ZERO_UL = 0;
-const uint64_t ONE_UL = 1;
+const uint64_t bit_zero_ul = 0;
+const uint64_t bit_one_ul = 1;
 
 typedef std::vector<int> vec_i;
 typedef std::vector<double> vec_d;
@@ -107,12 +107,13 @@ public:
 
   const int size;
   const int width_ul;
+  const int vlen;
 
-  PathSet(const int size, const int width_ul) : size(size), width_ul(width_ul) {};
+  PathSet(const int size, const int width_ul, const int vlen) : size(size), width_ul(width_ul), vlen(vlen) {};
   virtual ~PathSet() {};
 
   virtual const uint64_t* operator[](int idx) const = 0;
-  virtual void load(vec_i data) = 0;
+  virtual void load(const vec2d_i& data) = 0;
 
 protected:
 
@@ -125,7 +126,7 @@ public:
   PathSet_BlockM1(const int size, const int width_ul);
   virtual ~PathSet_BlockM1();
   virtual const uint64_t* operator[](int idx) const;
-  virtual void load(vec_i data);
+  virtual void load(const vec2d_i& data);
 };
 
 class PathSet_BlockM2 : public PathSet {
@@ -133,7 +134,7 @@ public:
   PathSet_BlockM2(const int size, const int width_ul);
   virtual ~PathSet_BlockM2();
   virtual const uint64_t* operator[](int idx) const;
-  virtual void load(vec_i data);
+  virtual void load(const vec2d_i& data);
 };
 
 class JoinExec {
@@ -143,8 +144,6 @@ public:
   const int num_cases;
   const int num_ctrls;
   const int width_ul;
-  vec2d_d value_table;
-  vec2d_u64 case_mask;
   vec2d_u16 permute_cases;
   int top_k = 12;
   int iterations = 0;
@@ -152,11 +151,21 @@ public:
 
   JoinExec(const int num_cases, const int num_ctrls);
 
+  ~JoinExec(){
+    if(case_mask)
+      delete[] case_mask;
+  }
+
+  void setValueTable(vec2d_d table);
+
   unique_ptr<PathSet> createPathSet(int size) const;
   
   joined_res join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
 protected:
+
+  vec2d_d value_table;
+  uint64_t* case_mask = nullptr;
 
   // pad to uint64_t
   static inline int vector_width_ul(int num_cases, int num_ctrls) {
