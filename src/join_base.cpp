@@ -56,7 +56,7 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
   return unique_ptr<PathSet>(new PathSet_BlockM2(size, num_cases + num_ctrls));
 }
 
-joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
 
   // TODO
@@ -66,11 +66,6 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
   // printf("adjusting width: %d -> %d\n", conf.num_cases + conf.num_controls, vlen * 64);
   // printf("adjusting iterations: %d -> %d\n\n", conf.iterations, iters);
 
-
-  bool keep_paths = paths_res.size != 0;
-  int flipped_pivot_length = paths1.size;
-  int path_idx = 0;
-
   // priority queue for the indices of the top K paths in the data
   // add dummy score to avoid empty check
   priority_queue<Score> scores;
@@ -78,26 +73,159 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
 
   atomic<unsigned> uid_idx(0);
 
-  // C++14 capture init syntax would be nice
+  // C++14 capture init syntax would be nice,
   // const auto exec = this;
-  auto worker = [this, &uids, &uid_idx](int tid) {
+  auto worker = [this, &uids, &uid_idx, iters, &paths0, &paths1, &paths_res, path_length, &join_gene_signs, &scores](int tid) {
 
-    // uint64_t joined_pos[vlen];
-    // uint64_t joined_neg[vlen];
-    // uint64_t joined_tps[vlen];
-    // uint64_t joined_tns[vlen];
+    // TODO shouldn't need to pass around path_length
+
+    bool keep_paths = paths_res.size != 0;
+    int flipped_pivot_length = paths1.size;
+
+    // TODO need to include result index in uids (increment won't work with threads)
+    int path_idx = 0;
+
+
+    double perm_score[iters];
+    double perm_flips[iters];
+    for(int k = 0; k < iters; k++){
+      perm_score[k] = 0;
+      perm_flips[k] = 0;
+    }
+
+    uint64_t joined_pos[width_ul];
+    uint64_t joined_neg[width_ul];
+    uint64_t joined_tp[width_ul];
+    uint64_t joined_tn[width_ul];
+
+    int p_case_pos[iters];
+    int p_ctrl_pos[iters];
 
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
       const auto& uid = uids[idx];
-      // printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
       if(uid.count == 0)
         continue;
+      // printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
 
-      // for(int loc = uid.location; loc < uid.location + uid.count; loc++)
-        // printf(" %d", loc);
-      // printf("\n");
-      // this_thread::sleep_for(chrono::milliseconds(10));
+      const uint64_t* path_pos0 = paths0[idx];
+      const uint64_t* path_neg0 = paths0[idx];
+
+      for(int loc = uid.location; loc < uid.location + uid.count; loc++) {
+        int sign = 0;
+        if(path_length > 3)
+          sign = join_gene_signs[idx];
+        else if(path_length < 3)
+          sign = join_gene_signs[loc];
+        else if(path_length == 3)
+          sign = (join_gene_signs[idx] + join_gene_signs[loc] == 0) ? -1 : 1;
+
+        const uint64_t* path_pos1 = (sign == 1 ? paths1[loc] : paths1[loc] + width_ul);
+        const uint64_t* path_neg1 = (sign == 1 ? paths1[loc] + width_ul : paths1[loc]);
+
+        int case_pos = 0;
+        int case_neg = 0;
+        int ctrl_pos = 0;
+        int ctrl_neg = 0;
+        int total_pos = 0;
+        int total_neg = 0;
+
+        uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
+
+        // zero out join path holder
+        memset(joined_pos, 0, width_ul * sizeof(uint64_t));
+        memset(joined_neg, 0, width_ul * sizeof(uint64_t));
+
+        for(int r = 0; r < iters; r++){
+          p_case_pos[r] = 0;
+          p_ctrl_pos[r] = 0;
+        }
+
+        for(int k = 0; k < width_ul; k++) {
+
+          bit_pos = path_pos0[k] | path_pos1[k];
+          bit_neg = path_neg0[k] | path_neg1[k];
+
+          if(bit_pos != 0 || bit_neg != 0) {
+
+            bit_con = bit_pos & bit_neg;
+            true_pos = bit_pos & ~bit_con;
+            true_neg = bit_neg & ~bit_con;
+            mask = case_mask[k];
+
+            total_pos += __builtin_popcountl(true_pos);
+            total_neg += __builtin_popcountl(true_neg);
+            case_pos += __builtin_popcountl(true_pos &  mask);
+            case_neg += __builtin_popcountl(true_neg & ~mask);
+            ctrl_pos += __builtin_popcountl(true_neg &  mask);
+            ctrl_neg += __builtin_popcountl(true_pos & ~mask);
+
+            // TODO permute mask access
+
+            if(true_pos != 0) {
+              for(int r = 0; r < iters; r++) {
+                // uint64_t* p_mask = permute_mask + r * vlen;
+                // p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
+              }
+            }
+
+            if(true_neg != 0) {
+              for(int r = 0; r < iters; r++){
+                // uint64_t* p_mask = permute_mask + r * vlen;
+                // p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
+              }
+            }
+
+            joined_pos[k] = bit_pos;
+            joined_neg[k] = bit_neg;
+
+          }
+
+        }
+
+        if(keep_paths){
+          // memcpy(pathsr->pos + path_idx * vlen, joined_pos, vlen * sizeof(uint64_t));
+          // memcpy(pathsr->neg + path_idx * vlen, joined_neg, vlen * sizeof(uint64_t));
+        }
+        path_idx += 1;
+
+        int cases = case_pos + case_neg;
+        int ctrls = ctrl_pos + ctrl_neg;
+
+        double score = value_table[cases][ctrls];
+        double flips = value_table[ctrls][cases];
+
+        if(score > scores.top().score)
+          scores.push(Score(score, idx, loc));
+        if(flips > scores.top().score)
+          scores.push(Score(flips, idx, loc + flipped_pivot_length));
+        while(scores.size() > top_k)
+          scores.pop();
+
+        // for(int r = 0; r < conf.iterations; r++){
+        //   int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
+        //   int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
+
+        //   double p_score = value_table[p_cases][p_ctrls];
+        //   if(p_score > perm_score[r])
+        //     perm_score[r] = p_score;
+        //   double p_flips = value_table[p_ctrls][p_cases];
+        //   if(p_flips > perm_flips[r])
+        //     perm_flips[r] = p_flips;
+        // }
+
+      }
+
+      // joined_res res;
+      // res.permuted_scores.resize(conf.iterations, 0);
+      // for(int k = 0; k < conf.iterations; k++)
+      //   res.permuted_scores[k] = max(perm_score[k], perm_flips[k]);
+      // res.scores.clear();
+      // while(!scores.empty()){
+      //   res.scores.push_back(scores.top());
+      //   scores.pop();
+      // }
+
     }
     printf("[%d] done.\n", tid);
   };

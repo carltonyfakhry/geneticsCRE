@@ -197,7 +197,7 @@ public:
 
   unique_ptr<PathSet> createPathSet(int size) const;
   
-  joined_res join(const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  joined_res join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
 protected:
 
@@ -209,7 +209,6 @@ protected:
   vec2d_d value_table;
   uint64_t* case_mask = nullptr;
   uint64_t* perm_case_mask = nullptr;
-
 
 };
 

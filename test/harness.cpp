@@ -90,35 +90,35 @@ int main(int argc, char* argv[]) {
     auto zero_1 = exec.createPathSet(data_idx0.size());
     auto input_1 = parsed_data1->select(data_idx1);
 
-    auto res0 = exec.join(uids0, signs0, *zero_1, *input_1, *paths1);
+    auto res0 = exec.join(1, uids0, signs0, *zero_1, *input_1, *paths1);
 
     auto zero_2 = exec.createPathSet(data_idx1.size());
     auto parsed_data2 = exec.createPathSet(data2.size());
     parsed_data2->load(data2);
     auto input_2 = parsed_data2->select(data_idx1);
 
-    auto res1 = exec.join(uids1, signs1, *zero_2, *input_2, *zero_set);
+    auto res1 = exec.join(1, uids1, signs1, *zero_2, *input_2, *zero_set);
 
   }
 
   if(path_length >= 2) {
     paths2 = exec.createPathSet(JoinExec::count_total_paths(uids2));
     auto input = parsed_data1->select(data_idx2);
-    auto res2 = exec.join(uids2, signs2, *paths1, *input, *paths2);
+    auto res2 = exec.join(2, uids2, signs2, *paths1, *input, *paths2);
   }
 
   if(path_length >= 3) {
     paths3 = exec.createPathSet(JoinExec::count_total_paths(uids3));
     auto input = parsed_data1->select(data_idx3);
-    auto res3 = exec.join(uids3, signs3, *paths2, *input, *paths3);
+    auto res3 = exec.join(3, uids3, signs3, *paths2, *input, *paths3);
   }
 
   if(path_length >= 4) {
-    auto res4 = exec.join(uids4, signs4, *paths3, *paths2, *zero_set);
+    auto res4 = exec.join(4, uids4, signs4, *paths3, *paths2, *zero_set);
   }
 
   if(path_length >= 5) {
-    auto res5 = exec.join(uids5, signs5, *paths3, *paths3, *zero_set);
+    auto res5 = exec.join(5, uids5, signs5, *paths3, *paths3, *zero_set);
   }
 
 /*
