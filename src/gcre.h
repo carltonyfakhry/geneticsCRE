@@ -44,23 +44,6 @@ public:
   friend bool operator<(Score a, Score b) { return a.score > b.score; }
 };
 
-struct paths_type {};
-
-struct paths_base : paths_type {
-  int size = 0;
-  int width_ul = 0;
-  int num_cases = 0;
-};
-
-struct join_config {
-  int num_cases = 0;
-  int num_controls = 0;
-  int top_k = 0;
-  int path_length = 0;
-  int iterations = 0;
-  int nthreads = 0;
-};
-
 struct uid_ref {
   int src;
   int trg;
@@ -77,16 +60,6 @@ class JoinMethod {
 public:
   virtual joined_res join(uid_ref& uid) const = 0;
 };
-
-// class JoinMethod1Native : public JoinMethod {
-// public:
-//   virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
-// };
-
-// class JoinMethod2Native : public JoinMethod {
-// public:
-//   virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
-// };
 
 class PathSet {
 
