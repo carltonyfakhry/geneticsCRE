@@ -12,7 +12,7 @@ LDFLAGS=-Wl -O3
 
 CXXFLAGS=$(CXX1XFLAGS)
 RM=rm -f
-LDLIBS=
+LDLIBS= -pthread
 
 # -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 

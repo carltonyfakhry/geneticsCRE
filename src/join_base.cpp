@@ -1,5 +1,9 @@
 #include "gcre.h"
 
+#include <thread>
+#include <atomic>
+#include <chrono>
+
 using namespace std;
 
 PathSet_BlockM1::PathSet_BlockM1(const int size, const int width_ul) : PathSet(size, width_ul, width_ul) {
@@ -125,10 +129,46 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
   int iters = iterations;
   int vlen = width_ul;
 
+  bool keep_paths = paths_res.size != 0;
+
+  atomic<unsigned> uid_idx(0);
+
+  // C++14 capture init syntax would be nice
+  // const auto exec = this;
+  auto worker = [this, &uids, &uid_idx](int tid) {
+    int idx = -1;
+    while((idx = uid_idx.fetch_add(1)) < uids.size()) {
+      const auto& uid = uids[idx];
+      printf("this: %d\n", width_ul);
+      printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
+      if(uid.count == 0)
+        continue;
+
+      for(int loc = uid.location; loc < uid.location + uid.count; loc++)
+        printf(" %d", loc);
+      printf("\n");
+      this_thread::sleep_for(chrono::milliseconds(10));
+    }
+    printf("[%d] done.\n", tid);
+  };
+
+  if(nthreads > 0) {
+    vector<thread> pool(nthreads);
+    for(int tid = 0; tid < pool.size(); tid++)
+      pool[tid] = thread(worker, tid + 1);
+    for(auto& t : pool)
+      t.join();
+  } else {
+    // '0' is main thread
+    worker(0);
+  }
+
+  // exit(0);
+  return joined_res();
+
   // printf("adjusting width: %d -> %d\n", conf.num_cases + conf.num_controls, vlen * 64);
   // printf("adjusting iterations: %d -> %d\n\n", conf.iterations, iters);
 
-  bool keep_paths = paths_res.size != 0;
 
   printf("  ****  %d\n", keep_paths);
 
@@ -149,6 +189,7 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
   // uint64_t joined_tp[vlen];
   // uint64_t joined_tn[vlen];
 
+/*
   for(int i = 0; i < uids.size(); i++){
 
     // ** thread partition
@@ -161,7 +202,7 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
 
 
     const uid_ref& uid = uids[i];
-    // printf("[%06d] src: %d, trg: %d, count: %d, loc: %d\n", i, uid.src, uid.trg, uid.count, uid.location);
+    printf("[%06d] src: %d, trg: %d, count: %d, loc: %d\n", i, uid.src, uid.trg, uid.count, uid.location);
     if(uid.count == 0)
       continue;
 
@@ -198,7 +239,7 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
     }
 
   }
-
+*/
   return joined_res();
 }
 

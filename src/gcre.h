@@ -88,6 +88,7 @@ public:
 //   virtual joined_res join(join_config& conf, vector<uid_ref>& uids, vector<int>& join_gene_signs, vec2d_d& value_table, vec2d_u16& permute_cases, paths_type* p_paths0, paths_type* p_paths1, paths_type* p_paths_res, uint64_t total_paths) const;
 // };
 
+// TODO move most implementations to block base
 class PathSet {
 
 public:

@@ -30,7 +30,11 @@ int main(int argc, char* argv[]) {
   int num_cases = stoi(read_line(fdata));
   int num_ctrls = stoi(read_line(fdata));
 
+
   JoinExec exec(num_cases, num_ctrls);
+
+  if(has_opt(argv, arge, "-l"))
+    path_length = stoi(get_opt(argv, arge, "-l"));
 
   if(has_opt(argv, arge, "-k"))
     exec.top_k = stoi(get_opt(argv, arge, "-k"));
