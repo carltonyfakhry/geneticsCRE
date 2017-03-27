@@ -1,8 +1,9 @@
 #include "gcre.h"
 
+#include <chrono>
 #include <thread>
 #include <atomic>
-#include <chrono>
+#include <mutex>
 
 using namespace std;
 
@@ -68,17 +69,21 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
 
   // priority queue for the indices of the top K paths in the data
   // add dummy score to avoid empty check
-  priority_queue<Score> scores;
-  scores.push(Score());
+  priority_queue<Score> global_scores;
+  global_scores.push(Score());
 
   atomic<unsigned> uid_idx(0);
+  mutex g_mutex;
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
-  auto worker = [this, &uids, &uid_idx, iters, &paths0, &paths1, &paths_res, &scores](int tid) {
+  auto worker = [this, &uids, &uid_idx, &g_mutex, iters, &paths0, &paths1, &paths_res, &global_scores](int tid) {
 
     bool keep_paths = paths_res.size != 0;
     int flipped_pivot_length = paths1.size;
+
+    priority_queue<Score> scores;
+    scores.push(Score());
 
     double perm_score[iters];
     double perm_flips[iters];
@@ -223,7 +228,18 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
       // }
 
     }
-    printf("[%d] done.\n", tid);
+
+    // synchronize final section to merge results
+    lock_guard<mutex> lock(g_mutex);
+
+    while(!scores.empty()){
+      auto score = scores.top();
+      if(score.score > global_scores.top().score)
+        global_scores.push(score);
+      scores.pop();
+    }
+
+    printf("[%d] done\n", tid);
   };
 
   if(nthreads > 0) {
@@ -237,10 +253,14 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
     worker(0);
   }
 
-  printf("scores: %lu\n", scores.size());
-  while(!scores.empty()){
-    auto score = scores.top();
-    scores.pop();
+
+  while(global_scores.size() > top_k)
+    global_scores.pop();
+
+  printf("scores: %lu\n", global_scores.size());
+  while(!global_scores.empty()){
+    auto score = global_scores.top();
+    global_scores.pop();
     printf("  %4d %4d %f\n", score.src, score.trg, score.score);
   }
 
