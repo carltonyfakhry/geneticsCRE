@@ -51,13 +51,13 @@ void JoinExec::setPermutedCases(vec2d_i& data) {
 
 }
 
+// TODO width based on method needs
 unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
   // std::make_unique is C++14
-  return unique_ptr<PathSet>(new PathSet_BlockM2(size, num_cases + num_ctrls));
+  return unique_ptr<PathSet>(new PathSet(size, width_ul, width_ul * 2));
 }
 
 joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
-
 
   // TODO
   // int iters = 8 * ceil(max(1, conf.iterations) / 8.0);
@@ -85,7 +85,6 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
     // TODO need to include result index in uids (increment won't work with threads)
     int path_idx = 0;
 
-
     double perm_score[iters];
     double perm_flips[iters];
     for(int k = 0; k < iters; k++){
@@ -93,8 +92,11 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
       perm_flips[k] = 0;
     }
 
-    uint64_t joined_pos[width_ul];
-    uint64_t joined_neg[width_ul];
+    // allocate as single block for storage in path set
+    uint64_t joined[width_ul * 2];
+    uint64_t* joined_pos = joined;
+    uint64_t* joined_neg = joined + width_ul;
+
     uint64_t joined_tp[width_ul];
     uint64_t joined_tn[width_ul];
 
@@ -109,7 +111,7 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
       // printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
 
       const uint64_t* path_pos0 = paths0[idx];
-      const uint64_t* path_neg0 = paths0[idx];
+      const uint64_t* path_neg0 = path_pos0 + width_ul;
 
       for(int loc = uid.location; loc < uid.location + uid.count; loc++) {
         int sign = 0;
@@ -136,10 +138,10 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
         memset(joined_pos, 0, width_ul * sizeof(uint64_t));
         memset(joined_neg, 0, width_ul * sizeof(uint64_t));
 
-        for(int r = 0; r < iters; r++){
-          p_case_pos[r] = 0;
-          p_ctrl_pos[r] = 0;
-        }
+        // for(int r = 0; r < iters; r++){
+        //   p_case_pos[r] = 0;
+        //   p_ctrl_pos[r] = 0;
+        // }
 
         for(int k = 0; k < width_ul; k++) {
 
@@ -161,7 +163,7 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
             ctrl_neg += __builtin_popcountl(true_pos & ~mask);
 
             // TODO permute mask access
-
+/*
             if(true_pos != 0) {
               for(int r = 0; r < iters; r++) {
                 // uint64_t* p_mask = permute_mask + r * vlen;
@@ -175,6 +177,7 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
                 // p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
               }
             }
+*/
 
             joined_pos[k] = bit_pos;
             joined_neg[k] = bit_neg;
@@ -183,10 +186,8 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
 
         }
 
-        if(keep_paths){
-          // memcpy(pathsr->pos + path_idx * vlen, joined_pos, vlen * sizeof(uint64_t));
-          // memcpy(pathsr->neg + path_idx * vlen, joined_neg, vlen * sizeof(uint64_t));
-        }
+        if(keep_paths)
+          paths_res.set(path_idx, joined);
         path_idx += 1;
 
         int cases = case_pos + case_neg;
@@ -239,6 +240,13 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
   } else {
     // '0' is main thread
     worker(0);
+  }
+
+  printf("scores: %lu\n", scores.size());
+  while(!scores.empty()){
+    auto score = scores.top();
+    scores.pop();
+    printf("  %4d %4d %f\n", score.src, score.trg, score.score);
   }
 
   // exit(0);

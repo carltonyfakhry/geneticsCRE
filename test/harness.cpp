@@ -5,6 +5,8 @@
 #include <set>
 #include <time.h>
 
+#include <locale.h>
+
 #include "gcre.h"
 #include "test.h"
 
@@ -12,6 +14,8 @@ using namespace std;
 using namespace test;
 
 int main(int argc, char* argv[]) {
+
+  setlocale(LC_ALL, "");
 
   char** arge = argc + argv;
   

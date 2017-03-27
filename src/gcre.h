@@ -96,17 +96,23 @@ public:
   const int width_ul;
   const int vlen;
 
-  PathSet(const int size, const int width_ul, const int vlen) : size(size), width_ul(width_ul), vlen(vlen), block(unique_ptr<uint64_t[]>(new uint64_t[size * vlen])) {
+  // TODO abstract interface for other storage types
+  PathSet(const int size, const int width_ul, const int vlen) : size(size), width_ul(width_ul), vlen(vlen) {
+    block = unique_ptr<uint64_t[]>(new uint64_t[size * vlen]);
     for(int k = 0; k < size * vlen; k++)
       block[k] = bit_zero_ul;
-    printf("[%p] allocated block for path set: %d x %d (%lu bytes)\n", this, size, width_ul, size * vlen * sizeof(uint64_t));
+    printf("[%p] allocated block for path set: %d x %d ul, total width: %d (%'1lu bytes)\n", this, size, width_ul, vlen, size * vlen * sizeof(uint64_t));
   }
 
   inline const uint64_t* operator[](int idx) const {
     return block.get() + idx * vlen;
   }
 
-  // virtual void load(const vec2d_i& data) = 0;
+  inline void set(int idx, const uint64_t* data) {
+    memcpy(block.get() + idx * vlen, data, vlen * sizeof(uint64_t));
+  }
+
+  // positives are loaded into the first half of the record, so m1/m2 loading is the same
   void load(const vec2d_i& data) {
 
     printf("loading data to path set: %lu x %lu\n", data.size(), data.size() > 0 ? data.front().size() : 0);
@@ -128,13 +134,8 @@ public:
   }
 
   // create new path set from provided indices
-  virtual unique_ptr<PathSet> select(const vector<int>& indices) const = 0;
-
-protected:
-
-  const unique_ptr<uint64_t[]> block;
-
-  unique_ptr<PathSet> select_into(PathSet* pset, const vector<int>& indices) const {
+  unique_ptr<PathSet> select(const vector<int>& indices) const {
+    unique_ptr<PathSet> pset(new PathSet(indices.size(), width_ul, vlen));
     for(int k = 0; k < pset->size; k++) {
       memcpy(pset->block.get() + vlen * k, block.get() + vlen * indices[k], vlen * sizeof(uint64_t));
     }
@@ -142,25 +143,13 @@ protected:
     for(int k = 0; k < pset->size * vlen; k++)
       count_set += __builtin_popcountl(pset->block[k]);
     printf("copied path set by index selection, indices: %lu; total set: %d\n", indices.size(), count_set);
-    return unique_ptr<PathSet>(pset);
+    return pset;
   }
 
-};
+protected:
 
-class PathSet_BlockM1 : public PathSet {
-public:
-  PathSet_BlockM1(const int size, const int width_ul) : PathSet(size, width_ul, width_ul) {}
-  virtual unique_ptr<PathSet> select(const vector<int>& indices) const {
-    return select_into(new PathSet_BlockM1(indices.size(), width_ul), indices);
-  }
-};
+  unique_ptr<uint64_t[]> block;
 
-class PathSet_BlockM2 : public PathSet {
-public:
-  PathSet_BlockM2(const int size, const int width_ul) : PathSet(size, width_ul, width_ul * 2) {}
-  virtual unique_ptr<PathSet> select(const vector<int>& indices) const {
-    return select_into(new PathSet_BlockM2(indices.size(), width_ul), indices);
-  }
 };
 
 class JoinExec {
