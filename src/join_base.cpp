@@ -33,11 +33,14 @@ void JoinExec::setPermutedCases(vec2d_i& data) {
 
   printf("loading permuted case masks: %lu x %lu (iterations: %d)\n", data.size(), data.size() > 0 ? data.front().size() : 0, iterations);
 
+  if(iterations < data.size())
+    printf("  ** WARN more permuted cases than iterations, input will be truncated\n");
+
   perm_case_mask = new uint64_t[iterations * width_ul];
   for(int k = 0; k < iterations * width_ul; k++)
     perm_case_mask[k] = bit_zero_ul;
 
-  for(int r = 0; r < data.size(); r++) {
+  for(int r = 0; r < min( (size_t) iterations, data.size()); r++) {
     uint64_t perm[width_ul];
     for(int k = 0; k < width_ul; k++)
       perm[k] = bit_zero_ul;
@@ -47,6 +50,17 @@ void JoinExec::setPermutedCases(vec2d_i& data) {
     }
     for(int k = 0; k < width_ul; k++) {
       perm_case_mask[r * width_ul + k] = case_mask[k] ^ perm[k];
+    }
+  }
+
+  if(iterations > data.size()) {
+
+    printf("  ** WARN not enough permuted cases, some will be reused to match iterations - hope this is for testing!\n");
+
+    for(int r = data.size(); r < iterations; r++) {
+      int c = r % data.size();
+      for(int k = 0; k < width_ul; k++) 
+        perm_case_mask[r * width_ul + k] = perm_case_mask[c * width_ul + k];
     }
   }
 

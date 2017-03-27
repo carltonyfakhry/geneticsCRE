@@ -1,8 +1,9 @@
+#include <set>
 #include <typeinfo>
 #include <sstream>
 #include <cstdlib>
+#include <chrono>
 #include <ctime>
-#include <set>
 #include <time.h>
 
 #include <locale.h>
@@ -70,7 +71,7 @@ int main(int argc, char* argv[]) {
     exec.top_k = stoi(get_opt(argv, arge, "-k"));
 
   if(has_opt(argv, arge, "-p"))
-    exec.iterations = max(1, stoi(get_opt(argv, arge, "-p")));
+    exec.iterations = max(0, stoi(get_opt(argv, arge, "-p")));
 
   if(has_opt(argv, arge, "-t"))
     exec.nthreads = stoi(get_opt(argv, arge, "-t"));
@@ -89,40 +90,43 @@ int main(int argc, char* argv[]) {
 
   auto uids0 = read_uids(fdata);
   auto sign0 = read_ints(fdata);
+  add_signs(1, uids0, sign0);
+  add_idx(uids0);
+  
   auto uids1 = read_uids(fdata);
   auto sign1 = read_ints(fdata);
+  add_signs(1, uids1, sign1);
+  add_idx(uids1);
+  
   auto uids2 = read_uids(fdata);
   auto sign2 = read_ints(fdata);
+  add_signs(2, uids2, sign2);
+  add_idx(uids2);
+  
   auto uids3 = read_uids(fdata);
   auto sign3 = read_ints(fdata);
+  add_signs(3, uids3, sign3);
+  add_idx(uids3);
+  
   auto uids4 = read_uids(fdata);
   auto sign4 = read_ints(fdata);
+  add_signs(4, uids4, sign4);
+  add_idx(uids4);
+  
   auto uids5 = read_uids(fdata);
   auto sign5 = read_ints(fdata);
-
-  add_signs(1, uids0, sign0);
-  add_signs(1, uids1, sign1);
-  add_signs(2, uids2, sign2);
-  add_signs(3, uids3, sign3);
-  add_signs(4, uids4, sign4);
   add_signs(5, uids5, sign5);
-
-  add_idx(uids0);
-  add_idx(uids1);
-  add_idx(uids2);
-  add_idx(uids3);
-  add_idx(uids4);
   add_idx(uids5);
 
-  vector<int> data_idx0 = read_ints(fdata);
-  vector<int> data_idx1 = read_ints(fdata);
-  vector<int> data_idx2 = read_ints(fdata);
-  vector<int> data_idx3 = read_ints(fdata);
+  auto data_idx0 = read_ints(fdata);
+  auto data_idx1 = read_ints(fdata);
+  auto data_idx2 = read_ints(fdata);
+  auto data_idx3 = read_ints(fdata);
 
-  vec2d_i data1 = read_data(fdata);
-  vec2d_i data2 = read_data(fdata);
-  vec2d_i perms = read_data(fdata);
-  vec2d_d table = read_vals(fdata);
+  auto data1 = read_data(fdata);
+  auto data2 = read_data(fdata);
+  auto perms = read_data(fdata);
+  auto table = read_vals(fdata);
 
   exec.setValueTable(table);
   exec.setPermutedCases(perms);
@@ -168,7 +172,14 @@ int main(int argc, char* argv[]) {
   }
 
   if(path_length >= 5) {
+
+    auto start = chrono::system_clock::now();
+
     auto res5 = exec.join(uids5, *paths3, *paths3, *zero_set);
+
+    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
+    printf("[%d] time: %'ld ms (%'ld x threads)\n", 0, time.count(), time.count() * max(1, exec.nthreads));
+
   }
 
 /*
