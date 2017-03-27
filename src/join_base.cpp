@@ -6,71 +6,6 @@
 
 using namespace std;
 
-PathSet_BlockM1::PathSet_BlockM1(const int size, const int width_ul) : PathSet(size, width_ul, width_ul) {
-  block = new uint64_t[size * vlen] {};
-  printf("[%p] allocated block for m1 paths: %d x %d (%lu bytes)\n", this, size, width_ul, size * vlen * sizeof(uint64_t));
-}
-
-PathSet_BlockM1::~PathSet_BlockM1(){
-  printf("[%p] m1 block cleanup\n", this);
-  delete[] block;
-}
-
-const uint64_t* PathSet_BlockM1::operator[](int idx) const {
-  return block + idx * vlen;
-}
-
-void PathSet_BlockM1::load(const vec2d_i& data) {}
-unique_ptr<PathSet> PathSet_BlockM1::select(const vector<int>& indices) const { return nullptr; }
-
-
-PathSet_BlockM2::PathSet_BlockM2(const int size, const int width_ul) : PathSet(size, width_ul, width_ul * 2) {
-  block = new uint64_t[size * vlen] {};
-  printf("[%p:%p] allocated block for m2 paths: %d x %d (%lu bytes)\n", this, block, size, width_ul, size * vlen * sizeof(uint64_t));
-}
-
-PathSet_BlockM2::~PathSet_BlockM2(){
-  printf("[%p:%p] m2 block cleanup\n", this, block);
-  delete[] block;
-}
-
-const uint64_t* PathSet_BlockM2::operator[](int idx) const {
-  return block + idx * vlen;
-}
-
-// interleave pos/neg uint64 blocks
-void PathSet_BlockM2::load(const vec2d_i& data) {
-
-  printf("loading data to path set: %lu x %lu\n", data.size(), data.size() > 0 ? data.front().size() : 0);
-
-  int count_in = 0;
-  for(int r = 0; r < data.size(); r++) {
-    for(int c = 0; c < data[r].size(); c++) {
-      if(data[r][c] != 0) {
-        block[r * vlen + c/64*2] |= bit_one_ul << c % 64;
-        count_in += 1;
-      }
-    }
-  }
-
-  int count_set = 0;
-  for(int k = 0; k < size * vlen; k++)
-    count_set += __builtin_popcountl(block[k]);
-  printf("total set: %d (input: %d)\n", count_set, count_in);
-}
-
-unique_ptr<PathSet> PathSet_BlockM2::select(const vector<int>& indices) const {
-  PathSet_BlockM2* pset = new PathSet_BlockM2(indices.size(), width_ul);
-  for(int k = 0; k < pset->size; k++) {
-    memcpy(pset->block + vlen * k, block + vlen * indices[k], vlen * sizeof(uint64_t));
-  }
-  int count_set = 0;
-  for(int k = 0; k < pset->size * vlen; k++)
-    count_set += __builtin_popcountl(pset->block[k]);
-  printf("copied path set by index selection, indices: %lu; total set: %d\n", indices.size(), count_set);
-  return unique_ptr<PathSet>(pset);
-}
-
 JoinExec::JoinExec(const int num_cases, const int num_ctrls) : num_cases(num_cases), num_ctrls(num_ctrls), width_ul(vector_width_ul(num_cases, num_ctrls)) {
 
   // create case mask from case/control ranges
@@ -126,28 +61,43 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
 
   // TODO
   // int iters = 8 * ceil(max(1, conf.iterations) / 8.0);
-  int iters = iterations;
-  int vlen = width_ul;
+  const int iters = iterations;
+  const int vlen = width_ul;
+  // printf("adjusting width: %d -> %d\n", conf.num_cases + conf.num_controls, vlen * 64);
+  // printf("adjusting iterations: %d -> %d\n\n", conf.iterations, iters);
+
 
   bool keep_paths = paths_res.size != 0;
+  int flipped_pivot_length = paths1.size;
+  int path_idx = 0;
+
+  // priority queue for the indices of the top K paths in the data
+  // add dummy score to avoid empty check
+  priority_queue<Score> scores;
+  scores.push(Score());
 
   atomic<unsigned> uid_idx(0);
 
   // C++14 capture init syntax would be nice
   // const auto exec = this;
   auto worker = [this, &uids, &uid_idx](int tid) {
+
+    // uint64_t joined_pos[vlen];
+    // uint64_t joined_neg[vlen];
+    // uint64_t joined_tps[vlen];
+    // uint64_t joined_tns[vlen];
+
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
       const auto& uid = uids[idx];
-      printf("this: %d\n", width_ul);
-      printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
+      // printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
       if(uid.count == 0)
         continue;
 
-      for(int loc = uid.location; loc < uid.location + uid.count; loc++)
-        printf(" %d", loc);
-      printf("\n");
-      this_thread::sleep_for(chrono::milliseconds(10));
+      // for(int loc = uid.location; loc < uid.location + uid.count; loc++)
+        // printf(" %d", loc);
+      // printf("\n");
+      // this_thread::sleep_for(chrono::milliseconds(10));
     }
     printf("[%d] done.\n", tid);
   };
@@ -166,28 +116,6 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const vector<int>& join_g
   // exit(0);
   return joined_res();
 
-  // printf("adjusting width: %d -> %d\n", conf.num_cases + conf.num_controls, vlen * 64);
-  // printf("adjusting iterations: %d -> %d\n\n", conf.iterations, iters);
-
-
-  printf("  ****  %d\n", keep_paths);
-
-
-  // priority queue for the indices of the top K paths in the data
-  // add dummy score to avoid empty check
-  // priority_queue<Score> scores;
-  // scores.push(Score());
-
-  // TODO conf.nthreads
-  // int nthreads = 1;
-
-  int flipped_pivot_length = paths1.size;
-  int path_idx = 0;
-
-  // uint64_t joined_pos[vlen];
-  // uint64_t joined_neg[vlen];
-  // uint64_t joined_tp[vlen];
-  // uint64_t joined_tn[vlen];
 
 /*
   for(int i = 0; i < uids.size(); i++){
