@@ -49,6 +49,8 @@ struct uid_ref {
   int trg;
   int count;
   int location;
+  int path_idx;
+  vector<bool> signs;
 };
 
 struct joined_res {
@@ -159,7 +161,7 @@ public:
 
   unique_ptr<PathSet> createPathSet(int size) const;
   
-  joined_res join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  joined_res join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
 protected:
 

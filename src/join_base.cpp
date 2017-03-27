@@ -57,7 +57,7 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
   return unique_ptr<PathSet>(new PathSet(size, width_ul, width_ul * 2));
 }
 
-joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const vector<int>& join_gene_signs, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
   // TODO
   // int iters = 8 * ceil(max(1, conf.iterations) / 8.0);
@@ -75,15 +75,10 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
-  auto worker = [this, &uids, &uid_idx, iters, &paths0, &paths1, &paths_res, path_length, &join_gene_signs, &scores](int tid) {
-
-    // TODO shouldn't need to pass around path_length
+  auto worker = [this, &uids, &uid_idx, iters, &paths0, &paths1, &paths_res, &scores](int tid) {
 
     bool keep_paths = paths_res.size != 0;
     int flipped_pivot_length = paths1.size;
-
-    // TODO need to include result index in uids (increment won't work with threads)
-    int path_idx = 0;
 
     double perm_score[iters];
     double perm_flips[iters];
@@ -105,25 +100,25 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
 
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
+
       const auto& uid = uids[idx];
+
       if(uid.count == 0)
         continue;
+
+      // start of result path block for this uid
+      int path_idx = uid.path_idx;
+
       // printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
 
       const uint64_t* path_pos0 = paths0[idx];
       const uint64_t* path_neg0 = path_pos0 + width_ul;
 
-      for(int loc = uid.location; loc < uid.location + uid.count; loc++) {
-        int sign = 0;
-        if(path_length > 3)
-          sign = join_gene_signs[idx];
-        else if(path_length < 3)
-          sign = join_gene_signs[loc];
-        else if(path_length == 3)
-          sign = (join_gene_signs[idx] + join_gene_signs[loc] == 0) ? -1 : 1;
+      for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
 
-        const uint64_t* path_pos1 = (sign == 1 ? paths1[loc] : paths1[loc] + width_ul);
-        const uint64_t* path_neg1 = (sign == 1 ? paths1[loc] + width_ul : paths1[loc]);
+        auto sign = uid.signs[loc_idx];
+        const uint64_t* path_pos1 = (sign ? paths1[loc] : paths1[loc] + width_ul);
+        const uint64_t* path_neg1 = (sign ? paths1[loc] + width_ul : paths1[loc]);
 
         int case_pos = 0;
         int case_neg = 0;
@@ -249,61 +244,6 @@ joined_res JoinExec::join(int path_length, const vector<uid_ref>& uids, const ve
     printf("  %4d %4d %f\n", score.src, score.trg, score.score);
   }
 
-  // exit(0);
-  return joined_res();
-
-
-/*
-  for(int i = 0; i < uids.size(); i++){
-
-    // ** thread partition
-    // int i
-    // uid_ref& uid
-    // -- sign stuff
-    // uint64_t* left (1 x width_ul)
-    // uint64_t* right (uid.count x width_ul)
-    // uint64_t* to store (if keep paths)
-
-
-    const uid_ref& uid = uids[i];
-    printf("[%06d] src: %d, trg: %d, count: %d, loc: %d\n", i, uid.src, uid.trg, uid.count, uid.location);
-    if(uid.count == 0)
-      continue;
-
-    // uint64_t* path_pos0 = paths0->pos + i * vlen;
-    // uint64_t* path_neg0 = paths0->neg + i * vlen;
-
-    for(int j = uid.location; j < (uid.location + uid.count); j++){
-
-      // printf("[%06d] src: %d, trg: %d, count: %d, loc: %d --> %d\n", i, uid.src, uid.trg, uid.count, uid.location, j);
-
-
-      int sign = 0;
-      // if(conf.path_length > 3)
-      //   sign = join_gene_signs[i];
-      // else if(conf.path_length < 3)
-      //   sign = join_gene_signs[j];
-      // else if(conf.path_length == 3)
-      //   sign = (join_gene_signs[i] + join_gene_signs[j] == 0) ? -1 : 1;
-
-      // uint64_t* path_pos1 = (sign == 1 ? paths1->pos : paths1->neg) + j * vlen;
-      // uint64_t* path_neg1 = (sign == 1 ? paths1->neg : paths1->pos) + j * vlen;
-
-
-      if(keep_paths){
-        // memcpy(pathsr->pos + path_idx * vlen, joined_pos, vlen * sizeof(uint64_t));
-        // memcpy(pathsr->neg + path_idx * vlen, joined_neg, vlen * sizeof(uint64_t));
-      }
-      path_idx += 1;
-
-      // int cases = case_pos + case_neg;
-      // int ctrls = ctrl_pos + ctrl_neg;
-
-
-    }
-
-  }
-*/
   return joined_res();
 }
 
