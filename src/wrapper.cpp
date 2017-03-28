@@ -1,28 +1,6 @@
-#include <fstream>
-
-#include <inttypes.h>
-#include <stdio.h>
-#include <algorithm>
-#include <cstdlib>
-#include <cstring>
-#include <memory>
-#include <cmath>
-#include <limits>
-#include <vector>
-#include <set>
-#include <queue>
-#include <cstdio>
-#include <iostream>
-#include <fstream>
-
 #include <Rcpp.h>
-
 #include "gcre.h"
 
-
-// [[Rcpp::plugins(cpp11)]]
-
-// using namespace Rcpp;
 using namespace std;
 
 /**
@@ -104,7 +82,7 @@ static vector<uid_ref> assemble_uids(int path_length, const Rcpp::IntegerVector&
     }
 
   }
-  printf("path_length: %ld, uids: %lu (paths: %ld)\n", path_length, uids.size(), total_paths);
+  printf("path_length: %d, uids: %lu (paths: %ld)\n", path_length, uids.size(), total_paths);
   return uids;
 }
 
@@ -180,7 +158,6 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
 
   unique_ptr<PathSet> paths1 = nullptr, paths2 = nullptr, paths3 = nullptr;
 
-  // Rcpp::List results;
   auto results = Rcpp::List::create(Rcpp::Named("lst1"), Rcpp::Named("lst2"), Rcpp::Named("lst3"), Rcpp::Named("lst4"), Rcpp::Named("lst5"));
 
   if(path_length >= 1) {
@@ -224,9 +201,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
     results["lst5"] = make_score_list(res);
   }
 
-
-
-  printf("done\n");
+  printf("done.\n");
 
   return results;
 }

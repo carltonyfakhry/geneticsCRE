@@ -1,12 +1,4 @@
-#include <set>
-#include <typeinfo>
-#include <sstream>
-#include <cstdlib>
 #include <chrono>
-#include <ctime>
-#include <time.h>
-
-#include <locale.h>
 
 #include "gcre.h"
 #include "test.h"

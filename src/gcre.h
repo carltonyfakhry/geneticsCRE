@@ -1,28 +1,21 @@
 #ifndef GCRE_H
 #define GCRE_H
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <algorithm>
-#include <cstdlib>
 #include <cstring>
-#include <memory>
+#include <cstdint>
+#include <cstdio>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <vector>
-#include <set>
-#include <queue>
-#include <cstdio>
 #include <iostream>
-#include <fstream>
-
-// these are types visible to R; keeping that minimal
 
 using namespace std;
 
 const uint64_t bit_zero_ul = 0;
 const uint64_t bit_one_ul = 1;
 
+// TODO apparently aliases are now the thing?
 typedef std::vector<int> vec_i;
 typedef std::vector<double> vec_d;
 typedef std::vector<uint64_t> vec_u64;

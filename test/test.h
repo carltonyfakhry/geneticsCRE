@@ -1,11 +1,9 @@
 #ifndef GCRE_TEST_H
 #define GCRE_TEST_H
 
-#include <typeinfo>
-#include <sstream>
-#include <cstdlib>
-#include <ctime>
-#include <set>
+#include <fstream>
+#include <vector>
+
 #include "gcre.h"
 
 using namespace std;

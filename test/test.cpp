@@ -1,6 +1,7 @@
-#include <typeinfo>
 #include <sstream>
-#include <cstdlib>
+#include <algorithm>
+#include <vector>
+
 #include "test.h"
 
 using namespace std;
