@@ -56,7 +56,11 @@
 #'             Epub 2012 Nov 29'.
 #'
 #'@export
-GetBestPaths <- function(dataset, nCases, nControls, method = 1, threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
+GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', threshold_percent = 0.05, K = 10, pathLength = 5, iterations = 100, strataF = NA, nthreads = NA){
+
+  # accept numeric method ids to match old interface --dmitri
+  if(is.numeric(method))
+    method <- paste0('method', toString(method))
 
   # Check the input parameters
   geneticsCRE:::check_input(nCases, nControls, method, threshold_percent, K, pathLength, iterations, nthreads)
