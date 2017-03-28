@@ -19,11 +19,20 @@ JoinExec::JoinExec(const int num_cases, const int num_ctrls) : num_cases(num_cas
   printf("init exec: %d x %d (width: %d ul)\n", num_cases, num_ctrls, width_ul);
 }
 
-// TODO size check and precompute max table
 // create a copy of the vt for simplicity
 void JoinExec::setValueTable(vec2d_d table){
+  // TODO size check
   printf("setting value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
   value_table = table;
+
+  // precompute max including flipped indices
+  value_table_max = vec2d_d(value_table.size(), vec_d(value_table.front().size()));
+  for(int r = 0; r < value_table.size(); r++) {
+    for(int c = 0; c < value_table[r].size(); c++) {
+      value_table_max[r][c] = max(value_table[r][c],value_table[c][r]);
+    }
+  }
+
 }
 
 // data comes in as perm x patient: 0=flipped, 1=unflipped
@@ -104,11 +113,8 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
     scores.push(Score());
 
     double perm_score[iters];
-    double perm_flips[iters];
-    for(int k = 0; k < iters; k++){
+    for(int k = 0; k < iters; k++)
       perm_score[k] = 0;
-      perm_flips[k] = 0;
-    }
 
     // allocate as single block for storage in path set
     uint64_t joined[width_ul * 2];
@@ -222,12 +228,9 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
           int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
           int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
 
-          double p_score = value_table[p_cases][p_ctrls];
+          double p_score = value_table_max[p_cases][p_ctrls];
           if(p_score > perm_score[r])
             perm_score[r] = p_score;
-          double p_flips = value_table[p_ctrls][p_cases];
-          if(p_flips > perm_flips[r])
-            perm_flips[r] = p_flips;
         }
 
       }
@@ -247,8 +250,6 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
     for(int r = 0; r < iters; r++) {
       if(perm_score[r] > global_perm_score[r])
         global_perm_score[r] = perm_score[r];
-      if(perm_flips[r] > global_perm_score[r])
-        global_perm_score[r] = perm_flips[r];
     }
 
     printf("[%d] done\n", tid);
