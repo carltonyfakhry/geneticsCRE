@@ -159,7 +159,13 @@ int main(int argc, char* argv[]) {
 
   if(path_length >= 4) {
 
+    auto start = chrono::system_clock::now();
+
     auto res4 = exec.join(uids4, *paths3, *paths2, *zero_set);
+
+    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
+    printf("[%d] time: %'ld ms\n", 0, time.count());
+
 
     printf("\n################################\n");
     printf("   length : %d  width: %d  iters: %d  thread: %d\n", path_length, exec.width_ul, exec.iterations, exec.nthreads);

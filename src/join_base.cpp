@@ -86,12 +86,16 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   priority_queue<Score> global_scores;
   global_scores.push(Score());
 
+  double global_perm_score[iters];
+  for(int k = 0; k < iters; k++)
+    global_perm_score[k] = 0;
+
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
-  auto worker = [this, &uids, &uid_idx, &g_mutex, iters, &paths0, &paths1, &paths_res, &global_scores](int tid) {
+  auto worker = [this, &uids, &uid_idx, &g_mutex, iters, &paths0, &paths1, &paths_res, &global_scores, &global_perm_score](int tid) {
 
     bool keep_paths = paths_res.size != 0;
     int flipped_pivot_length = paths1.size;
@@ -152,10 +156,10 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
         memset(joined_pos, 0, width_ul * sizeof(uint64_t));
         memset(joined_neg, 0, width_ul * sizeof(uint64_t));
 
-        // for(int r = 0; r < iters; r++){
-        //   p_case_pos[r] = 0;
-        //   p_ctrl_pos[r] = 0;
-        // }
+        for(int r = 0; r < iters; r++){
+          p_case_pos[r] = 0;
+          p_ctrl_pos[r] = 0;
+        }
 
         for(int k = 0; k < width_ul; k++) {
 
@@ -176,22 +180,19 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
             ctrl_pos += __builtin_popcountl(true_neg &  mask);
             ctrl_neg += __builtin_popcountl(true_pos & ~mask);
 
-            // TODO permute mask access
-/*
             if(true_pos != 0) {
               for(int r = 0; r < iters; r++) {
-                // uint64_t* p_mask = permute_mask + r * vlen;
-                // p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
+                uint64_t* p_mask = perm_case_mask + r * width_ul;
+                p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
               }
             }
 
             if(true_neg != 0) {
               for(int r = 0; r < iters; r++){
-                // uint64_t* p_mask = permute_mask + r * vlen;
-                // p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
+                uint64_t* p_mask = perm_case_mask + r * width_ul;
+                p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
               }
             }
-*/
 
             joined_pos[k] = bit_pos;
             joined_neg[k] = bit_neg;
@@ -217,17 +218,17 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
         while(scores.size() > top_k)
           scores.pop();
 
-        // for(int r = 0; r < conf.iterations; r++){
-        //   int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
-        //   int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
+        for(int r = 0; r < iters; r++){
+          int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
+          int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
 
-        //   double p_score = value_table[p_cases][p_ctrls];
-        //   if(p_score > perm_score[r])
-        //     perm_score[r] = p_score;
-        //   double p_flips = value_table[p_ctrls][p_cases];
-        //   if(p_flips > perm_flips[r])
-        //     perm_flips[r] = p_flips;
-        // }
+          double p_score = value_table[p_cases][p_ctrls];
+          if(p_score > perm_score[r])
+            perm_score[r] = p_score;
+          double p_flips = value_table[p_ctrls][p_cases];
+          if(p_flips > perm_flips[r])
+            perm_flips[r] = p_flips;
+        }
 
       }
 
@@ -241,6 +242,13 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
       if(score.score > global_scores.top().score)
         global_scores.push(score);
       scores.pop();
+    }
+
+    for(int r = 0; r < iters; r++) {
+      if(perm_score[r] > global_perm_score[r])
+        global_perm_score[r] = perm_score[r];
+      if(perm_flips[r] > global_perm_score[r])
+        global_perm_score[r] = perm_flips[r];
     }
 
     printf("[%d] done\n", tid);
@@ -263,7 +271,7 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   joined_res res;
   res.permuted_scores.resize(iterations, 0);
   for(int k = 0; k < iterations; k++)
-    res.permuted_scores[k] = 0; // max(perm_score[k], perm_flips[k]);
+    res.permuted_scores[k] = global_perm_score[k];
   res.scores.clear();
   while(!global_scores.empty()){
     res.scores.push_back(global_scores.top());
