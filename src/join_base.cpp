@@ -9,6 +9,11 @@
 
 using namespace std;
 
+static void score_permute_cpu(int idx, int loc, int flipped_pivot_length,
+  priority_queue<Score>& scores, double* perm_score,
+  const vec2d_d& value_table, int* p_case_pos, int* p_ctrl_pos,
+  const int width_ul, const int iters, uint64_t* mask, uint64_t* perm_case_mask, uint64_t* joined_pos, uint64_t* joined_neg, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
+
 JoinExec::JoinExec(const int num_cases, const int num_ctrls) : num_cases(num_cases), num_ctrls(num_ctrls), width_ul(vector_width_ul(num_cases, num_ctrls)) {
 
   // create case mask from case/control ranges
@@ -84,7 +89,6 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
 }
 
 joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
-
   // TODO
   // int iters = 8 * ceil(max(1, conf.iterations) / 8.0);
   const int iters = iterations;
@@ -160,100 +164,13 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
         const uint64_t* path_pos1 = (sign ? paths1[loc] : paths1[loc] + width_ul);
         const uint64_t* path_neg1 = (sign ? paths1[loc] + width_ul : paths1[loc]);
 
-        int case_pos = 0;
-        int case_neg = 0;
-        int ctrl_pos = 0;
-        int ctrl_neg = 0;
-        int total_pos = 0;
-        int total_neg = 0;
-
-        uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
-
-        // zero out join path holder
-        // memset(joined_pos, 0, width_ul * sizeof(uint64_t));
-        // memset(joined_neg, 0, width_ul * sizeof(uint64_t));
-
-        // fancy zero-out (only needs avx, not avx2)
-        for(int k = 0; k < width_full_ul / 4; k++)
-          _mm256_storeu_si256(z_joined + k, _mm256_setzero_si256());
-        for(int k = 1; k <= width_full_ul % 4; k++)
-          joined[width_full_ul - k] = 0;
-
-        // for(int r = 0; r < iters; r++){
-        //   p_case_pos[r] = 0;
-        //   p_ctrl_pos[r] = 0;
-        // }
-
-        for(int k = 0; k < p_block_size / 8; k++)
-          _mm256_storeu_si256(z_pos_block + k, _mm256_setzero_si256());
-        for(int k = 1; k <= p_block_size % 8; k++)
-          p_pos_block[p_block_size - k] = 0;
-
-        for(int k = 0; k < width_ul; k++) {
-
-          bit_pos = path_pos0[k] | path_pos1[k];
-          bit_neg = path_neg0[k] | path_neg1[k];
-
-          if(bit_pos != 0 || bit_neg != 0) {
-
-            bit_con = bit_pos & bit_neg;
-            true_pos = bit_pos & ~bit_con;
-            true_neg = bit_neg & ~bit_con;
-            mask = case_mask[k];
-
-            total_pos += __builtin_popcountl(true_pos);
-            total_neg += __builtin_popcountl(true_neg);
-            case_pos += __builtin_popcountl(true_pos &  mask);
-            case_neg += __builtin_popcountl(true_neg & ~mask);
-            ctrl_pos += __builtin_popcountl(true_neg &  mask);
-            ctrl_neg += __builtin_popcountl(true_pos & ~mask);
-
-            if(true_pos != 0) {
-              for(int r = 0; r < iters; r++) {
-                uint64_t* p_mask = perm_case_mask + r * width_ul;
-                p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
-              }
-            }
-
-            if(true_neg != 0) {
-              for(int r = 0; r < iters; r++){
-                uint64_t* p_mask = perm_case_mask + r * width_ul;
-                p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
-              }
-            }
-
-            joined_pos[k] = bit_pos;
-            joined_neg[k] = bit_neg;
-
-          }
-
-        }
+        score_permute_cpu(idx, loc, flipped_pivot_length, scores, perm_score, value_table, p_case_pos, p_ctrl_pos,
+          width_ul, iters, case_mask, perm_case_mask,
+          joined_pos, joined_neg, path_pos0, path_neg0, path_pos1, path_neg1);
 
         if(keep_paths)
           paths_res.set(path_idx, joined);
         path_idx += 1;
-
-        int cases = case_pos + case_neg;
-        int ctrls = ctrl_pos + ctrl_neg;
-
-        double score = value_table[cases][ctrls];
-        double flips = value_table[ctrls][cases];
-
-        if(score > scores.top().score)
-          scores.push(Score(score, idx, loc));
-        if(flips > scores.top().score)
-          scores.push(Score(flips, idx, loc + flipped_pivot_length));
-        while(scores.size() > top_k)
-          scores.pop();
-
-        for(int r = 0; r < iters; r++){
-          int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
-          int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
-
-          double p_score = value_table_max[p_cases][p_ctrls];
-          if(p_score > perm_score[r])
-            perm_score[r] = p_score;
-        }
 
       }
 
@@ -302,6 +219,111 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   }
 
   return res;
+}
+
+static void score_permute_cpu(int idx, int loc, int flipped_pivot_length,
+  priority_queue<Score>& scores, double* perm_score,
+  const vec2d_d& value_table, int* p_case_pos, int* p_ctrl_pos,
+  const int width_ul, const int iters, uint64_t* case_mask, uint64_t* perm_case_mask,
+  uint64_t* joined_pos, uint64_t* joined_neg,
+  const uint64_t* path_pos0, const uint64_t* path_neg0,
+  const uint64_t* path_pos1, const uint64_t* path_neg1) {
+
+  int top_k = 12;
+
+  int case_pos = 0;
+  int case_neg = 0;
+  int ctrl_pos = 0;
+  int ctrl_neg = 0;
+  int total_pos = 0;
+  int total_neg = 0;
+
+  uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
+
+        // zero out join path holder
+  memset(joined_pos, 0, width_ul * sizeof(uint64_t));
+  memset(joined_neg, 0, width_ul * sizeof(uint64_t));
+
+        // fancy zero-out (only needs avx, not avx2)
+        // for(int k = 0; k < width_full_ul / 4; k++)
+        //   _mm256_storeu_si256(z_joined + k, _mm256_setzero_si256());
+        // for(int k = 1; k <= width_full_ul % 4; k++)
+        //   joined[width_full_ul - k] = 0;
+
+  for(int r = 0; r < iters; r++){
+    p_case_pos[r] = 0;
+    p_ctrl_pos[r] = 0;
+  }
+
+        // for(int k = 0; k < p_block_size / 8; k++)
+        //   _mm256_storeu_si256(z_pos_block + k, _mm256_setzero_si256());
+        // for(int k = 1; k <= p_block_size % 8; k++)
+        //   p_pos_block[p_block_size - k] = 0;
+
+  for(int k = 0; k < width_ul; k++) {
+
+    bit_pos = path_pos0[k] | path_pos1[k];
+    bit_neg = path_neg0[k] | path_neg1[k];
+
+    if(bit_pos != 0 || bit_neg != 0) {
+
+      bit_con = bit_pos & bit_neg;
+      true_pos = bit_pos & ~bit_con;
+      true_neg = bit_neg & ~bit_con;
+      mask = case_mask[k];
+
+      total_pos += __builtin_popcountl(true_pos);
+      total_neg += __builtin_popcountl(true_neg);
+      case_pos += __builtin_popcountl(true_pos &  mask);
+      case_neg += __builtin_popcountl(true_neg & ~mask);
+      ctrl_pos += __builtin_popcountl(true_neg &  mask);
+      ctrl_neg += __builtin_popcountl(true_pos & ~mask);
+
+      if(true_pos != 0) {
+        for(int r = 0; r < iters; r++) {
+          uint64_t* p_mask = perm_case_mask + r * width_ul;
+          p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
+        }
+      }
+
+      if(true_neg != 0) {
+        for(int r = 0; r < iters; r++){
+          uint64_t* p_mask = perm_case_mask + r * width_ul;
+          p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
+        }
+      }
+
+      joined_pos[k] = bit_pos;
+      joined_neg[k] = bit_neg;
+
+    }
+
+  }
+
+  int cases = case_pos + case_neg;
+  int ctrls = ctrl_pos + ctrl_neg;
+
+  double score = value_table[cases][ctrls];
+  double flips = value_table[ctrls][cases];
+
+  if(score > scores.top().score)
+    scores.push(Score(score, idx, loc));
+  if(flips > scores.top().score)
+    scores.push(Score(flips, idx, loc + flipped_pivot_length));
+  while(scores.size() > top_k)
+    scores.pop();
+
+  for(int r = 0; r < iters; r++){
+    int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
+    int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
+
+    // TODO
+    // double p_score = value_table_max[p_cases][p_ctrls];
+    double p_score = value_table[p_cases][p_ctrls];
+    if(p_score > perm_score[r])
+      perm_score[r] = p_score;
+  }
+
 }
 
 // TODO method to generate case permutations
