@@ -3,6 +3,8 @@
 #include <atomic>
 #include <mutex>
 
+#include <immintrin.h>
+
 #include "gcre.h"
 
 using namespace std;
@@ -106,6 +108,10 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   // const auto exec = this;
   auto worker = [this, &uids, &uid_idx, &g_mutex, iters, &paths0, &paths1, &paths_res, &global_scores, &global_perm_score](int tid) {
 
+    // clean these up
+    const int width_full_ul = width_ul * 2;
+    const int p_block_size = iters * 2;
+
     bool keep_paths = paths_res.size != 0;
     int flipped_pivot_length = paths1.size;
 
@@ -118,14 +124,19 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
 
     // allocate as single block for storage in path set
     uint64_t joined[width_ul * 2];
+    auto z_joined = (__m256i*) joined;
+
     uint64_t* joined_pos = joined;
     uint64_t* joined_neg = joined + width_ul;
 
     uint64_t joined_tp[width_ul];
     uint64_t joined_tn[width_ul];
 
-    int p_case_pos[iters];
-    int p_ctrl_pos[iters];
+    int p_pos_block[p_block_size];
+    auto z_pos_block = (__m256i*) p_pos_block;
+
+    int* p_case_pos = p_pos_block;
+    int* p_ctrl_pos = p_pos_block + iters;
 
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
@@ -159,13 +170,24 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
         uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
 
         // zero out join path holder
-        memset(joined_pos, 0, width_ul * sizeof(uint64_t));
-        memset(joined_neg, 0, width_ul * sizeof(uint64_t));
+        // memset(joined_pos, 0, width_ul * sizeof(uint64_t));
+        // memset(joined_neg, 0, width_ul * sizeof(uint64_t));
 
-        for(int r = 0; r < iters; r++){
-          p_case_pos[r] = 0;
-          p_ctrl_pos[r] = 0;
-        }
+        // fancy zero-out (only needs avx, not avx2)
+        for(int k = 0; k < width_full_ul / 4; k++)
+          _mm256_storeu_si256(z_joined + k, _mm256_setzero_si256());
+        for(int k = 1; k <= width_full_ul % 4; k++)
+          joined[width_full_ul - k] = 0;
+
+        // for(int r = 0; r < iters; r++){
+        //   p_case_pos[r] = 0;
+        //   p_ctrl_pos[r] = 0;
+        // }
+
+        for(int k = 0; k < p_block_size / 8; k++)
+          _mm256_storeu_si256(z_pos_block + k, _mm256_setzero_si256());
+        for(int k = 1; k <= p_block_size % 8; k++)
+          p_pos_block[p_block_size - k] = 0;
 
         for(int k = 0; k < width_ul; k++) {
 

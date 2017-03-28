@@ -176,8 +176,8 @@ int main(int argc, char* argv[]) {
     }
     printf("\n");
     printf("    perms :");
-    for(auto ps : res4.permuted_scores)
-      printf(" %0.2f", ps);
+    for(int k = 0; k < min(12, (int) res4.permuted_scores.size()); k++)
+      printf(" %0.2f", res4.permuted_scores[k]);
     printf("\n");
 
     printf("################################\n\n");
