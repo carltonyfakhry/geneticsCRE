@@ -1,6 +1,6 @@
 CC=clang
 CXX=clang++
-CXX1XFLAGS=-I../src -std=c++11 -g -O3 -march=native -mpopcnt
+CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -mno-avx2
 # CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize
 # CXX1XFLAGS=-I../src -std=c++11 -g -O3 -march=native -fno-vectorize -mno-avx -mno-avx2 -mpopcnt -Rpass=loop-vectorize
 LDFLAGS=-Wl -O3
