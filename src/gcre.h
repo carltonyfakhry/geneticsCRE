@@ -157,7 +157,7 @@ public:
 
   void setValueTable(vec2d_d table);
 
-  void setPermutedCases(vec2d_i& perm_cases);
+  void setPermutedCases(const vec2d_i& perm_cases);
 
   unique_ptr<PathSet> createPathSet(int size) const;
   

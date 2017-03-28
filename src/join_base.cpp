@@ -29,7 +29,7 @@ void JoinExec::setValueTable(vec2d_d table){
 // data comes in as perm x patient: 0=flipped, 1=unflipped
 // here converted to 1=case, 0=control
 // intermediate mask is inverted, to keep 0-padding of the vector tail from becoming mostly cases
-void JoinExec::setPermutedCases(vec2d_i& data) {
+void JoinExec::setPermutedCases(const vec2d_i& data) {
 
   printf("loading permuted case masks: %lu x %lu (iterations: %d)\n", data.size(), data.size() > 0 ? data.front().size() : 0, iterations);
 

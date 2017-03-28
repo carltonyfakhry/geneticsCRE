@@ -108,6 +108,26 @@ static vector<uid_ref> assemble_uids(int path_length, const Rcpp::IntegerVector&
   return uids;
 }
 
+static Rcpp::List make_score_list(const joined_res& res) {
+
+  Rcpp::NumericVector permuted_scores(res.permuted_scores.size());
+
+  for(int k = 0; k < res.permuted_scores.size(); k++)
+    permuted_scores[k] = res.permuted_scores[k];
+
+  Rcpp::NumericVector scores(res.scores.size());
+  Rcpp::IntegerMatrix ids(res.scores.size(), 2);
+  for(int k = 0; k < res.scores.size(); k++){
+    const auto& score = res.scores[k];
+    scores[k] = score.score;
+    // add 1 because it will be used as an index in R
+    ids(k,0) = score.src + 1;
+    ids(k,1) = score.trg + 1;
+  }
+
+  return Rcpp::List::create(Rcpp::Named("scores") = scores, Rcpp::Named("ids") = ids, Rcpp::Named("TestScores") = permuted_scores);
+}
+
 // [[Rcpp::export]]
 Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_trg_uids1, Rcpp::List r_count_locs1, Rcpp::IntegerVector r_signs1,
   Rcpp::IntegerVector r_src_uids1_2, Rcpp::IntegerVector r_trg_uids1_2, Rcpp::List r_count_locs1_2, Rcpp::IntegerVector r_signs1_2,
@@ -117,9 +137,10 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   Rcpp::IntegerVector r_src_uids5, Rcpp::IntegerVector r_trg_uids5, Rcpp::List r_count_locs5, Rcpp::IntegerVector r_signs5,
   Rcpp::IntegerVector r_data_inds1, Rcpp::IntegerVector r_data_inds1_2, Rcpp::IntegerVector r_data_inds2, Rcpp::IntegerVector r_data_inds3,
   Rcpp::IntegerMatrix r_data1, Rcpp::IntegerMatrix r_data2, Rcpp::NumericMatrix r_value_table,
-  int num_cases, int num_ctrls, int top_k, int iterations, Rcpp::IntegerMatrix r_perm_cases, int method, int path_length, int nthreads){
+  int num_cases, int num_ctrls, int top_k, int iterations, Rcpp::IntegerMatrix r_perm_cases, std::string method, int path_length, int nthreads){
 
   printf("meh\n");
+  cout << "method: " << method << endl;
 
   auto uids1a = assemble_uids(1, r_src_uids1, r_trg_uids1, r_count_locs1, r_signs1);
   auto uids1b = assemble_uids(1, r_src_uids1_2, r_trg_uids1_2, r_count_locs1_2, r_signs1_2);
@@ -128,19 +149,84 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   auto uids4 = assemble_uids(4, r_src_uids4, r_trg_uids4, r_count_locs4, r_signs4);
   auto uids5 = assemble_uids(5, r_src_uids5, r_trg_uids5, r_count_locs5, r_signs5);
 
-  auto data_inx1a = copy_r(r_data_inds1);
-  auto data_inx1b = copy_r(r_data_inds1_2);
-  auto data_inx2 = copy_r(r_data_inds3);
-  auto data_inx3 = copy_r(r_data_inds3);
+  auto data_idx1a = copy_r(r_data_inds1);
+  auto data_idx1b = copy_r(r_data_inds1_2);
+  auto data_idx2 = copy_r(r_data_inds3);
+  auto data_idx3 = copy_r(r_data_inds3);
 
   auto data1 = copy_r(r_data1);
   auto data2 = copy_r(r_data2);
 
-  auto value_table = copy_r(r_value_table);
-  auto perm_cases = copy_r(r_perm_cases);
+  // TODO method
+  JoinExec exec(num_cases, num_ctrls);
+
+  exec.top_k = top_k;
+  exec.iterations = iterations;
+  exec.nthreads = nthreads;
+
+  printf("\nstarting join:\n\n");
+  printf("   path_length : %d\n", path_length);
+  printf("         cases : %d\n", exec.num_cases);
+  printf("      controls : %d\n", exec.num_ctrls);
+  printf("\n");
+
+  exec.setValueTable(copy_r(r_value_table));
+  exec.setPermutedCases(copy_r(r_perm_cases));
+
+  auto parsed_data1 = exec.createPathSet(data1.size());
+  parsed_data1->load(data1);
+
+  auto zero_set = exec.createPathSet(0);
+
+  unique_ptr<PathSet> paths1 = nullptr, paths2 = nullptr, paths3 = nullptr;
+
+  // Rcpp::List results;
+  auto results = Rcpp::List::create(Rcpp::Named("lst1"), Rcpp::Named("lst2"), Rcpp::Named("lst3"), Rcpp::Named("lst4"), Rcpp::Named("lst5"));
+
+  if(path_length >= 1) {
+
+    paths1 = exec.createPathSet(JoinExec::count_total_paths(uids1a));
+    auto zero_1 = exec.createPathSet(data_idx1a.size());
+    auto input_1 = parsed_data1->select(data_idx1b);
+
+    exec.join(uids1a, *zero_1, *input_1, *paths1);
+
+    auto zero_2 = exec.createPathSet(data_idx1b.size());
+    auto parsed_data2 = exec.createPathSet(data2.size());
+    parsed_data2->load(data2);
+    auto input_2 = parsed_data2->select(data_idx1b);
+
+    auto res = exec.join(uids1b, *zero_2, *input_2, *zero_set);
+    results["lst1"] = make_score_list(res);
+  }
+
+  if(path_length >= 2) {
+    paths2 = exec.createPathSet(JoinExec::count_total_paths(uids2));
+    auto input = parsed_data1->select(data_idx2);
+    auto res = exec.join(uids2, *paths1, *input, *paths2);
+    results["lst2"] = make_score_list(res);
+  }
+
+  if(path_length >= 3) {
+    paths3 = exec.createPathSet(JoinExec::count_total_paths(uids3));
+    auto input = parsed_data1->select(data_idx3);
+    auto res = exec.join(uids3, *paths2, *input, *paths3);
+    results["lst3"] = make_score_list(res);
+  }
+
+  if(path_length >= 4) {
+    auto res = exec.join(uids4, *paths3, *paths2, *zero_set);
+    results["lst4"] = make_score_list(res);
+  }
+
+  if(path_length >= 5) {
+    auto res = exec.join(uids5, *paths3, *paths3, *zero_set);
+    results["lst5"] = make_score_list(res);
+  }
+
+
 
   printf("done\n");
-  exit(0);
 
-  return Rcpp::List::create();
+  return results;
 }
