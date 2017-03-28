@@ -28,7 +28,7 @@ void JoinExec::setValueTable(vec2d_d table){
 
 // data comes in as perm x patient: 0=flipped, 1=unflipped
 // here converted to 1=case, 0=control
-// intermediate mask is inverted, so keep 0-padding of the vector tail from becoming mostly cases
+// intermediate mask is inverted, to keep 0-padding of the vector tail from becoming mostly cases
 void JoinExec::setPermutedCases(vec2d_i& data) {
 
   printf("loading permuted case masks: %lu x %lu (iterations: %d)\n", data.size(), data.size() > 0 ? data.front().size() : 0, iterations);
@@ -231,16 +231,6 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
 
       }
 
-      // joined_res res;
-      // res.permuted_scores.resize(conf.iterations, 0);
-      // for(int k = 0; k < conf.iterations; k++)
-      //   res.permuted_scores[k] = max(perm_score[k], perm_flips[k]);
-      // res.scores.clear();
-      // while(!scores.empty()){
-      //   res.scores.push_back(scores.top());
-      //   scores.pop();
-      // }
-
     }
 
     // synchronize final section to merge results
@@ -267,18 +257,20 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
     worker(0);
   }
 
-
   while(global_scores.size() > top_k)
     global_scores.pop();
 
-  printf("scores: %lu\n", global_scores.size());
+  joined_res res;
+  res.permuted_scores.resize(iterations, 0);
+  for(int k = 0; k < iterations; k++)
+    res.permuted_scores[k] = 0; // max(perm_score[k], perm_flips[k]);
+  res.scores.clear();
   while(!global_scores.empty()){
-    auto score = global_scores.top();
+    res.scores.push_back(global_scores.top());
     global_scores.pop();
-    printf("  %4d %4d %f\n", score.src, score.trg, score.score);
   }
 
-  return joined_res();
+  return res;
 }
 
 // TODO method to generate case permutations
