@@ -62,7 +62,7 @@ protected:
 
 JoinExec::JoinExec(string method_name, int num_cases, int num_ctrls, int iters) :
 
-method(method_name == "method2" ? Method::method2 : Method::method1),
+method(to_method(method_name)),
 num_cases(num_cases),
 num_ctrls(num_ctrls),
 width_ul(vector_width_ul(num_cases, num_ctrls)),
@@ -147,6 +147,12 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
 }
 
 joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+  if(method == Method::method2)
+    return join_method2(uids, paths0, paths1, paths_res);
+  throw std::logic_error("bad method");
+}
+
+joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
   const int iters = iterations;
 

@@ -156,6 +156,15 @@ public:
 
   int width_vec;
 
+  static inline Method to_method(string name) {
+    if(name == "method1")
+      return Method::method1;
+    if(name == "method2")
+      return Method::method2;
+    cout << "unknown method: " << name << endl;
+    exit(1);
+  }
+
   // TODO shouldn't really be here
   static inline unsigned count_total_paths(const vector<uid_ref>& uids) {
     unsigned total = 0;
@@ -182,6 +191,9 @@ public:
   joined_res join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
 protected:
+
+  joined_res join_method1(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  joined_res join_method2(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
   static int vector_width_ul(int num_cases, int num_ctrls) {
     int width = (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
