@@ -142,6 +142,7 @@ public:
     memcpy(block.get() + idx * vlen, data, vlen * sizeof(uint64_t));
   }
 
+  // TODO check input size dimensions
   // positives are loaded into the first half of the record, so m1/m2 loading is the same
   void load(const vec2d_i& data) {
 

@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
 
     paths1 = exec.createPathSet(uids0.count_total_paths());
     auto zero_1 = exec.createPathSet(data_idx0.size());
-    auto input_1 = parsed_data1->select(data_idx1);
+    auto input_1 = parsed_data1->select(data_idx0);
 
     auto res0 = exec.join(uids0, *zero_1, *input_1, *paths1);
 

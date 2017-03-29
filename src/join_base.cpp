@@ -9,6 +9,8 @@
 
 using namespace std;
 
+constexpr int progress_chunk = 100000000;
+
 class JoinMethod {
 
 public:
@@ -270,6 +272,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     // or it may be a thread access thing... either way, this works
     JoinMethod1 method(this, paths1.size, perm_scores_block, joined_block, perm_block);
 
+    unsigned long completed = 0;
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
 
@@ -278,6 +281,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
       if(uid.count == 0)
         continue;
 
+      // TODO long
       // start of result path block for this uid
       int path_idx = uid.path_idx;
 
@@ -289,9 +293,15 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 
         method.score_permute_cpu(idx, loc, path0, path1);
 
-        if(keep_paths)
+        if(keep_paths) {
           paths_res.set(path_idx, joined_block);
-        path_idx += 1;
+          path_idx += 1;
+        }
+
+        completed += 1;
+        if(completed % progress_chunk == 0) {
+          printf(" [%02d] %lum\n", tid, completed / 1000000);
+        }
 
       }
 
@@ -300,7 +310,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
     method.drain_scores(this);
-    printf("[%d] worker finished.\n", tid);
+    printf(" [%02d] worker finished: %'lu paths\n", tid, completed);
   };
 
   if(nthreads > 0) {
@@ -317,6 +327,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
   return format_result();
 }
 
+// TODO check where path set sizes exceed max int
 joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
   atomic<unsigned> uid_idx(0);
@@ -344,6 +355,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     // or it may be a thread access thing... either way, this works
     JoinMethod2 method(this, paths1.size, perm_scores_block, joined_block, perm_pos_block);
 
+    unsigned long completed = 0;
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
 
@@ -366,9 +378,15 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
 
         method.SCORE_METHOD_NAME (idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
 
-        if(keep_paths)
+        if(keep_paths) {
           paths_res.set(path_idx, joined_block);
-        path_idx += 1;
+          path_idx += 1;
+        }
+
+        completed += 1;
+        if(completed % progress_chunk == 0) {
+          printf(" [%02d] %lum\n", tid, completed / 1000000);
+        }
 
       }
 
@@ -377,7 +395,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
     method.drain_scores(this);
-    printf("[%d] worker finished.\n", tid);
+    printf(" [%02d] worker finished: %'lu paths\n", tid, completed);
 
   };
 

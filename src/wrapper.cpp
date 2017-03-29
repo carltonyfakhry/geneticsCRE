@@ -142,6 +142,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   exec.nthreads = nthreads;
 
   setlocale(LC_ALL, "");
+
   printf("\nstarting join:\n\n");
   printf("   path_length : %d\n", path_length);
   printf("         cases : %d\n", exec.num_cases);
