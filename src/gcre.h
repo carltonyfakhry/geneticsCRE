@@ -8,6 +8,7 @@
 #include <limits>
 #include <memory>
 #include <vector>
+#include <queue>
 #include <iostream>
 
 // #if defined __AVX2__
@@ -142,8 +143,6 @@ protected:
 class JoinExec {
 
   friend class JoinMethod;
-  friend class JoinMethod1;
-  friend class JoinMethod2;
 
 public:
 
@@ -194,6 +193,10 @@ public:
 
 protected:
 
+  mutable priority_queue<Score> scores;
+  mutable double* perm_scores;
+
+  joined_res format_result() const;
   joined_res join_method1(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
   joined_res join_method2(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 

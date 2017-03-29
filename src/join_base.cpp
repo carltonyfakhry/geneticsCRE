@@ -1,4 +1,3 @@
-#include <queue>
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -15,6 +14,7 @@ class JoinMethod {
 public:
 
   priority_queue<Score> scores;
+  double* perm_scores;
 
   JoinMethod(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
 
@@ -49,7 +49,6 @@ protected:
 
   uint64_t* joined_block;
   int* perm_count_block;
-  double* perm_scores;
 
 };
 
@@ -75,32 +74,15 @@ protected:
 
 };
 
-
-class JoinMethod2 {
+class JoinMethod2 : public JoinMethod {
 
 public:
+  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {
 
-  priority_queue<Score> scores;
-
-  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
-
-  exec(exec),
-  flip_pivot_len(flip_pivot_len),
-  case_mask(exec->case_mask),
-  perm_case_mask(exec->perm_case_mask),
-  value_table(exec->value_table),
-  value_table_max(exec->value_table_max) {
-
-    scores.push(Score());
-
-    perm_scores = p_perm_scores;
-    for(int k = 0; k < exec->iterations; k++)
-      perm_scores[k] = 0;
-
-    joined_block = joined_pos = p_joined_block;
+    joined_pos = joined_block;
     joined_neg = joined_block + exec->width_ul;
 
-    perm_count_block = perm_case_pos = p_perm_count_block;
+    perm_case_pos = perm_count_block;
     perm_ctrl_pos = perm_count_block + exec->iterations;
 
   }
@@ -111,18 +93,10 @@ public:
 
 protected:
 
-  const JoinExec* exec;
-  const int flip_pivot_len;
-
-  const uint64_t* case_mask;
-  const uint64_t* perm_case_mask;
-
-  const vec2d_d& value_table;
-  const vec2d_d& value_table_max;
-
-  uint64_t *joined_block, *joined_pos, *joined_neg;
-  int *perm_count_block, *perm_case_pos, *perm_ctrl_pos;
-  double* perm_scores;
+  uint64_t* joined_pos;
+  uint64_t* joined_neg;
+  int* perm_case_pos;
+  int* perm_ctrl_pos;
 
 };
 
@@ -214,27 +188,46 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
 
 // TODO overload the method based on JoinMethod implementation
 // not entirely sure what dynamic dispatch will to performance-wise, so doing everything statically for now
+// JoinExec itself is very super not thread-safe
 joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+
+  // why no .clear() C++?
+  while(!scores.empty())
+    scores.pop();
+  scores.push(Score());
+
+  double perm_scores[iterations];
+  for(int k = 0; k < iterations; k++)
+    perm_scores[k] = 0;
+  this->perm_scores = perm_scores;
+
   if(method == Method::method1)
     return join_method1(uids, paths0, paths1, paths_res);
   if(method == Method::method2)
     return join_method2(uids, paths0, paths1, paths_res);
   throw std::logic_error("bad method");
+
+}
+
+joined_res JoinExec::format_result() const {
+
+  while(scores.size() > top_k)
+    scores.pop();
+
+  joined_res res;
+  res.permuted_scores.resize(iterations, 0);
+  for(int k = 0; k < iterations; k++)
+    res.permuted_scores[k] = perm_scores[k];
+  res.scores.clear();
+  while(!scores.empty()){
+    res.scores.push_back(scores.top());
+    scores.pop();
+  }
+  return res;
+
 }
 
 joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
-
-  const int iters = iterations;
-
-  // priority queue for the indices of the top K paths in the data
-  // add dummy score to avoid empty check
-  priority_queue<Score> global_scores;
-  global_scores.push(Score());
-
-  // TODO move to field
-  double global_perm_scores[iters];
-  for(int k = 0; k < iters; k++)
-    global_perm_scores[k] = 0;
 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
@@ -242,7 +235,7 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
-  auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res, &global_scores, &global_perm_scores](int tid) {
+  auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res](int tid) {
 
     const int iters = this->iterations;
     const int width_ul = this->width_ul;
@@ -252,14 +245,14 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
     const int p_block_size = iters * 2;
 
 
-    double perm_scores[iters];
+    double perm_scores_block[iters];
     uint64_t joined_block[width_ul];
     int perm_block[p_block_size];
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
-    JoinMethod1 method(this, paths1.size, perm_scores, joined_block, perm_block);
+    JoinMethod1 method(this, paths1.size, perm_scores_block, joined_block, perm_block);
 
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
@@ -294,17 +287,17 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
 
     while(!method.scores.empty()){
       auto score = method.scores.top();
-      if(score.score > global_scores.top().score)
-        global_scores.push(score);
+      if(score.score > scores.top().score)
+        scores.push(score);
       method.scores.pop();
     }
 
     for(int r = 0; r < iters; r++) {
-      if(perm_scores[r] > global_perm_scores[r])
-        global_perm_scores[r] = perm_scores[r];
+      if(method.perm_scores[r] > perm_scores[r])
+        perm_scores[r] = method.perm_scores[r];
     }
 
-    printf("[%d] done\n", tid);
+    printf("[%d] worker finished.\n", tid);
   };
 
   if(nthreads > 0) {
@@ -318,42 +311,17 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
     worker(0);
   }
 
-  while(global_scores.size() > top_k)
-    global_scores.pop();
-
-  joined_res res;
-  res.permuted_scores.resize(iterations, 0);
-  for(int k = 0; k < iterations; k++)
-    res.permuted_scores[k] = global_perm_scores[k];
-  res.scores.clear();
-  while(!global_scores.empty()){
-    res.scores.push_back(global_scores.top());
-    global_scores.pop();
-  }
-
-  return res;
+  return format_result();
 }
 
 joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
-
-  const int iters = iterations;
-
-  // priority queue for the indices of the top K paths in the data
-  // add dummy score to avoid empty check
-  priority_queue<Score> global_scores;
-  global_scores.push(Score());
-
-  // TODO move to field
-  double global_perm_scores[iters];
-  for(int k = 0; k < iters; k++)
-    global_perm_scores[k] = 0;
 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
-  auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res, &global_scores, &global_perm_scores](int tid) {
+  auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res](int tid) {
 
     const int iters = this->iterations;
     const int width_ul = this->width_ul;
@@ -364,14 +332,14 @@ joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& pa
     const int p_block_size = iters * 2;
 
 
-    double perm_scores[iters];
+    double perm_scores_block[iters];
     uint64_t joined_block[width_ul * 2];
     int perm_pos_block[p_block_size];
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
-    JoinMethod2 method(this, paths1.size, perm_scores, joined_block, perm_pos_block);
+    JoinMethod2 method(this, paths1.size, perm_scores_block, joined_block, perm_pos_block);
 
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
@@ -408,17 +376,17 @@ joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& pa
 
     while(!method.scores.empty()){
       auto score = method.scores.top();
-      if(score.score > global_scores.top().score)
-        global_scores.push(score);
+      if(score.score > scores.top().score)
+        scores.push(score);
       method.scores.pop();
     }
 
     for(int r = 0; r < iters; r++) {
-      if(perm_scores[r] > global_perm_scores[r])
-        global_perm_scores[r] = perm_scores[r];
+      if(method.perm_scores[r] > perm_scores[r])
+        perm_scores[r] = method.perm_scores[r];
     }
 
-    printf("[%d] done\n", tid);
+    printf("[%d] worker finished.\n", tid);
   };
 
   if(nthreads > 0) {
@@ -432,20 +400,7 @@ joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& pa
     worker(0);
   }
 
-  while(global_scores.size() > top_k)
-    global_scores.pop();
-
-  joined_res res;
-  res.permuted_scores.resize(iterations, 0);
-  for(int k = 0; k < iterations; k++)
-    res.permuted_scores[k] = global_perm_scores[k];
-  res.scores.clear();
-  while(!global_scores.empty()){
-    res.scores.push_back(global_scores.top());
-    global_scores.pop();
-  }
-
-  return res;
+  return format_result();
 }
 
 void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
