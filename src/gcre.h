@@ -51,11 +51,6 @@ struct joined_res {
   vec_d permuted_scores;
 };
 
-class JoinMethod {
-public:
-  virtual joined_res join(uid_ref& uid) const = 0;
-};
-
 class PathSet {
 
 public:
@@ -121,6 +116,8 @@ protected:
 };
 
 class JoinExec {
+
+  friend class JoinMethod;
 
 public:
 

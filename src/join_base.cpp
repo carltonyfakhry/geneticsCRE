@@ -9,10 +9,53 @@
 
 using namespace std;
 
-static void score_permute_cpu(int idx, int loc, int flipped_pivot_length,
-  priority_queue<Score>& scores, double* perm_score,
-  const vec2d_d& value_table, int* p_case_pos, int* p_ctrl_pos,
-  const int width_ul, const int iters, uint64_t* mask, uint64_t* perm_case_mask, uint64_t* joined_pos, uint64_t* joined_neg, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
+class JoinMethod {
+
+public:
+
+  priority_queue<Score> scores;
+
+  JoinMethod(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_pos_block) :
+
+  exec(exec),
+  flip_pivot_len(flip_pivot_len),
+  case_mask(exec->case_mask),
+  perm_case_mask(exec->perm_case_mask),
+  value_table(exec->value_table),
+  value_table_max(exec->value_table_max) {
+
+    scores.push(Score());
+
+    perm_scores = p_perm_scores;
+    for(int k = 0; k < exec->iterations; k++)
+      perm_scores[k] = 0;
+
+    joined_block = joined_pos = p_joined_block;
+    joined_neg = joined_block + exec->width_ul;
+
+    perm_pos_block = perm_case_pos = p_perm_pos_block;
+    perm_ctrl_pos = perm_pos_block + exec->iterations;
+
+  }
+
+  void score_permute_cpu(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
+
+protected:
+
+  const JoinExec* exec;
+  const int flip_pivot_len;
+
+  const uint64_t* case_mask;
+  const uint64_t* perm_case_mask;
+
+  const vec2d_d& value_table;
+  const vec2d_d& value_table_max;
+
+  uint64_t *joined_block, *joined_pos, *joined_neg;
+  int *perm_pos_block, *perm_case_pos, *perm_ctrl_pos;
+  double* perm_scores;
+
+};
 
 JoinExec::JoinExec(const int num_cases, const int num_ctrls) : num_cases(num_cases), num_ctrls(num_ctrls), width_ul(vector_width_ul(num_cases, num_ctrls)) {
 
@@ -92,7 +135,7 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   // TODO
   // int iters = 8 * ceil(max(1, conf.iterations) / 8.0);
   const int iters = iterations;
-  const int vlen = width_ul;
+  // const int vlen = width_ul;
   // printf("adjusting width: %d -> %d\n", conf.num_cases + conf.num_controls, vlen * 64);
   // printf("adjusting iterations: %d -> %d\n\n", conf.iterations, iters);
 
@@ -101,46 +144,35 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   priority_queue<Score> global_scores;
   global_scores.push(Score());
 
-  double global_perm_score[iters];
+  // TODO move to field
+  double global_perm_scores[iters];
   for(int k = 0; k < iters; k++)
-    global_perm_score[k] = 0;
+    global_perm_scores[k] = 0;
 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
-  auto worker = [this, &uids, &uid_idx, &g_mutex, iters, &paths0, &paths1, &paths_res, &global_scores, &global_perm_score](int tid) {
+  auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res, &global_scores, &global_perm_scores](int tid) {
 
+    const int iters = this->iterations;
+    const int width_ul = this->width_ul;
+
+    const bool keep_paths = paths_res.size != 0;
     // clean these up
     const int width_full_ul = width_ul * 2;
     const int p_block_size = iters * 2;
 
-    bool keep_paths = paths_res.size != 0;
-    int flipped_pivot_length = paths1.size;
 
-    priority_queue<Score> scores;
-    scores.push(Score());
+    double perm_scores[iters];
+    uint64_t joined_block[width_ul * 2];
+    int perm_pos_block[p_block_size];
 
-    double perm_score[iters];
-    for(int k = 0; k < iters; k++)
-      perm_score[k] = 0;
-
-    // allocate as single block for storage in path set
-    uint64_t joined[width_ul * 2];
-    auto z_joined = (__m256i*) joined;
-
-    uint64_t* joined_pos = joined;
-    uint64_t* joined_neg = joined + width_ul;
-
-    uint64_t joined_tp[width_ul];
-    uint64_t joined_tn[width_ul];
-
-    int p_pos_block[p_block_size];
-    auto z_pos_block = (__m256i*) p_pos_block;
-
-    int* p_case_pos = p_pos_block;
-    int* p_ctrl_pos = p_pos_block + iters;
+    // this mess actually makes a significant performance difference
+    // don't know if there is a different way to stack-allocate a dynamic array in an instance field
+    // or it may be a thread access thing... either way, this works
+    JoinMethod method(this, paths1.size, perm_scores, joined_block, perm_pos_block);
 
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
@@ -153,23 +185,19 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
       // start of result path block for this uid
       int path_idx = uid.path_idx;
 
-      // printf("[thread-%d] idx: %d, src: %d, trg: %d, count: %d, loc: %d --", tid, idx, uid.src, uid.trg, uid.count, uid.location);
-
       const uint64_t* path_pos0 = paths0[idx];
       const uint64_t* path_neg0 = path_pos0 + width_ul;
 
       for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
 
-        auto sign = uid.signs[loc_idx];
+        const auto sign = uid.signs[loc_idx];
         const uint64_t* path_pos1 = (sign ? paths1[loc] : paths1[loc] + width_ul);
         const uint64_t* path_neg1 = (sign ? paths1[loc] + width_ul : paths1[loc]);
 
-        score_permute_cpu(idx, loc, flipped_pivot_length, scores, perm_score, value_table, p_case_pos, p_ctrl_pos,
-          width_ul, iters, case_mask, perm_case_mask,
-          joined_pos, joined_neg, path_pos0, path_neg0, path_pos1, path_neg1);
+        method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
 
         if(keep_paths)
-          paths_res.set(path_idx, joined);
+          paths_res.set(path_idx, joined_block);
         path_idx += 1;
 
       }
@@ -179,16 +207,16 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
 
-    while(!scores.empty()){
-      auto score = scores.top();
+    while(!method.scores.empty()){
+      auto score = method.scores.top();
       if(score.score > global_scores.top().score)
         global_scores.push(score);
-      scores.pop();
+      method.scores.pop();
     }
 
     for(int r = 0; r < iters; r++) {
-      if(perm_score[r] > global_perm_score[r])
-        global_perm_score[r] = perm_score[r];
+      if(perm_scores[r] > global_perm_scores[r])
+        global_perm_scores[r] = perm_scores[r];
     }
 
     printf("[%d] done\n", tid);
@@ -211,7 +239,7 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   joined_res res;
   res.permuted_scores.resize(iterations, 0);
   for(int k = 0; k < iterations; k++)
-    res.permuted_scores[k] = global_perm_score[k];
+    res.permuted_scores[k] = global_perm_scores[k];
   res.scores.clear();
   while(!global_scores.empty()){
     res.scores.push_back(global_scores.top());
@@ -221,15 +249,13 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
   return res;
 }
 
-static void score_permute_cpu(int idx, int loc, int flipped_pivot_length,
-  priority_queue<Score>& scores, double* perm_score,
-  const vec2d_d& value_table, int* p_case_pos, int* p_ctrl_pos,
-  const int width_ul, const int iters, uint64_t* case_mask, uint64_t* perm_case_mask,
-  uint64_t* joined_pos, uint64_t* joined_neg,
-  const uint64_t* path_pos0, const uint64_t* path_neg0,
-  const uint64_t* path_pos1, const uint64_t* path_neg1) {
+void JoinMethod::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
 
-  int top_k = 12;
+  // avoid de-refs like the plague
+  const int top_k = exec->top_k;
+  const int iters = exec->iterations;
+  const int width_ul = exec->width_ul;
+  const int flip_pivot_len = this->flip_pivot_len;
 
   int case_pos = 0;
   int case_neg = 0;
@@ -240,25 +266,25 @@ static void score_permute_cpu(int idx, int loc, int flipped_pivot_length,
 
   uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
 
-        // zero out join path holder
+  // zero out join path holder
   memset(joined_pos, 0, width_ul * sizeof(uint64_t));
   memset(joined_neg, 0, width_ul * sizeof(uint64_t));
 
-        // fancy zero-out (only needs avx, not avx2)
-        // for(int k = 0; k < width_full_ul / 4; k++)
-        //   _mm256_storeu_si256(z_joined + k, _mm256_setzero_si256());
-        // for(int k = 1; k <= width_full_ul % 4; k++)
-        //   joined[width_full_ul - k] = 0;
+  // fancy zero-out (only needs avx, not avx2)
+  // for(int k = 0; k < width_full_ul / 4; k++)
+  //   _mm256_storeu_si256(z_joined + k, _mm256_setzero_si256());
+  // for(int k = 1; k <= width_full_ul % 4; k++)
+  //   joined[width_full_ul - k] = 0;
 
   for(int r = 0; r < iters; r++){
-    p_case_pos[r] = 0;
-    p_ctrl_pos[r] = 0;
+    perm_case_pos[r] = 0;
+    perm_ctrl_pos[r] = 0;
   }
 
-        // for(int k = 0; k < p_block_size / 8; k++)
-        //   _mm256_storeu_si256(z_pos_block + k, _mm256_setzero_si256());
-        // for(int k = 1; k <= p_block_size % 8; k++)
-        //   p_pos_block[p_block_size - k] = 0;
+  // for(int k = 0; k < p_block_size / 8; k++)
+  //   _mm256_storeu_si256(z_pos_block + k, _mm256_setzero_si256());
+  // for(int k = 1; k <= p_block_size % 8; k++)
+  //   p_pos_block[p_block_size - k] = 0;
 
   for(int k = 0; k < width_ul; k++) {
 
@@ -281,15 +307,15 @@ static void score_permute_cpu(int idx, int loc, int flipped_pivot_length,
 
       if(true_pos != 0) {
         for(int r = 0; r < iters; r++) {
-          uint64_t* p_mask = perm_case_mask + r * width_ul;
-          p_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
+          const uint64_t* p_mask = perm_case_mask + r * width_ul;
+          perm_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
         }
       }
 
       if(true_neg != 0) {
         for(int r = 0; r < iters; r++){
-          uint64_t* p_mask = perm_case_mask + r * width_ul;
-          p_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
+          const uint64_t* p_mask = perm_case_mask + r * width_ul;
+          perm_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
         }
       }
 
@@ -309,19 +335,17 @@ static void score_permute_cpu(int idx, int loc, int flipped_pivot_length,
   if(score > scores.top().score)
     scores.push(Score(score, idx, loc));
   if(flips > scores.top().score)
-    scores.push(Score(flips, idx, loc + flipped_pivot_length));
+    scores.push(Score(flips, idx, loc + flip_pivot_len));
   while(scores.size() > top_k)
     scores.pop();
 
   for(int r = 0; r < iters; r++){
-    int p_cases = p_case_pos[r] + (total_neg - p_ctrl_pos[r]);
-    int p_ctrls = p_ctrl_pos[r] + (total_pos - p_case_pos[r]);
+    int perm_cases = perm_case_pos[r] + (total_neg - perm_ctrl_pos[r]);
+    int perm_ctrls = perm_ctrl_pos[r] + (total_pos - perm_case_pos[r]);
 
-    // TODO
-    // double p_score = value_table_max[p_cases][p_ctrls];
-    double p_score = value_table[p_cases][p_ctrls];
-    if(p_score > perm_score[r])
-      perm_score[r] = p_score;
+    double p_score = value_table_max[perm_cases][perm_ctrls];
+    if(p_score > perm_scores[r])
+      perm_scores[r] = p_score;
   }
 
 }
