@@ -1,3 +1,5 @@
+
+#include <chrono>
 #include <Rcpp.h>
 #include "gcre.h"
 
@@ -52,10 +54,16 @@ static vec2d_i copy_r(const Rcpp::IntegerMatrix& matrix) {
 }
 
 
-static vector<uid_ref> assemble_uids(int path_length, const Rcpp::IntegerVector& r_src_uids, const Rcpp::IntegerVector& r_trg_uids, const Rcpp::List& r_count_locs, const Rcpp::IntegerVector& r_signs){
+static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src_uids, const Rcpp::IntegerVector& r_trg_uids, const Rcpp::List& r_count_locs, const Rcpp::IntegerVector& r_signs){
+
+  printf("start uid assemble for length: %d (src: %lu, locs: %lu)\n", path_length, r_src_uids.size(), r_count_locs.size());
+  auto start = chrono::system_clock::now();
+
   long total_paths = 0;
   vector<uid_ref> uids(r_trg_uids.size(), uid_ref());
+
   for(int k = 0; k < r_trg_uids.size(); k++){
+
     auto& uid = uids[k];
     uid.trg = r_trg_uids[k];
     uid.src = r_src_uids[k];
@@ -65,25 +73,15 @@ static vector<uid_ref> assemble_uids(int path_length, const Rcpp::IntegerVector&
 
     // set begin index of result path storage block
     uid.path_idx = total_paths;
-
     total_paths += uid.count;
 
-    // store computed join signs
-    // TODO check correctness (path_length >5?)
-    for(int loc = uid.location; loc < uid.location + uid.count; loc++) {
-      int sign = 0;
-      if(path_length > 3)
-        sign = r_signs[k];
-      else if(path_length < 3)
-        sign = r_signs[loc];
-      else if(path_length == 3)
-        sign = (r_signs[k] + r_signs[loc] == 0) ? -1 : 1;
-      uid.signs.push_back(sign == 1);
-    }
-
   }
-  printf("path_length: %d, uids: %lu (paths: %ld)\n", path_length, uids.size(), total_paths);
-  return uids;
+
+  auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
+  printf("path_length: %d, uids: %lu, paths: %ld (%'ld ms)\n", path_length, uids.size(), total_paths);
+
+  return UidRelSet(path_length, uids, copy_r(r_signs));
+
 }
 
 static Rcpp::List make_score_list(const joined_res& res) {
@@ -158,7 +156,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
 
   if(path_length >= 1) {
 
-    paths1 = exec.createPathSet(JoinExec::count_total_paths(uids1a));
+    paths1 = exec.createPathSet(uids1a.count_total_paths());
     auto zero_1 = exec.createPathSet(data_idx1a.size());
     auto input_1 = parsed_data1->select(data_idx1b);
 
@@ -174,14 +172,14 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   }
 
   if(path_length >= 2) {
-    paths2 = exec.createPathSet(JoinExec::count_total_paths(uids2));
+    paths2 = exec.createPathSet(uids2.count_total_paths());
     auto input = parsed_data1->select(data_idx2);
     auto res = exec.join(uids2, *paths1, *input, *paths2);
     results["lst2"] = make_score_list(res);
   }
 
   if(path_length >= 3) {
-    paths3 = exec.createPathSet(JoinExec::count_total_paths(uids3));
+    paths3 = exec.createPathSet(uids3.count_total_paths());
     auto input = parsed_data1->select(data_idx3);
     auto res = exec.join(uids3, *paths2, *input, *paths3);
     results["lst3"] = make_score_list(res);

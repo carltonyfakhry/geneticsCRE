@@ -14,20 +14,9 @@ void add_idx(vector<uid_ref>& refs) {
   }
 }
 
-void add_signs(int path_length, vector<uid_ref>& uids, vector<int> signs){
-  for(int idx = 0; idx < uids.size(); idx++){
-    auto& uid = uids[idx];
-    for(int loc = uid.location; loc < uid.location + uid.count; loc++) {
-      int sign = 0;
-      if(path_length > 3)
-        sign = signs[idx];
-      else if(path_length < 3)
-        sign = signs[loc];
-      else if(path_length == 3)
-        sign = (signs[idx] + signs[loc] == 0) ? -1 : 1;
-      uid.signs.push_back(sign == 1);
-    }
-  }
+UidRelSet add_signs(int path_length, vector<uid_ref>& uids, vector<int> signs){
+  add_idx(uids);
+  return UidRelSet(path_length, uids, signs);
 }
 
 int main(int argc, char* argv[]) {
@@ -82,35 +71,29 @@ int main(int argc, char* argv[]) {
   printf("      controls : %d\n", exec.num_ctrls);
   printf("\n");
 
-  auto uids0 = read_uids(fdata);
+  auto uids0v = read_uids(fdata);
   auto sign0 = read_ints(fdata);
-  add_signs(1, uids0, sign0);
-  add_idx(uids0);
+  auto uids0 = add_signs(1, uids0v, sign0);
   
-  auto uids1 = read_uids(fdata);
+  auto uids1v = read_uids(fdata);
   auto sign1 = read_ints(fdata);
-  add_signs(1, uids1, sign1);
-  add_idx(uids1);
+  auto uids1 = add_signs(1, uids1v, sign1);
   
-  auto uids2 = read_uids(fdata);
+  auto uids2v = read_uids(fdata);
   auto sign2 = read_ints(fdata);
-  add_signs(2, uids2, sign2);
-  add_idx(uids2);
+  auto uids2 = add_signs(2, uids2v, sign2);
   
-  auto uids3 = read_uids(fdata);
+  auto uids3v = read_uids(fdata);
   auto sign3 = read_ints(fdata);
-  add_signs(3, uids3, sign3);
-  add_idx(uids3);
+  auto uids3 = add_signs(3, uids3v, sign3);
   
-  auto uids4 = read_uids(fdata);
+  auto uids4v = read_uids(fdata);
   auto sign4 = read_ints(fdata);
-  add_signs(4, uids4, sign4);
-  add_idx(uids4);
+  auto uids4 = add_signs(4, uids4v, sign4);
   
-  auto uids5 = read_uids(fdata);
+  auto uids5v = read_uids(fdata);
   auto sign5 = read_ints(fdata);
-  add_signs(5, uids5, sign5);
-  add_idx(uids5);
+  auto uids5 = add_signs(5, uids5v, sign5);
 
   auto data_idx0 = read_ints(fdata);
   auto data_idx1 = read_ints(fdata);
@@ -134,7 +117,7 @@ int main(int argc, char* argv[]) {
 
   if(path_length >= 1) {
 
-    paths1 = exec.createPathSet(JoinExec::count_total_paths(uids0));
+    paths1 = exec.createPathSet(uids0.count_total_paths());
     auto zero_1 = exec.createPathSet(data_idx0.size());
     auto input_1 = parsed_data1->select(data_idx1);
 
@@ -150,13 +133,13 @@ int main(int argc, char* argv[]) {
   }
 
   if(path_length >= 2) {
-    paths2 = exec.createPathSet(JoinExec::count_total_paths(uids2));
+    paths2 = exec.createPathSet(uids2.count_total_paths());
     auto input = parsed_data1->select(data_idx2);
     auto res2 = exec.join(uids2, *paths1, *input, *paths2);
   }
 
   if(path_length >= 3) {
-    paths3 = exec.createPathSet(JoinExec::count_total_paths(uids3));
+    paths3 = exec.createPathSet(uids3.count_total_paths());
     auto input = parsed_data1->select(data_idx3);
     auto res3 = exec.join(uids3, *paths2, *input, *paths3);
   }

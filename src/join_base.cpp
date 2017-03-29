@@ -206,7 +206,7 @@ unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
 // TODO overload the method based on JoinMethod implementation
 // not entirely sure what dynamic dispatch will to performance-wise, so doing everything statically for now
 // JoinExec itself is very super not thread-safe
-joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
   // why no .clear() C++?
   while(!scores.empty())
@@ -244,7 +244,7 @@ joined_res JoinExec::format_result() const {
 
 }
 
-joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
@@ -286,7 +286,6 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
 
       for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
 
-        const auto sign = uid.signs[loc_idx];
         const uint64_t* path1 = paths1[loc];
 
         method.score_permute_cpu(idx, loc, path0, path1);
@@ -319,7 +318,7 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
   return format_result();
 }
 
-joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
+joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
@@ -362,9 +361,9 @@ joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& pa
 
       for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
 
-        const auto sign = uid.signs[loc_idx];
-        const uint64_t* path_pos1 = (sign ? paths1[loc] : paths1[loc] + width_ul);
-        const uint64_t* path_neg1 = (sign ? paths1[loc] + width_ul : paths1[loc]);
+        const auto do_flip = uids.need_flip(idx, loc);
+        const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
+        const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
 
         method.SCORE_METHOD_NAME (idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
 

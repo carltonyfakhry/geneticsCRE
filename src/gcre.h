@@ -68,7 +68,51 @@ struct uid_ref {
   int count;
   int location;
   int path_idx;
-  vector<bool> signs;
+};
+
+// TODO need to check memory use and performance for larger lengths
+class UidRelSet {
+
+public:
+
+  const int path_length;
+  const vector<uid_ref> uids;
+  const vector<int> signs;
+
+  UidRelSet(int path_length, vector<uid_ref> uids, vector<int> signs) : path_length(path_length), uids(uids), signs(signs) {
+    // TODO remove
+    printf(" SIGNS SIZE: %lu\n", signs.size());
+  }
+
+  size_t size() const {
+    return uids.size();
+  }
+
+  // TODO will this copy?
+  inline const uid_ref& operator[](int idx) const {
+    return uids[idx];
+  }
+
+  // TODO this is probably slow - need a short-circuit for path_length != 3
+  inline bool need_flip(int idx, int loc) const {
+    // TODO check correctness (path_length >5?)
+    int sign = 0;
+    if(path_length > 3)
+      sign = signs[idx];
+    else if(path_length < 3)
+      sign = signs[loc];
+    else if(path_length == 3)
+      sign = (signs[idx] + signs[loc] == 0) ? -1 : 1;
+    return sign == 1;
+  }
+
+  unsigned count_total_paths() const {
+    unsigned total = 0;
+    for(const auto& uid : uids)
+      total += uid.count;
+    return total;
+  }
+
 };
 
 struct joined_res {
@@ -166,14 +210,6 @@ public:
     exit(1);
   }
 
-  // TODO shouldn't really be here
-  static inline unsigned count_total_paths(const vector<uid_ref>& uids) {
-    unsigned total = 0;
-    for(const auto& uid : uids)
-      total += uid.count;
-    return total;
-  }
-
   JoinExec(string method_name, int num_cases, int num_ctrls, int iters);
 
   ~JoinExec(){
@@ -189,7 +225,7 @@ public:
 
   unique_ptr<PathSet> createPathSet(int size) const;
   
-  joined_res join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  joined_res join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
 protected:
 
@@ -197,8 +233,8 @@ protected:
   mutable double* perm_scores;
 
   joined_res format_result() const;
-  joined_res join_method1(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
-  joined_res join_method2(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  joined_res join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
   static int vector_width_ul(int num_cases, int num_ctrls) {
     int width = (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
