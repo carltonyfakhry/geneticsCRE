@@ -141,6 +141,7 @@ protected:
 
 class JoinExec {
 
+  friend class JoinMethod;
   friend class JoinMethod1;
   friend class JoinMethod2;
 

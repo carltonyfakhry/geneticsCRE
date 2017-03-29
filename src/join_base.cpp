@@ -10,13 +10,13 @@
 
 using namespace std;
 
-class JoinMethod1 {
+class JoinMethod {
 
 public:
 
   priority_queue<Score> scores;
 
-  JoinMethod1(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_block) :
+  JoinMethod(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
 
   exec(exec),
   flip_pivot_len(flip_pivot_len),
@@ -31,14 +31,10 @@ public:
     for(int k = 0; k < exec->iterations; k++)
       perm_scores[k] = 0;
 
-    joined = p_joined_block;
-
-    perm_block = perm_case = p_perm_block;
-    perm_ctrl = perm_block + exec->iterations;
+    joined_block = p_joined_block;
+    perm_count_block = p_perm_count_block;
 
   }
-
-  void score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
 
 protected:
 
@@ -51,9 +47,31 @@ protected:
   const vec2d_d& value_table;
   const vec2d_d& value_table_max;
 
-  uint64_t* joined;
-  int *perm_block, *perm_case, *perm_ctrl;
+  uint64_t* joined_block;
+  int* perm_count_block;
   double* perm_scores;
+
+};
+
+class JoinMethod1 : public JoinMethod {
+
+public:
+
+  JoinMethod1(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {
+
+    joined = joined_block;
+    perm_case = perm_count_block;
+    perm_ctrl = perm_count_block + exec->iterations;
+
+  }
+
+  void score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
+
+protected:
+
+  uint64_t* joined;
+  int* perm_case;
+  int* perm_ctrl;
 
 };
 
@@ -64,7 +82,7 @@ public:
 
   priority_queue<Score> scores;
 
-  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_pos_block) :
+  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
 
   exec(exec),
   flip_pivot_len(flip_pivot_len),
@@ -82,8 +100,8 @@ public:
     joined_block = joined_pos = p_joined_block;
     joined_neg = joined_block + exec->width_ul;
 
-    perm_pos_block = perm_case_pos = p_perm_pos_block;
-    perm_ctrl_pos = perm_pos_block + exec->iterations;
+    perm_count_block = perm_case_pos = p_perm_count_block;
+    perm_ctrl_pos = perm_count_block + exec->iterations;
 
   }
 
@@ -103,7 +121,7 @@ protected:
   const vec2d_d& value_table_max;
 
   uint64_t *joined_block, *joined_pos, *joined_neg;
-  int *perm_pos_block, *perm_case_pos, *perm_ctrl_pos;
+  int *perm_count_block, *perm_case_pos, *perm_ctrl_pos;
   double* perm_scores;
 
 };
@@ -220,6 +238,7 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
+
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
@@ -437,6 +456,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
   const int width_ul = exec->width_ul;
   const int flip_pivot_len = this->flip_pivot_len;
 
+
   int cases = 0;
   int ctrls = 0;
 
@@ -597,7 +617,7 @@ void JoinMethod2::score_permute_sse2(int idx, int loc, const uint64_t* path_pos0
   for(int k = 0; k < width_vec * 2; k++)
     _mm_storeu_si128(vec_joined + k, _mm_setzero_si128());
 
-  auto vec_perm_block = (__m128i*) perm_pos_block;
+  auto vec_perm_block = (__m128i*) perm_count_block;
   for(int r = 0; r < iters / gs_vec_width_32 * 2; r++)
     _mm_storeu_si128(vec_perm_block + r, _mm_setzero_si128());
 
