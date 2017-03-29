@@ -261,7 +261,6 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     // clean these up
     const int p_block_size = iters * 2;
 
-
     double perm_scores_block[iters];
     uint64_t joined_block[width_ul];
     int perm_block[p_block_size];

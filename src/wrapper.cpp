@@ -1,4 +1,5 @@
-
+#include <unordered_map>
+#include <array>
 #include <chrono>
 #include <Rcpp.h>
 #include "gcre.h"
@@ -57,9 +58,21 @@ static vec2d_i copy_r(const Rcpp::IntegerMatrix& matrix) {
 static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src_uids, const Rcpp::IntegerVector& r_trg_uids, const Rcpp::List& r_count_locs, const Rcpp::IntegerVector& r_signs){
 
   printf("start uid assemble for length: %d (src: %lu, locs: %lu)\n", path_length, r_src_uids.size(), r_count_locs.size());
+
   auto start = chrono::system_clock::now();
 
+  // Rcpp named Lists are ridiculously slow, and keeping that format would required a lot of int<->string conversions
+  unordered_map<int, array<int,2>> count_locs;
+  const Rcpp::CharacterVector& r_names = r_count_locs.names();
+  for(const auto& r_str : r_names) {
+    string uid = Rcpp::as<string>(r_str);
+    const Rcpp::IntegerVector& count_loc = r_count_locs[uid];
+    count_locs[stoi(uid)] = {count_loc[0], count_loc[1]};
+  }
+
   long total_paths = 0;
+
+  // TODO not entirely sure this allocates the way I think it does
   vector<uid_ref> uids(r_trg_uids.size(), uid_ref());
 
   for(int k = 0; k < r_trg_uids.size(); k++){
@@ -67,9 +80,9 @@ static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src
     auto& uid = uids[k];
     uid.trg = r_trg_uids[k];
     uid.src = r_src_uids[k];
-    const Rcpp::IntegerVector& count_loc = r_count_locs[to_string(uid.trg)];
-    uid.count = count_loc[0];
-    uid.location = count_loc[1];
+    const auto& cloc = count_locs[uid.trg];
+    uid.count = cloc[0];
+    uid.location = cloc[1];
 
     // set begin index of result path storage block
     uid.path_idx = total_paths;
@@ -78,7 +91,7 @@ static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src
   }
 
   auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-  printf("path_length: %d, uids: %lu, paths: %ld (%'ld ms)\n", path_length, uids.size(), total_paths);
+  printf("path_length: %d, uids: %lu, paths: %ld (%'ld ms)\n", path_length, uids.size(), total_paths, time.count());
 
   return UidRelSet(path_length, uids, copy_r(r_signs));
 
@@ -115,13 +128,6 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   Rcpp::IntegerMatrix r_data1, Rcpp::IntegerMatrix r_data2, Rcpp::NumericMatrix r_value_table,
   int num_cases, int num_ctrls, int top_k, int iterations, Rcpp::IntegerMatrix r_perm_cases, std::string method, int path_length, int nthreads){
 
-  auto uids1a = assemble_uids(1, r_src_uids1, r_trg_uids1, r_count_locs1, r_signs1);
-  auto uids1b = assemble_uids(1, r_src_uids1_2, r_trg_uids1_2, r_count_locs1_2, r_signs1_2);
-  auto uids2 = assemble_uids(2, r_src_uids2, r_trg_uids2, r_count_locs2, r_signs2);
-  auto uids3 = assemble_uids(3, r_src_uids3, r_trg_uids3, r_count_locs3, r_signs3);
-  auto uids4 = assemble_uids(4, r_src_uids4, r_trg_uids4, r_count_locs4, r_signs4);
-  auto uids5 = assemble_uids(5, r_src_uids5, r_trg_uids5, r_count_locs5, r_signs5);
-
   auto data_idx1a = copy_r(r_data_inds1);
   auto data_idx1b = copy_r(r_data_inds1_2);
   auto data_idx2 = copy_r(r_data_inds3);
@@ -130,12 +136,12 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   auto data1 = copy_r(r_data1);
   auto data2 = copy_r(r_data2);
 
-  // TODO method
   JoinExec exec(method, num_cases, num_ctrls, iterations);
 
   exec.top_k = top_k;
   exec.nthreads = nthreads;
 
+  setlocale(LC_ALL, "");
   printf("\nstarting join:\n\n");
   printf("   path_length : %d\n", path_length);
   printf("         cases : %d\n", exec.num_cases);
@@ -156,6 +162,9 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
 
   if(path_length >= 1) {
 
+    auto uids1a = assemble_uids(1, r_src_uids1, r_trg_uids1, r_count_locs1, r_signs1);
+    auto uids1b = assemble_uids(1, r_src_uids1_2, r_trg_uids1_2, r_count_locs1_2, r_signs1_2);
+
     paths1 = exec.createPathSet(uids1a.count_total_paths());
     auto zero_1 = exec.createPathSet(data_idx1a.size());
     auto input_1 = parsed_data1->select(data_idx1b);
@@ -172,6 +181,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   }
 
   if(path_length >= 2) {
+    auto uids2 = assemble_uids(2, r_src_uids2, r_trg_uids2, r_count_locs2, r_signs2);
     paths2 = exec.createPathSet(uids2.count_total_paths());
     auto input = parsed_data1->select(data_idx2);
     auto res = exec.join(uids2, *paths1, *input, *paths2);
@@ -179,6 +189,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   }
 
   if(path_length >= 3) {
+    auto uids3 = assemble_uids(3, r_src_uids3, r_trg_uids3, r_count_locs3, r_signs3);
     paths3 = exec.createPathSet(uids3.count_total_paths());
     auto input = parsed_data1->select(data_idx3);
     auto res = exec.join(uids3, *paths2, *input, *paths3);
@@ -186,11 +197,13 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   }
 
   if(path_length >= 4) {
+    auto uids4 = assemble_uids(4, r_src_uids4, r_trg_uids4, r_count_locs4, r_signs4);
     auto res = exec.join(uids4, *paths3, *paths2, *zero_set);
     results["lst4"] = make_score_list(res);
   }
 
   if(path_length >= 5) {
+    auto uids5 = assemble_uids(5, r_src_uids5, r_trg_uids5, r_count_locs5, r_signs5);
     auto res = exec.join(uids5, *paths3, *paths3, *zero_set);
     results["lst5"] = make_score_list(res);
   }

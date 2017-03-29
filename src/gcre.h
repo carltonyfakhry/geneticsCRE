@@ -80,8 +80,6 @@ public:
   const vector<int> signs;
 
   UidRelSet(int path_length, vector<uid_ref> uids, vector<int> signs) : path_length(path_length), uids(uids), signs(signs) {
-    // TODO remove
-    printf(" SIGNS SIZE: %lu\n", signs.size());
   }
 
   size_t size() const {
