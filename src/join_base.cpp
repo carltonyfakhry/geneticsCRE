@@ -36,6 +36,23 @@ public:
 
   }
 
+  // run at end of worker thread to collect results
+  void drain_scores(const JoinExec* exec) {
+
+    while(!scores.empty()) {
+      auto score = scores.top();
+      if(score.score > exec->scores.top().score)
+        exec->scores.push(score);
+      scores.pop();
+    }
+
+    for(int r = 0; r < exec->iterations; r++) {
+      if(perm_scores[r] > exec->perm_scores[r])
+        exec->perm_scores[r] = perm_scores[r];
+    }
+
+  }
+
 protected:
 
   const JoinExec* exec;
@@ -284,19 +301,7 @@ joined_res JoinExec::join_method1(const vector<uid_ref>& uids, const PathSet& pa
 
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
-
-    while(!method.scores.empty()){
-      auto score = method.scores.top();
-      if(score.score > scores.top().score)
-        scores.push(score);
-      method.scores.pop();
-    }
-
-    for(int r = 0; r < iters; r++) {
-      if(method.perm_scores[r] > perm_scores[r])
-        perm_scores[r] = method.perm_scores[r];
-    }
-
+    method.drain_scores(this);
     printf("[%d] worker finished.\n", tid);
   };
 
@@ -373,20 +378,9 @@ joined_res JoinExec::join_method2(const vector<uid_ref>& uids, const PathSet& pa
 
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
-
-    while(!method.scores.empty()){
-      auto score = method.scores.top();
-      if(score.score > scores.top().score)
-        scores.push(score);
-      method.scores.pop();
-    }
-
-    for(int r = 0; r < iters; r++) {
-      if(method.perm_scores[r] > perm_scores[r])
-        perm_scores[r] = method.perm_scores[r];
-    }
-
+    method.drain_scores(this);
     printf("[%d] worker finished.\n", tid);
+
   };
 
   if(nthreads > 0) {
