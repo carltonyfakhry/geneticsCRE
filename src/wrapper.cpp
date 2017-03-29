@@ -133,7 +133,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   auto data2 = copy_r(r_data2);
 
   // TODO method
-  JoinExec exec(num_cases, num_ctrls, iterations);
+  JoinExec exec(method, num_cases, num_ctrls, iterations);
 
   exec.top_k = top_k;
   exec.nthreads = nthreads;

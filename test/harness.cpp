@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
   if(has_opt(argv, arge, "-p"))
     iters = max(0, stoi(get_opt(argv, arge, "-p")));
 
-  JoinExec exec(num_cases, num_ctrls, iters);
+  JoinExec exec("method2", num_cases, num_ctrls, iters);
 
   if(has_opt(argv, arge, "-l"))
     path_length = stoi(get_opt(argv, arge, "-l"));

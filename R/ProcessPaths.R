@@ -61,6 +61,10 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
   # accept numeric method ids to match old interface --dmitri
   if(is.numeric(method))
     method <- paste0('method', toString(method))
+  else if(grepl('^enrich', method))
+    method <- 'method1'
+  else if(grepl('^direct', method))
+    method <- 'method2'
 
   # Check the input parameters
   geneticsCRE:::check_input(nCases, nControls, method, threshold_percent, K, pathLength, iterations, nthreads)

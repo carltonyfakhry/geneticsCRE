@@ -10,22 +10,23 @@
 #include <vector>
 #include <iostream>
 
-#if defined __AVX2__
-#define SCORE_METHOD_NAME score_permute_avx2
-#define SCORE_IMPL_LABEL "AVX2"
-constexpr int gs_vec_width    = 256;
-#elif defined __AVX__
-#define SCORE_METHOD_NAME score_permute_sse4
-#define SCORE_IMPL_LABEL "SSE4"
-constexpr int gs_vec_width    = 256;
-#else
-#define SCORE_METHOD_NAME score_permute_sse2
-#define SCORE_IMPL_LABEL "SSE2"
-constexpr int gs_vec_width    = 128;
-#endif
+// #if defined __AVX2__
+// #define SCORE_METHOD_NAME score_permute_avx2
+// #define SCORE_IMPL_LABEL "AVX2"
+// constexpr int gs_vec_width    = 256;
+// #elif defined __AVX__
+// #define SCORE_METHOD_NAME score_permute_sse4
+// #define SCORE_IMPL_LABEL "SSE4"
+// constexpr int gs_vec_width    = 256;
+// #else
+// #define SCORE_METHOD_NAME score_permute_sse2
+// #define SCORE_IMPL_LABEL "SSE2"
+// constexpr int gs_vec_width    = 128;
+// #endif
 
 #define SCORE_METHOD_NAME score_permute_cpu
 #define SCORE_IMPL_LABEL "CPU"
+constexpr int gs_vec_width    = 64;
 
 constexpr int gs_vec_width_b  = gs_vec_width / 8;
 constexpr int gs_vec_width_32 = gs_vec_width / 32;
@@ -46,6 +47,8 @@ typedef std::vector<std::vector<int>> vec2d_i;
 typedef std::vector<std::vector<int8_t>> vec2d_i8;
 typedef std::vector<std::vector<uint16_t>> vec2d_u16;
 typedef std::vector<std::vector<uint64_t>> vec2d_u64;
+
+enum class Method { method1 = 1, method2 = 2 };
 
 class Score {
 public:
@@ -142,6 +145,7 @@ class JoinExec {
 
 public:
 
+  const Method method;
   const int num_cases;
   const int num_ctrls;
   const int width_ul;
@@ -160,7 +164,7 @@ public:
     return total;
   }
 
-  JoinExec(const int num_cases, const int num_ctrls, const int iters);
+  JoinExec(string method_name, int num_cases, int num_ctrls, int iters);
 
   ~JoinExec(){
     if(case_mask)

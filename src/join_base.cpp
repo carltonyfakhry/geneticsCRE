@@ -60,8 +60,9 @@ protected:
 
 };
 
-JoinExec::JoinExec(const int num_cases, const int num_ctrls, const int iters) :
+JoinExec::JoinExec(string method_name, int num_cases, int num_ctrls, int iters) :
 
+method(method_name == "method2" ? Method::method2 : Method::method1),
 num_cases(num_cases),
 num_ctrls(num_ctrls),
 width_ul(vector_width_ul(num_cases, num_ctrls)),
@@ -76,7 +77,7 @@ iterations(iter_size(iters)) {
   for(int k = 0; k < num_cases; k++)
     case_mask[k/64] |= bit_one_ul << k % 64;
 
-  printf("init exec: %d x %d (width: %d ul)\n", num_cases, num_ctrls, width_ul);
+  printf("[init exec] method: '%d' | data: %d x %d (width: %d ul)\n", method, num_cases, num_ctrls, width_ul);
   printf("**  using scoring implementation: %s\n", SCORE_IMPL_LABEL);
 }
 
@@ -141,7 +142,8 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
 // TODO width based on method needs
 unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
   // std::make_unique is C++14
-  return unique_ptr<PathSet>(new PathSet(size, width_ul, width_ul * 2));
+  // also the size parameter is a ridiculous hack
+  return unique_ptr<PathSet>(new PathSet(size, width_ul, width_ul * (int) method));
 }
 
 joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
