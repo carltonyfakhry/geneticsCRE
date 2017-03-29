@@ -11,12 +11,21 @@
 #include <iostream>
 
 #if defined __AVX2__
+#define SCORE_METHOD_NAME score_permute_avx2
+#define SCORE_IMPL_LABEL "AVX2"
 constexpr int gs_vec_width    = 256;
 #elif defined __AVX__
+#define SCORE_METHOD_NAME score_permute_sse4
+#define SCORE_IMPL_LABEL "SSE4"
 constexpr int gs_vec_width    = 256;
 #else
+#define SCORE_METHOD_NAME score_permute_sse2
+#define SCORE_IMPL_LABEL "SSE2"
 constexpr int gs_vec_width    = 128;
 #endif
+
+#define SCORE_METHOD_NAME score_permute_cpu
+#define SCORE_IMPL_LABEL "CPU"
 
 constexpr int gs_vec_width_b  = gs_vec_width / 8;
 constexpr int gs_vec_width_32 = gs_vec_width / 32;

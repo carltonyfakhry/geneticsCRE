@@ -77,6 +77,7 @@ iterations(iter_size(iters)) {
     case_mask[k/64] |= bit_one_ul << k % 64;
 
   printf("init exec: %d x %d (width: %d ul)\n", num_cases, num_ctrls, width_ul);
+  printf("**  using scoring implementation: %s\n", SCORE_IMPL_LABEL);
 }
 
 // create a copy of the vt for simplicity
@@ -202,7 +203,7 @@ joined_res JoinExec::join(const vector<uid_ref>& uids, const PathSet& paths0, co
         const uint64_t* path_pos1 = (sign ? paths1[loc] : paths1[loc] + width_ul);
         const uint64_t* path_neg1 = (sign ? paths1[loc] + width_ul : paths1[loc]);
 
-        method.score_permute_sse2(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
+        method.SCORE_METHOD_NAME (idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
 
         if(keep_paths)
           paths_res.set(path_idx, joined_block);
