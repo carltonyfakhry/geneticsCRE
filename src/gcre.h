@@ -10,6 +10,18 @@
 #include <vector>
 #include <iostream>
 
+#if defined __AVX2__
+constexpr int gs_vec_width    = 256;
+#elif defined __AVX__
+constexpr int gs_vec_width    = 256;
+#else
+constexpr int gs_vec_width    = 128;
+#endif
+
+constexpr int gs_vec_width_b  = gs_vec_width / 8;
+constexpr int gs_vec_width_32 = gs_vec_width / 32;
+constexpr int gs_vec_width_ul = gs_vec_width / 64;
+
 using namespace std;
 
 const uint64_t bit_zero_ul = 0;
@@ -124,9 +136,12 @@ public:
   const int num_cases;
   const int num_ctrls;
   const int width_ul;
+  const int iterations;
+  
   int top_k = 12;
-  int iterations = 0;
   int nthreads = 0;
+
+  int width_vec;
 
   // TODO shouldn't really be here
   static inline unsigned count_total_paths(const vector<uid_ref>& uids) {
@@ -136,7 +151,7 @@ public:
     return total;
   }
 
-  JoinExec(const int num_cases, const int num_ctrls);
+  JoinExec(const int num_cases, const int num_ctrls, const int iters);
 
   ~JoinExec(){
     if(case_mask)
@@ -155,9 +170,16 @@ public:
 
 protected:
 
-  // pad to uint64_t
-  static inline int vector_width_ul(int num_cases, int num_ctrls) {
-    return (int) ceil((num_cases + num_ctrls) / 64.0);
+  static int vector_width_ul(int num_cases, int num_ctrls) {
+    int width = (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
+    printf("adjusting input to vector width: %d -> %d\n", num_cases + num_ctrls, width * gs_vec_width);
+    return width * gs_vec_width_ul;
+  }
+
+  static int iter_size(int iters) {
+    int width = gs_vec_width_32 * (int) ceil(iters / (double) gs_vec_width_32);
+    printf("adjusting iterations to vector width: %d -> %d\n", iters, width);
+    return width;
   }
 
   vec2d_d value_table;

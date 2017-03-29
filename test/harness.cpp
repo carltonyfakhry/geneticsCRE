@@ -51,17 +51,17 @@ int main(int argc, char* argv[]) {
   int num_cases = stoi(read_line(fdata));
   int num_ctrls = stoi(read_line(fdata));
 
+  int iters = 10;
+  if(has_opt(argv, arge, "-p"))
+    iters = max(0, stoi(get_opt(argv, arge, "-p")));
 
-  JoinExec exec(num_cases, num_ctrls);
+  JoinExec exec(num_cases, num_ctrls, iters);
 
   if(has_opt(argv, arge, "-l"))
     path_length = stoi(get_opt(argv, arge, "-l"));
 
   if(has_opt(argv, arge, "-k"))
     exec.top_k = stoi(get_opt(argv, arge, "-k"));
-
-  if(has_opt(argv, arge, "-p"))
-    exec.iterations = max(0, stoi(get_opt(argv, arge, "-p")));
 
   if(has_opt(argv, arge, "-t"))
     exec.nthreads = stoi(get_opt(argv, arge, "-t"));
