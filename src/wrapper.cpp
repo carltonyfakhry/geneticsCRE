@@ -168,7 +168,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
 
     paths1 = exec.createPathSet(uids1a.count_total_paths());
     auto zero_1 = exec.createPathSet(data_idx1a.size());
-    auto input_1 = parsed_data1->select(data_idx1b);
+    auto input_1 = parsed_data1->select(data_idx1a);
 
     exec.join(uids1a, *zero_1, *input_1, *paths1);
 
