@@ -12,7 +12,7 @@ load_all()
 # res2 <- GetBestPaths('/data/gcre/testdata', nCases = 1537, nControls = 1537, method = 'directed', threshold_percent = 0.05, K = 4, pathLength = 4, iterations = 100, strataF = NA, nthreads = 4)
 #res2 <- GetBestPaths('/data/gcre/testdata', nCases = 1537, nControls = 1537, method = 2, threshold_percent = 0.05, K = 4, pathLength = 4, iterations = 2, strataF = NA, nthreads = 1)
 
-res2 <- GetBestPaths('/data/gcre/sim_lof_500', nCases = 500, nControls = 500, method = 'enrich', threshold_percent = 1, K = 8, pathLength = 4, iterations = 80, strataF = NA, nthreads = 4)
+res2 <- GetBestPaths('/data/sim_lof_500', nCases = 500, nControls = 500, method = 'enrich', threshold_percent = 1, K = 8, pathLength = 3, iterations = 10, strataF = NA, nthreads = 4)
 
 
 res2[,c("Paths", "Scores", "Pvalues")]
