@@ -2,9 +2,6 @@
 #include <atomic>
 #include <mutex>
 
-#include <emmintrin.h>
-#include <immintrin.h>
-
 #include "gcre.h"
 
 using namespace std;
@@ -97,8 +94,6 @@ public:
 
   void score_permute_cpu(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
 
-  void score_permute_sse2(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
-
 protected:
 
   uint64_t* joined_pos;
@@ -126,7 +121,6 @@ iterations(iter_size(iters)) {
     case_mask[k/64] |= bit_one_ul << k % 64;
 
   printf("[init exec] method: '%d' | data: %d x %d (width: %d ul)\n", method, num_cases, num_ctrls, width_ul);
-  printf("**  using scoring implementation: %s\n", SCORE_IMPL_LABEL);
 }
 
 // create a copy of the vt for simplicity
@@ -360,7 +354,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
         const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
         const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
 
-        method.SCORE_METHOD_NAME (idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
+        method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
 
         if(keep_paths) {
           paths_res.set(path_idx, joined_block);
@@ -542,110 +536,3 @@ void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0,
   }
 
 }
-
-void JoinMethod2::score_permute_sse2(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
-
-  // avoid de-refs like the plague
-  const int top_k = exec->top_k;
-  const int iters = exec->iterations;
-  const int width_ul = exec->width_ul;
-  const int width_vec = exec->width_vec;
-  const int flip_pivot_len = this->flip_pivot_len;
-
-  int case_pos = 0;
-  int case_neg = 0;
-  int ctrl_pos = 0;
-  int ctrl_neg = 0;
-  int total_pos = 0;
-  int total_neg = 0;
-
-  uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
-
-  // zero out join path holder
-
-  auto vec_joined = (__m128i*) joined_block;
-  for(int k = 0; k < width_vec * 2; k++)
-    _mm_storeu_si128(vec_joined + k, _mm_setzero_si128());
-
-  auto vec_perm_block = (__m128i*) perm_count_block;
-  for(int r = 0; r < iters / gs_vec_width_32 * 2; r++)
-    _mm_storeu_si128(vec_perm_block + r, _mm_setzero_si128());
-
-  for(int k = 0; k < width_ul; k++) {
-
-    bit_pos = path_pos0[k] | path_pos1[k];
-    bit_neg = path_neg0[k] | path_neg1[k];
-
-    if(bit_pos != 0 || bit_neg != 0) {
-
-      bit_con = bit_pos & bit_neg;
-      true_pos = bit_pos & ~bit_con;
-      true_neg = bit_neg & ~bit_con;
-      mask = case_mask[k];
-
-      total_pos += __builtin_popcountl(true_pos);
-      total_neg += __builtin_popcountl(true_neg);
-      case_pos += __builtin_popcountl(true_pos &  mask);
-      case_neg += __builtin_popcountl(true_neg & ~mask);
-      ctrl_pos += __builtin_popcountl(true_neg &  mask);
-      ctrl_neg += __builtin_popcountl(true_pos & ~mask);
-
-      if(true_pos != 0) {
-        for(int r = 0; r < iters; r++) {
-          const uint64_t* p_mask = perm_case_mask + r * width_ul;
-          perm_case_pos[r] += __builtin_popcountl(true_pos & p_mask[k]);
-        }
-      }
-
-      if(true_neg != 0) {
-        for(int r = 0; r < iters; r++){
-          const uint64_t* p_mask = perm_case_mask + r * width_ul;
-          perm_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[k]);
-        }
-      }
-
-      joined_pos[k] = bit_pos;
-      joined_neg[k] = bit_neg;
-
-    }
-
-  }
-
-  int cases = case_pos + case_neg;
-  int ctrls = ctrl_pos + ctrl_neg;
-
-  double score = value_table[cases][ctrls];
-  double flips = value_table[ctrls][cases];
-
-  if(score > scores.top().score)
-    scores.push(Score(score, idx, loc));
-  if(flips > scores.top().score)
-    scores.push(Score(flips, idx, loc + flip_pivot_len));
-  while(scores.size() > top_k)
-    scores.pop();
-
-  for(int r = 0; r < iters; r++){
-    int perm_cases = perm_case_pos[r] + (total_neg - perm_ctrl_pos[r]);
-    int perm_ctrls = perm_ctrl_pos[r] + (total_pos - perm_case_pos[r]);
-
-    double p_score = value_table_max[perm_cases][perm_ctrls];
-    if(p_score > perm_scores[r])
-      perm_scores[r] = p_score;
-  }
-
-}
-
-// TODO method to generate case permutations
-  // printf("generating simplified case masks for permutation (it = %d)\n", conf.iterations);
-  // srand((unsigned) time(0));
-
-  // vec2d_u16 permute_cases;
-  // for(int k = 0; k < conf.iterations; k++){
-  //   set<int> cases;
-  //   permute_cases.push_back(vector<uint16_t>());
-  //   while(cases.size() < conf.num_cases)
-  //     cases.insert(rand() % (conf.num_cases + conf.num_controls));
-  //   for(auto c : cases)
-  //     permute_cases.back().push_back(c);
-  // }
-  // printf("permuted_cases: %lu (%lu)\n", permute_cases.size(), permute_cases.back().size());
