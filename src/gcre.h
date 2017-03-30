@@ -6,10 +6,13 @@
 #include <cstdio>
 #include <cmath>
 #include <limits>
+#include <chrono>
 #include <memory>
 #include <vector>
 #include <queue>
 #include <iostream>
+
+#include <unistd.h>
 
 constexpr int gs_vec_width    = 64;
 
@@ -88,8 +91,8 @@ public:
     return sign == 1;
   }
 
-  unsigned count_total_paths() const {
-    unsigned total = 0;
+  uint64_t count_total_paths() const {
+    uint64_t total = 0;
     for(const auto& uid : uids)
       total += uid.count;
     return total;
@@ -235,6 +238,30 @@ protected:
   vec2d_d value_table_max;
   uint64_t* case_mask = nullptr;
   uint64_t* perm_case_mask = nullptr;
+
+};
+
+class Timer {
+
+public:
+
+  static void print_header() {
+    printf("\nTIME:PID METHOD WIDTH LENGTH PATHS PERMS THREADS MS\n\n");
+  }
+
+  Timer(const JoinExec& exec, int path_length, uint64_t total_paths) : exec(exec), path_length(path_length), total_paths(total_paths) {}
+
+  ~Timer(){
+    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
+    printf("\nTIME:%d %d %d %d %lu %d %d %lu\n\n", getpid(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
+  }
+
+private:
+
+  const chrono::system_clock::time_point start = chrono::system_clock::now();
+  const JoinExec& exec;
+  const int path_length;
+  const uint64_t total_paths;
 
 };
 

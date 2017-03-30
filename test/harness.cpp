@@ -1,5 +1,3 @@
-#include <chrono>
-
 #include "gcre.h"
 #include "test.h"
 
@@ -115,6 +113,8 @@ int main(int argc, char* argv[]) {
 
   unique_ptr<PathSet> paths1 = nullptr, paths2 = nullptr, paths3 = nullptr;
 
+  Timer::print_header();
+
   if(path_length >= 1) {
 
     paths1 = exec.createPathSet(uids0.count_total_paths());
@@ -135,24 +135,22 @@ int main(int argc, char* argv[]) {
   if(path_length >= 2) {
     paths2 = exec.createPathSet(uids2.count_total_paths());
     auto input = parsed_data1->select(data_idx2);
+    Timer timer(exec, 2, paths2->size);
     auto res2 = exec.join(uids2, *paths1, *input, *paths2);
   }
 
   if(path_length >= 3) {
     paths3 = exec.createPathSet(uids3.count_total_paths());
     auto input = parsed_data1->select(data_idx3);
+    Timer timer(exec, 3, paths3->size);
     auto res3 = exec.join(uids3, *paths2, *input, *paths3);
   }
 
   if(path_length >= 4) {
 
-    auto start = chrono::system_clock::now();
 
+    Timer timer(exec, 4, uids4.count_total_paths());
     auto res4 = exec.join(uids4, *paths3, *paths2, *zero_set);
-
-    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("[%d] time: %'ld ms\n", 0, time.count());
-
 
     printf("\n################################\n");
     printf("   length : %d  width: %d  iters: %d  thread: %d\n", path_length, exec.width_ul, exec.iterations, exec.nthreads);
@@ -173,14 +171,8 @@ int main(int argc, char* argv[]) {
   }
 
   if(path_length >= 5) {
-
-    auto start = chrono::system_clock::now();
-
+    Timer timer(exec, 5, uids5.count_total_paths());
     auto res5 = exec.join(uids5, *paths3, *paths3, *zero_set);
-
-    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("[%d] time: %'ld ms (%'ld x threads)\n", 0, time.count(), time.count() * max(1, exec.nthreads));
-
   }
 
 /*

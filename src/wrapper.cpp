@@ -1,6 +1,5 @@
 #include <unordered_map>
 #include <array>
-#include <chrono>
 #include <Rcpp.h>
 #include "gcre.h"
 
@@ -149,6 +148,8 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   printf("      controls : %d\n", exec.num_ctrls);
   printf("\n");
 
+  Timer::print_header();
+
   exec.setValueTable(copy_r(r_value_table));
   exec.setPermutedCases(copy_r(r_perm_cases));
 
@@ -185,6 +186,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
     auto uids2 = assemble_uids(2, r_src_uids2, r_trg_uids2, r_count_locs2, r_signs2);
     paths2 = exec.createPathSet(uids2.count_total_paths());
     auto input = parsed_data1->select(data_idx2);
+    Timer timer(exec, 2, paths2->size);
     auto res = exec.join(uids2, *paths1, *input, *paths2);
     results["lst2"] = make_score_list(res);
   }
@@ -193,18 +195,21 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
     auto uids3 = assemble_uids(3, r_src_uids3, r_trg_uids3, r_count_locs3, r_signs3);
     paths3 = exec.createPathSet(uids3.count_total_paths());
     auto input = parsed_data1->select(data_idx3);
+    Timer timer(exec, 3, paths3->size);
     auto res = exec.join(uids3, *paths2, *input, *paths3);
     results["lst3"] = make_score_list(res);
   }
 
   if(path_length >= 4) {
     auto uids4 = assemble_uids(4, r_src_uids4, r_trg_uids4, r_count_locs4, r_signs4);
+    Timer timer(exec, 4, uids4.count_total_paths());
     auto res = exec.join(uids4, *paths3, *paths2, *zero_set);
     results["lst4"] = make_score_list(res);
   }
 
   if(path_length >= 5) {
     auto uids5 = assemble_uids(5, r_src_uids5, r_trg_uids5, r_count_locs5, r_signs5);
+    Timer timer(exec, 5, uids5.count_total_paths());
     auto res = exec.join(uids5, *paths3, *paths3, *zero_set);
     results["lst5"] = make_score_list(res);
   }
