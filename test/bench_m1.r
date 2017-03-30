@@ -25,9 +25,8 @@ if(length(args) > 4)
 if(length(args) > 5)
  c <- as.numeric(args[6])
 
-suppressMessages(library(geneticsCRE))
+library(geneticsCRE)
 
-res <- GetBestPaths(file, nCases = c, nControls = c, method = 'direct', threshold_percent = 1, K = k, pathLength = l, iterations = i, strataF = NA, nthreads = t)
+res <- GetBestPaths(file, nCases = c, nControls = c, method = 'enrich', threshold_percent = 1, K = k, pathLength = l, iterations = i, strataF = NA, nthreads = t)
 res[,c("Paths", "Scores", "Pvalues")]
-
 
