@@ -76,20 +76,9 @@ class JoinMethod1 : public JoinMethod {
 public:
 
   JoinMethod1(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {
-
-    joined = joined_block;
-    perm_case = perm_count_block;
-    perm_ctrl = perm_count_block + exec->iterations;
-
   }
 
   void score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
-
-protected:
-
-  uint64_t* joined;
-  int* perm_case;
-  int* perm_ctrl;
 
 };
 
@@ -251,7 +240,6 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
 
-
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
   auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res](int tid) {
@@ -260,17 +248,15 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     const int width_ul = this->width_ul;
 
     const bool keep_paths = paths_res.size != 0;
-    // clean these up
-    const int p_block_size = iters * 2;
 
-    double perm_scores_block[iters];
     uint64_t joined_block[width_ul];
-    int perm_block[p_block_size];
+    double perm_scores_block[iters];
+    int perm_count_block[iters];
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
-    JoinMethod1 method(this, paths1.size, perm_scores_block, joined_block, perm_block);
+    JoinMethod1 method(this, paths1.size, perm_scores_block, joined_block, perm_count_block);
 
     unsigned long completed = 0;
     int idx = -1;
@@ -289,9 +275,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 
       for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
 
-        const uint64_t* path1 = paths1[loc];
-
-        method.score_permute_cpu(idx, loc, path0, path1);
+        method.score_permute_cpu(idx, loc, path0, paths1[loc]);
 
         if(keep_paths) {
           paths_res.set(path_idx, joined_block);
@@ -421,30 +405,30 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
   const int width_ul = exec->width_ul;
   const int flip_pivot_len = this->flip_pivot_len;
 
-
   int cases = 0;
   int ctrls = 0;
 
   // zero out join path holder
-  memset(joined, 0, width_ul * sizeof(uint64_t));
+  memset(joined_block, 0, width_ul * sizeof(uint64_t));
+  memset(perm_count_block, 0, iters * sizeof(int));
 
-  for(int r = 0; r < iters; r++) {
-    perm_case[r] = 0;
-    perm_ctrl[r] = 0;
-  }
-
+  uint64_t joined = 0;
 
   for(int k = 0; k < width_ul; k++) {
 
-    joined[k] = path0[k] | path1[k];
+    joined = path0[k] | path1[k];
 
-    cases += __builtin_popcountl(joined[k] &  case_mask[k]);
-    ctrls += __builtin_popcountl(joined[k] & ~case_mask[k]);
+    if(joined != 0) {
 
-    for(int r = 0; r < iters; r++){
-      const uint64_t* p_mask = perm_case_mask + r * width_ul;
-      perm_case[r] += __builtin_popcountl(joined[k] &  p_mask[k]);
-      perm_ctrl[r] += __builtin_popcountl(joined[k] & ~p_mask[k]);
+      joined_block[k] = joined;
+
+      cases += __builtin_popcountl(joined &  case_mask[k]);
+      ctrls += __builtin_popcountl(joined & ~case_mask[k]);
+
+      const uint64_t* p_mask = perm_case_mask + k;
+      for(int r = 0; r < iters; r++)
+        perm_count_block[r] += __builtin_popcountl(joined & p_mask[r * width_ul]);
+
     }
 
   }
@@ -459,14 +443,15 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
   while(scores.size() > top_k)
     scores.pop();
 
+  int total = cases + ctrls;
   for(int r = 0; r < iters; r++){
-    double p_score = value_table_max[perm_case[r]][perm_ctrl[r]];
+    int p_cases = perm_count_block[r];
+    double p_score = value_table_max[p_cases][total - p_cases];
     if(p_score > perm_scores[r])
       perm_scores[r] = p_score;
   }
 
 }
-
 
 void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
 
