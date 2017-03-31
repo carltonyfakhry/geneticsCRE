@@ -6,8 +6,6 @@
 
 using namespace std;
 
-constexpr int progress_chunk = 100000000;
-
 class JoinMethod {
 
 public:
@@ -229,10 +227,23 @@ joined_res JoinExec::format_result() const {
 
 }
 
+constexpr int prog_min_size = 4000;
+
+static inline void prog_print(mutex& g_mutex, const int prog_size, size_t idx) {
+  if(prog_size >= prog_min_size && idx % (prog_size / 10) == 0) {
+    lock_guard<mutex> lock(g_mutex);
+    printf(" %1.0lf%%", (idx * 100.0) / prog_size);
+    std::cout << std::flush;
+  }
+}
+
 joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
-  atomic<unsigned> uid_idx(0);
+  atomic<size_t> uid_idx(0);
   mutex g_mutex;
+
+  if(uids.size() >= prog_min_size)
+    printf("\nprogress:");
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
@@ -252,33 +263,33 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     // or it may be a thread access thing... either way, this works
     JoinMethod1 method(this, paths1.size, perm_scores_block, joined_block, perm_count_block);
 
-    unsigned long completed = 0;
-    int idx = -1;
+    const size_t prog_size = uids.size();
+
+    size_t idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
 
       const auto& uid = uids[idx];
 
-      if(uid.count == 0)
-        continue;
+      prog_print(g_mutex, prog_size, idx);
+      // if(prog_size >= prog_min_size && idx % (prog_size / 10) == 0) {
+      //   lock_guard<mutex> lock(g_mutex);
+      //   printf(" %1.0lf%%", (idx * 100.0) / prog_size);
+      //   std::cout << std::flush;
+      // }
 
-      // TODO long
-      // start of result path block for this uid
-      int path_idx = uid.path_idx;
+      if(uid.count > 0) {
 
-      const uint64_t* path0 = paths0[idx];
+        // TODO long
+        // start of result path block for this uid
+        int path_idx = uid.path_idx;
+        const uint64_t* path0 = paths0[idx];
 
-      for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
-
-        method.score_permute_cpu(idx, loc, path0, paths1[loc]);
-
-        if(keep_paths) {
-          paths_res.set(path_idx, joined_block);
-          path_idx += 1;
-        }
-
-        completed += 1;
-        if(completed % progress_chunk == 0) {
-          printf(" [%02d] %lum\n", tid, completed / 1000000);
+        for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
+          method.score_permute_cpu(idx, loc, path0, paths1[loc]);
+          if(keep_paths) {
+            paths_res.set(path_idx, joined_block);
+            path_idx += 1;
+          }
         }
 
       }
@@ -288,8 +299,8 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
     method.drain_scores(this);
-    printf(" [%02d] worker finished: %'lu paths\n", tid, completed);
   };
+
 
   if(nthreads > 0) {
     vector<thread> pool(nthreads);
@@ -301,6 +312,9 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     // '0' is main thread
     worker(0);
   }
+
+  if(uids.size() >= prog_min_size)
+    printf(" - done!\n");
 
   return format_result();
 }
@@ -311,6 +325,9 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
 
+  if(uids.size() >= prog_min_size)
+    printf("\nprogress:");
+
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
   auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res](int tid) {
@@ -319,10 +336,9 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     const int width_ul = this->width_ul;
 
     const bool keep_paths = paths_res.size != 0;
-    // clean these up
+    // TODO clean these up
     const int width_full_ul = width_ul * 2;
     const int p_block_size = iters * 2;
-
 
     double perm_scores_block[iters];
     uint64_t joined_block[width_ul * 2];
@@ -333,37 +349,32 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     // or it may be a thread access thing... either way, this works
     JoinMethod2 method(this, paths1.size, perm_scores_block, joined_block, perm_pos_block);
 
-    unsigned long completed = 0;
+    const size_t prog_size = uids.size();
+
     int idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
 
       const auto& uid = uids[idx];
 
-      if(uid.count == 0)
-        continue;
+      prog_print(g_mutex, prog_size, idx);
 
-      // start of result path block for this uid
-      int path_idx = uid.path_idx;
+      if(uid.count > 0) {
 
-      const uint64_t* path_pos0 = paths0[idx];
-      const uint64_t* path_neg0 = path_pos0 + width_ul;
+        // start of result path block for this uid
+        int path_idx = uid.path_idx;
 
-      for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
+        const uint64_t* path_pos0 = paths0[idx];
+        const uint64_t* path_neg0 = path_pos0 + width_ul;
 
-        const auto do_flip = uids.need_flip(idx, loc);
-        const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
-        const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
-
-        method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
-
-        if(keep_paths) {
-          paths_res.set(path_idx, joined_block);
-          path_idx += 1;
-        }
-
-        completed += 1;
-        if(completed % progress_chunk == 0) {
-          printf(" [%02d] %lum\n", tid, completed / 1000000);
+        for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
+          const auto do_flip = uids.need_flip(idx, loc);
+          const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
+          const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
+          method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
+          if(keep_paths) {
+            paths_res.set(path_idx, joined_block);
+            path_idx += 1;
+          }
         }
 
       }
@@ -373,8 +384,6 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
     method.drain_scores(this);
-    printf(" [%02d] worker finished: %'lu paths\n", tid, completed);
-
   };
 
   if(nthreads > 0) {
@@ -387,6 +396,9 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     // '0' is main thread
     worker(0);
   }
+
+  if(uids.size() >= prog_min_size)
+    printf(" - done!\n");
 
   return format_result();
 }

@@ -246,14 +246,14 @@ class Timer {
 public:
 
   static void print_header() {
-    printf("\nTIME:PID METHOD WIDTH LENGTH PATHS PERMS THREADS MS\n\n");
+    printf("\nTIME:PID IMPL METHOD WIDTH LENGTH PATHS PERMS THREADS MS\n\n");
   }
 
   Timer(const JoinExec& exec, int path_length, uint64_t total_paths) : exec(exec), path_length(path_length), total_paths(total_paths) {}
 
   ~Timer(){
     auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("\nTIME:%d %d %d %d %lu %d %d %lu\n\n", getpid(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
+    printf("\nTIME:%d CPU %d %d %d %lu %d %d %lu\n\n", getpid(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
   }
 
 private:

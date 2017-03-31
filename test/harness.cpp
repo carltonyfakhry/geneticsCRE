@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
       printf(" %0.2f", res4.permuted_scores[k]);
     printf("\n");
 
-    printf("################################\n\n");
+    printf("################################\n");
 
 
   }

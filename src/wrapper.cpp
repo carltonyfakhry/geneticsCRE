@@ -127,6 +127,22 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   Rcpp::IntegerMatrix r_data1, Rcpp::IntegerMatrix r_data2, Rcpp::NumericMatrix r_value_table,
   int num_cases, int num_ctrls, int top_k, int iterations, Rcpp::IntegerMatrix r_perm_cases, std::string method, int path_length, int nthreads){
 
+  JoinExec exec(method, num_cases, num_ctrls, iterations);
+  exec.top_k = top_k;
+  exec.nthreads = nthreads;
+
+  setlocale(LC_ALL, "");
+
+  printf("\nstarting join:\n\n");
+  printf("       method : %d\n", exec.num_ctrls);
+  printf("  path_length : %d\n", path_length);
+  printf("        cases : %d\n", exec.num_cases);
+  printf("     controls : %d\n", exec.num_ctrls);
+  printf("      threads : %d\n", nthreads);
+  printf("  iterations : %d\n", iterations);
+
+  Timer::print_header();
+
   auto data_idx1a = copy_r(r_data_inds1);
   auto data_idx1b = copy_r(r_data_inds1_2);
   auto data_idx2 = copy_r(r_data_inds3);
@@ -134,21 +150,6 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
 
   auto data1 = copy_r(r_data1);
   auto data2 = copy_r(r_data2);
-
-  JoinExec exec(method, num_cases, num_ctrls, iterations);
-
-  exec.top_k = top_k;
-  exec.nthreads = nthreads;
-
-  setlocale(LC_ALL, "");
-
-  printf("\nstarting join:\n\n");
-  printf("   path_length : %d\n", path_length);
-  printf("         cases : %d\n", exec.num_cases);
-  printf("      controls : %d\n", exec.num_ctrls);
-  printf("\n");
-
-  Timer::print_header();
 
   exec.setValueTable(copy_r(r_value_table));
   exec.setPermutedCases(copy_r(r_perm_cases));
@@ -214,7 +215,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
     results["lst5"] = make_score_list(res);
   }
 
-  printf("done.\n");
+  std::cout << "[success]" << std::endl;
 
   return results;
 }
