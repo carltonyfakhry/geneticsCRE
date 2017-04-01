@@ -63,11 +63,15 @@ int main(int argc, char* argv[]) {
 
   int width;
 
+  exec.print_vector_info();
+
   printf("\nheader:\n\n");
   printf("   path_length : %d\n", path_length);
   printf("         cases : %d\n", exec.num_cases);
   printf("      controls : %d\n", exec.num_ctrls);
   printf("\n");
+
+  exit(0);
 
   auto uids0v = read_uids(fdata);
   auto sign0 = read_ints(fdata);

@@ -14,11 +14,42 @@
 
 #include <unistd.h>
 
-constexpr int gs_vec_width    = 64;
+// will not compile without sse2, but cpu can be enable manually for testing
+#ifdef COMPILE_CPU
+
+#define SCORE_METHOD_NAME score_permute_cpu
+constexpr int gs_vec_width = 64;
+const std::string gs_impl_label = "CPU";
+
+#else
+
+// SSE4 also requires AVX (don't think that affects many CPUs)
+#if defined __AVX2__
+
+#define SCORE_METHOD_NAME score_permute_avx2
+constexpr int gs_vec_width = 256;
+const std::string gs_impl_label = "AVX2";
+
+#elif defined __AVX__
+
+#define SCORE_METHOD_NAME score_permute_sse4
+constexpr int gs_vec_width = 256;
+const std::string gs_impl_label = "SSE4";
+
+#else
+
+#define SCORE_METHOD_NAME score_permute_sse2
+constexpr int gs_vec_width = 128;
+const std::string gs_impl_label = "SSE2";
+
+#endif
+#endif
 
 constexpr int gs_vec_width_b  = gs_vec_width / 8;
-constexpr int gs_vec_width_32 = gs_vec_width / 32;
-constexpr int gs_vec_width_ul = gs_vec_width / 64;
+constexpr int gs_vec_width_dw = gs_vec_width / 32;
+constexpr int gs_vec_width_qw = gs_vec_width / 64;
+constexpr int gs_vec_width_dq = gs_vec_width / 128;
+constexpr int gs_vec_width_qq = gs_vec_width / 256;
 
 using namespace std;
 
@@ -153,7 +184,7 @@ public:
     int count_set = 0;
     for(int k = 0; k < size * vlen; k++)
       count_set += __builtin_popcountl(block[k]);
-  
+
     printf("%d (of %d)\n", count_set, count_in);
   }
 
@@ -186,7 +217,12 @@ public:
   const int num_cases;
   const int num_ctrls;
   const int width_ul;
+  const int width_dw;
+  const int width_qw;
+  const int width_dq;
+  const int width_qq;
   const int iterations;
+  const int iters_requested;
   
   int top_k = 12;
   int nthreads = 0;
@@ -211,6 +247,26 @@ public:
       delete[] perm_case_mask;
   }
 
+  void print_vector_info() {
+    printf("\n");
+    printf("########################\n");
+    printf("  vector sizes with: %s\n", gs_impl_label.c_str());
+    printf("########################\n");
+    printf("\n  vector width: %u\n", gs_vec_width);
+    printf("    bytes: %u\n", gs_vec_width_b);
+    printf("    dword: %u\n", gs_vec_width_dw);
+    printf("    qword: %u\n", gs_vec_width_qw);
+    printf("    dquad: %u\n", gs_vec_width_dq);
+    printf("    qquad: %u\n", gs_vec_width_qq);
+    printf("\n   input width: %d (%d)\n", width_ul * 64, num_cases + num_ctrls);
+    printf("    dword: %u\n", width_dw);
+    printf("    qword: %u\n", width_qw);
+    printf("    dquad: %u\n", width_dq);
+    printf("    qquad: %u\n", width_qq);
+    printf("\n########################\n");
+    printf("\n");
+  }
+
   void setValueTable(vec2d_d table);
 
   void setPermutedCases(const vec2d_i& perm_cases);
@@ -228,16 +284,21 @@ protected:
   joined_res join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
   joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
-  static int vector_width_ul(int num_cases, int num_ctrls) {
-    int width = (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
-    printf("adjusting input to vector width: %d -> %d\n", num_cases + num_ctrls, width * gs_vec_width);
-    return width * gs_vec_width_ul;
+  static int vector_width(int num_cases, int num_ctrls) {
+    printf("sum: %d, div: %lf, ceil: %lf\n", num_cases + num_ctrls, (num_cases + num_ctrls) / (double) gs_vec_width, ceil((num_cases + num_ctrls) / (double) gs_vec_width));
+    return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
+    return 1;
   }
 
-  static int iter_size(int iters) {
-    int width = gs_vec_width_32 * (int) ceil(iters / (double) gs_vec_width_32);
-    printf("adjusting iterations to vector width: %d -> %d\n", iters, width);
-    return width;
+  // width larger than current will not be set
+  static int vector_width_cast(int num_cases, int num_ctrls, int width) {
+    if(width > gs_vec_width)
+      return 0;
+    return vector_width(num_cases, num_ctrls) / width;
+  }
+
+  static int iter_size_dw(int iters) {
+    return gs_vec_width_dw * (int) ceil(iters / (double) gs_vec_width_dw);
   }
 
   vec2d_d value_table;
