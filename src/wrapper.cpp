@@ -134,12 +134,12 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   setlocale(LC_ALL, "");
 
   printf("\nstarting join:\n\n");
-  printf("       method : %d\n", exec.num_ctrls);
+  printf("       method : %d\n", exec.method);
   printf("  path_length : %d\n", path_length);
   printf("        cases : %d\n", exec.num_cases);
   printf("     controls : %d\n", exec.num_ctrls);
   printf("      threads : %d\n", nthreads);
-  printf("  iterations : %d\n", iterations);
+  printf("   iterations : %d\n", iterations);
 
   Timer::print_header();
 
