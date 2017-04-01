@@ -23,13 +23,19 @@ const std::string gs_impl_label = "CPU";
 
 #else
 
-// SSE4 also requires AVX (don't think that affects many CPUs)
-#if defined __AVX2__
+#if defined __AVX512__
+
+#define SCORE_METHOD_NAME score_permute_evex
+constexpr int gs_vec_width = 512;
+const std::string gs_impl_label = "AVX-512";
+
+#elif defined __AVX2__
 
 #define SCORE_METHOD_NAME score_permute_avx2
 constexpr int gs_vec_width = 256;
 const std::string gs_impl_label = "AVX2";
 
+// SSE4 also requires AVX (don't think that affects many CPUs)
 #elif defined __AVX__
 
 #define SCORE_METHOD_NAME score_permute_sse4
@@ -50,6 +56,7 @@ constexpr int gs_vec_width_dw = gs_vec_width / 32;
 constexpr int gs_vec_width_qw = gs_vec_width / 64;
 constexpr int gs_vec_width_dq = gs_vec_width / 128;
 constexpr int gs_vec_width_qq = gs_vec_width / 256;
+constexpr int gs_vec_width_oq = gs_vec_width / 512;
 
 using namespace std;
 
@@ -221,6 +228,7 @@ public:
   const int width_qw;
   const int width_dq;
   const int width_qq;
+  const int width_oq;
   const int iterations;
   const int iters_requested;
   
@@ -258,11 +266,13 @@ public:
     printf("    qword: %u\n", gs_vec_width_qw);
     printf("    dquad: %u\n", gs_vec_width_dq);
     printf("    qquad: %u\n", gs_vec_width_qq);
+    printf("    oquad: %u\n", gs_vec_width_oq);
     printf("\n   input width: %d (%d)\n", width_ul * 64, num_cases + num_ctrls);
     printf("    dword: %u\n", width_dw);
     printf("    qword: %u\n", width_qw);
     printf("    dquad: %u\n", width_dq);
     printf("    qquad: %u\n", width_qq);
+    printf("    oquad: %u\n", width_oq);
     printf("\n########################\n");
     printf("\n");
   }
@@ -285,9 +295,7 @@ protected:
   joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
   static int vector_width(int num_cases, int num_ctrls) {
-    printf("sum: %d, div: %lf, ceil: %lf\n", num_cases + num_ctrls, (num_cases + num_ctrls) / (double) gs_vec_width, ceil((num_cases + num_ctrls) / (double) gs_vec_width));
     return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
-    return 1;
   }
 
   // width larger than current will not be set

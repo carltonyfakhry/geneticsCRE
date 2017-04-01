@@ -71,8 +71,6 @@ int main(int argc, char* argv[]) {
   printf("      controls : %d\n", exec.num_ctrls);
   printf("\n");
 
-  exit(0);
-
   auto uids0v = read_uids(fdata);
   auto sign0 = read_ints(fdata);
   auto uids0 = add_signs(1, uids0v, sign0);

@@ -117,6 +117,7 @@ width_dw(vector_width_cast(num_cases, num_ctrls, 32)),
 width_qw(vector_width_cast(num_cases, num_ctrls, 64)),
 width_dq(vector_width_cast(num_cases, num_ctrls, 128)),
 width_qq(vector_width_cast(num_cases, num_ctrls, 256)),
+width_oq(vector_width_cast(num_cases, num_ctrls, 512)),
 iters_requested(iters),
 iterations(iter_size_dw(iters)) {
 
