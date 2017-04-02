@@ -50,9 +50,6 @@ void JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, co
   unsigned short perm_count_k[iters] __attribute__ ((aligned (gs_align_size)));
   auto vec_perm_count_k = (__m256i*) perm_count_k;
 
-  // TODO no need to init
-  // zero_vector(perm_count_k, iters / 4);
-
   for(int kqq = 0; kqq < width_qq; kqq++) {
 
     joined = _mm256_or_si256(vec_path0[kqq], vec_path1[kqq]);
