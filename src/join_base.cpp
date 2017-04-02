@@ -11,9 +11,9 @@ class JoinMethod {
 public:
 
   priority_queue<Score> scores;
-  double* perm_scores;
+  float* perm_scores;
 
-  JoinMethod(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
+  JoinMethod(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
 
   exec(exec),
   flip_pivot_len(flip_pivot_len),
@@ -70,7 +70,7 @@ class JoinMethod1 : public JoinMethod {
 
 public:
 
-  JoinMethod1(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {}
+  JoinMethod1(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {}
 
   void score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
   void score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
@@ -83,7 +83,7 @@ class JoinMethod2 : public JoinMethod {
 
 public:
 
-  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, double* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {
+  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {
 
     joined_pos = joined_block;
     joined_neg = joined_block + exec->width_ul;
@@ -210,7 +210,7 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     scores.pop();
   scores.push(Score());
 
-  double perm_scores[iterations];
+  float perm_scores[iterations];
   for(int k = 0; k < iterations; k++)
     perm_scores[k] = 0;
   this->perm_scores = perm_scores;
@@ -271,7 +271,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     // TODO method implementation should request size
 
     uint64_t joined_block[width_ul] __attribute__ ((aligned (gs_align_size)));
-    double perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
+    float perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
     int perm_count_block[iters] __attribute__ ((aligned (gs_align_size)));
 
     // this mess actually makes a significant performance difference
@@ -350,7 +350,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     const int width_full_ul = width_ul * 2;
     const int p_block_size = iters * 2;
 
-    double perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
+    float perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
     uint64_t joined_block[width_ul * 2] __attribute__ ((aligned (gs_align_size)));
     int perm_pos_block[p_block_size] __attribute__ ((aligned (gs_align_size)));
 

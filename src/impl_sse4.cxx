@@ -107,16 +107,16 @@ void JoinMethod1::score_permute_sse4(int idx, int loc, const uint64_t* path0, co
     scores.pop();
 
   int total = cases + ctrls;
-  double p_scores[iters] __attribute__ ((aligned (gs_align_size)));
+  float p_scores[iters] __attribute__ ((aligned (gs_align_size)));
   for(int r = 0; r < iters; r++){
     int p_cases = local_perm_count[r];
-    p_scores[r] = value_table_max[p_cases][total - p_cases];
+    p_scores[r] = (float) value_table_max[p_cases][total - p_cases];
   }
 
-  auto vec_perm_scores = (__m256d*) perm_scores;
-  auto vec_p_scores = (__m256d*) p_scores;
-  for(int v = 0; v < iters / 4; v++)
-    _mm256_stream_pd(perm_scores + v * 4, _mm256_max_pd(vec_perm_scores[v], vec_p_scores[v]));
+  auto vec_perm_scores = (__m256*) perm_scores;
+  auto vec_p_scores = (__m256*) p_scores;
+  for(int v = 0; v < iters / 8; v++)
+    _mm256_stream_ps(perm_scores + v * 8, _mm256_max_ps(vec_perm_scores[v], vec_p_scores[v]));
 
 }
 

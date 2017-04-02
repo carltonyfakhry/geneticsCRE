@@ -5,6 +5,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
   const int iters = exec->iterations;
   const int width_ul = exec->width_ul;
   const int flip_pivot_len = this->flip_pivot_len;
+  float* perm_scores = this->perm_scores;
 
   int cases = 0;
   int ctrls = 0;
@@ -47,7 +48,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
   int total = cases + ctrls;
   for(int r = 0; r < iters; r++){
     int p_cases = perm_count_block[r];
-    double p_score = value_table_max[p_cases][total - p_cases];
+    float p_score = (float) value_table_max[p_cases][total - p_cases];
     if(p_score > perm_scores[r])
       perm_scores[r] = p_score;
   }

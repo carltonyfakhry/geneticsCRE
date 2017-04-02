@@ -295,7 +295,7 @@ public:
 protected:
 
   mutable priority_queue<Score> scores;
-  mutable double* perm_scores;
+  mutable float* perm_scores;
 
   joined_res format_result() const;
   joined_res join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
