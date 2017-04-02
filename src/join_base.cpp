@@ -130,8 +130,8 @@ iterations(iter_size_dw(iters)) {
   for(int k = 0; k < num_cases; k++)
     case_mask[k/64] |= bit_one_ul << k % 64;
 
-    printf("adjusting input to vector width: %d -> %d\n", num_cases + num_ctrls, vector_width(num_cases, num_ctrls));
-    // printf("adjusting iterations to vector width: %d -> %d\n", iters, width);
+  printf("adjusting input to vector width: %d -> %d\n", num_cases + num_ctrls, vector_width(num_cases, num_ctrls));
+  printf("adjusting iterations to vector width: %d -> %d\n", iters_requested, iterations);
   printf("[init exec] method: '%d' | data: %d x %d (width: %d ul)\n", method, num_cases, num_ctrls, width_ul);
 }
 
@@ -268,9 +268,11 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 
     const bool keep_paths = paths_res.size != 0;
 
-    uint64_t joined_block[width_ul];
-    double perm_scores_block[iters];
-    int perm_count_block[iters];
+    // TODO method implementation should request size
+
+    uint64_t joined_block[width_ul] __attribute__ ((aligned (gs_align_size)));
+    double perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
+    int perm_count_block[iters] __attribute__ ((aligned (gs_align_size)));
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
@@ -294,7 +296,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
         const uint64_t* path0 = paths0[idx];
 
         for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
-          method.score_permute_cpu(idx, loc, path0, paths1[loc]);
+          method.SCORE_METHOD_NAME(idx, loc, path0, paths1[loc]);
           if(keep_paths) {
             paths_res.set(path_idx, joined_block);
             path_idx += 1;
@@ -309,7 +311,6 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     lock_guard<mutex> lock(g_mutex);
     method.drain_scores(this);
   };
-
 
   if(nthreads > 0) {
     vector<thread> pool(nthreads);
@@ -349,9 +350,9 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     const int width_full_ul = width_ul * 2;
     const int p_block_size = iters * 2;
 
-    double perm_scores_block[iters];
-    uint64_t joined_block[width_ul * 2];
-    int perm_pos_block[p_block_size];
+    double perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
+    uint64_t joined_block[width_ul * 2] __attribute__ ((aligned (gs_align_size)));
+    int perm_pos_block[p_block_size] __attribute__ ((aligned (gs_align_size)));
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
@@ -379,7 +380,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
           const auto do_flip = uids.need_flip(idx, loc);
           const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
           const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
-          method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
+          method.SCORE_METHOD_NAME(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
           if(keep_paths) {
             paths_res.set(path_idx, joined_block);
             path_idx += 1;
@@ -412,7 +413,12 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
   return format_result();
 }
 
-// TODO conditional include
 // .cxx extensions so that these don't get picked up by Rcpps' makefile (also that they shouldn't be compiled independently)
+
+#ifdef COMPILE_CPU
 #include "impl_cpu.cxx"
+#endif
+
+#ifdef COMPILE_SSE2
 #include "impl_sse2.cxx"
+#endif

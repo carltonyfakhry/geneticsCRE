@@ -25,12 +25,14 @@ const std::string gs_impl_label = "CPU";
 
 #if defined __AVX512__
 
+#define COMPILE_EVEX
 #define SCORE_METHOD_NAME score_permute_evex
 constexpr int gs_vec_width = 512;
 const std::string gs_impl_label = "AVX-512";
 
 #elif defined __AVX2__
 
+#define COMPILE_AVX2
 #define SCORE_METHOD_NAME score_permute_avx2
 constexpr int gs_vec_width = 256;
 const std::string gs_impl_label = "AVX2";
@@ -38,18 +40,22 @@ const std::string gs_impl_label = "AVX2";
 // SSE4 also requires AVX (don't think that affects many CPUs)
 #elif defined __AVX__
 
+#define COMPILE_SSE4
 #define SCORE_METHOD_NAME score_permute_sse4
 constexpr int gs_vec_width = 256;
 const std::string gs_impl_label = "SSE4";
 
 #else
 
+#define COMPILE_SSE2
 #define SCORE_METHOD_NAME score_permute_sse2
 constexpr int gs_vec_width = 128;
 const std::string gs_impl_label = "SSE2";
 
 #endif
 #endif
+
+constexpr int gs_align_size = 32;
 
 constexpr int gs_vec_width_b  = gs_vec_width / 8;
 constexpr int gs_vec_width_dw = gs_vec_width / 32;
@@ -260,6 +266,7 @@ public:
     printf("########################\n");
     printf("  vector sizes with: %s\n", gs_impl_label.c_str());
     printf("########################\n");
+    printf("\n    aligned to: %u\n", gs_align_size);
     printf("\n  vector width: %u\n", gs_vec_width);
     printf("    bytes: %u\n", gs_vec_width_b);
     printf("    dword: %u\n", gs_vec_width_dw);
@@ -328,7 +335,7 @@ public:
 
   ~Timer(){
     auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("\nTIME:%d CPU %d %d %d %lu %d %d %lu\n\n", getpid(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
+    printf("\nTIME:%d %s %d %d %d %lu %d %d %lu\n\n", getpid(), gs_impl_label.c_str(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
   }
 
 private:

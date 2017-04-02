@@ -1,10 +1,8 @@
 
-// TODO warn about patient limit
-
-// sse2
+// TODO check flags sse2
+// sse2 and sse4.1
 #include <emmintrin.h>
-
-// width: double quad (128-bit)
+// width: 128bit (double quad)
 
 static inline void zero_vector(void* p_vec, int size) {
   auto vec = (__m128i*) p_vec;
@@ -30,10 +28,9 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
   int ctrls = 0;
 
   zero_vector(joined_block, width_dq);
-  zero_vector(perm_count_block, iters_dw / 2);
+  zero_vector(perm_count_block, iters_dw);
 
   auto vec_joined_block = (__m128i*) joined_block;
-  auto vec_perm_count = (__m128i*) perm_count_block;
 
   auto joined = _mm_setzero_si128();
 
@@ -42,45 +39,35 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
   const auto vec_case_mask = (__m128i*) case_mask;
   const auto vec_perm_case_mask = (__m128i*) perm_case_mask;
 
-  uint64_t tmp_two_qw[2] __attribute__ ((aligned (gs_align_size)));
-  auto vec_two_qw = (__m128i*) tmp_two_qw;
-
-  unsigned short perm_count_k[iters] __attribute__ ((aligned (gs_align_size)));
-  auto vec_perm_count_k = (__m128i*) perm_count_k;
-  // zero_vector(perm_count_k, iters / 4);
-
   for(int k = 0; k < width_dq; k++) {
 
     joined = _mm_or_si128(vec_path0[k], vec_path1[k]);
 
-    if(_mm_movemask_epi8(_mm_cmpeq_epi32(joined, _mm_setzero_si128())) != 0xFFFF) {
+    if(!_mm_test_all_zeros(joined, joined)) {
 
       auto vec_case_mask_k = _mm_load_si128(vec_case_mask + k);
 
-      _mm_store_si128(vec_two_qw, _mm_and_si128(vec_case_mask_k, joined));
-      cases += __builtin_popcountl(tmp_two_qw[0]) + __builtin_popcountl(tmp_two_qw[1]);
+      auto vec_cases = _mm_and_si128(vec_case_mask_k, joined);
+      cases += __builtin_popcountll(_mm_extract_epi64(vec_cases, 0));
+      cases += __builtin_popcountll(_mm_extract_epi64(vec_cases, 1));
 
-      _mm_store_si128(vec_two_qw, _mm_andnot_si128(vec_case_mask_k, joined));
-      ctrls += __builtin_popcountl(tmp_two_qw[0]) + __builtin_popcountl(tmp_two_qw[1]);
+      auto vec_ctrls = _mm_andnot_si128(vec_case_mask_k, joined);
+      ctrls += __builtin_popcountll(_mm_extract_epi64(vec_ctrls, 0));
+      ctrls += __builtin_popcountll(_mm_extract_epi64(vec_ctrls, 1));
 
       const auto p_mask = perm_case_mask + k;
       for(int r = 0; r < iters; r++) {
-        _mm_store_si128(vec_two_qw, _mm_and_si128(_mm_load_si128(vec_perm_case_mask + r * width_dq), joined));
-        perm_count_k[r] = __builtin_popcountl(tmp_two_qw[0]) + __builtin_popcountl(tmp_two_qw[1]);
-      }
-      for(int v = 0; v < iters / 8; v++) {
-        _mm_store_si128(vec_perm_count + v, _mm_adds_epu16(vec_perm_count[v], vec_perm_count_k[v]));
+        auto perm_cases = _mm_and_si128(_mm_load_si128(vec_perm_case_mask + r * width_dq), joined);
+        perm_count_block[r] += __builtin_popcountll(_mm_extract_epi64(perm_cases, 0)) + __builtin_popcountll(_mm_extract_epi64(perm_cases, 1));
       }
 
-      _mm_stream_si128(vec_joined_block + k, joined);
+      _mm_storeu_si128(vec_joined_block + k, joined);
     }
 
   }
 
   double score = value_table[cases][ctrls];
   double flips = value_table[ctrls][cases];
-
-  auto local_perm_count = (unsigned short*) perm_count_block;
 
   if(score > scores.top().score)
     scores.push(Score(score, idx, loc));
@@ -89,17 +76,14 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
   while(scores.size() > top_k)
     scores.pop();
 
-  int total = cases + ctrls;
-  double p_scores[iters] __attribute__ ((aligned (gs_align_size)));
-  for(int r = 0; r < iters; r++){
-    int p_cases = local_perm_count[r];
-    p_scores[r] = value_table_max[p_cases][total - p_cases];
-  }
 
-  auto vec_perm_scores = (__m128d*) perm_scores;
-  auto vec_p_scores = (__m128d*) p_scores;
-  for(int v = 0; v < iters / 4; v++)
-    _mm_stream_pd(perm_scores + v * 2, _mm_max_pd(vec_perm_scores[v], vec_p_scores[v]));
+  int total = cases + ctrls;
+  for(int r = 0; r < iters; r++){
+    int p_cases = perm_count_block[r];
+    double p_score = value_table_max[p_cases][total - p_cases];
+    if(p_score > perm_scores[r])
+      perm_scores[r] = p_score;
+  }
 
 }
 
