@@ -163,7 +163,7 @@ public:
     const size_t block_size = size * vlen * sizeof(uint64_t);
     if(block_size > min_block_size)
       printf("allocate block for path-set (%5d x %d ul) %'15lu bytes: ", size, vlen, block_size);
-    block = unique_ptr<uint64_t[]>(new uint64_t[size * vlen]);
+    block = unique_ptr<uint64_t[]>((uint64_t*) aligned_alloc(gs_align_size, sizeof(uint64_t) * size * vlen));
     for(int k = 0; k < size * vlen; k++)
       block[k] = bit_zero_ul;
     if(block_size > min_block_size)

@@ -426,3 +426,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
 #ifdef COMPILE_SSE4
 #include "impl_sse4.cxx"
 #endif
+
+#ifdef COMPILE_AVX2
+#include "impl_avx2.cxx"
+#endif
