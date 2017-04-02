@@ -98,7 +98,8 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
 
   auto vec_perm_scores = (__m128d*) perm_scores;
   auto vec_p_scores = (__m128d*) p_scores;
-  for(int v = 0; v < iters / 4; v++)
+// TODO
+  for(int v = 0; v < iters / 2; v++)
     _mm_stream_pd(perm_scores + v * 2, _mm_max_pd(vec_perm_scores[v], vec_p_scores[v]));
 
 }

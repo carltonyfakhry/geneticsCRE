@@ -1,17 +1,21 @@
 
-// TODO check flags sse2
-// sse2 and sse4.1
-#include <emmintrin.h>
-// width: 128bit (double quad)
+// avx
+#include "immintrin.h"
+// sse4.2
+// #include "nmmintrin.h"
+
+// TODO warn about patient limit
+
+// width: quad quad (256-bit)
 
 static inline void zero_vector(void* p_vec, int size) {
-  auto vec = (__m128i*) p_vec;
+  auto vec = (__m256i*) p_vec;
   auto end = vec + size;
   while(vec < end)
-    _mm_store_si128(vec++, _mm_setzero_si128());
+    _mm256_store_si256(vec++, _mm256_setzero_si256());
 }
 
-void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
+void JoinMethod1::score_permute_sse4(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
 
   // avoid de-refs like the plague
   const int top_k = exec->top_k;
@@ -19,6 +23,7 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
   // TODO should never need ul
   const int width_ul = exec->width_ul;
   const int width_dq = exec->width_dq;
+  const int width_qq = exec->width_qq;
   const int flip_pivot_len = this->flip_pivot_len;
 
   // TODO set consistently
@@ -27,47 +32,72 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
   int cases = 0;
   int ctrls = 0;
 
-  zero_vector(joined_block, width_dq);
-  zero_vector(perm_count_block, iters_dw);
+  zero_vector(joined_block, width_qq);
+  zero_vector(perm_count_block, iters_dw / 4);
 
-  auto vec_joined_block = (__m128i*) joined_block;
+  auto vec_joined_block = (__m256i*) joined_block;
+  auto vec_perm_count = (__m128i*) perm_count_block;
 
-  auto joined = _mm_setzero_si128();
+  auto joined = _mm256_setzero_si256();
+  auto joined0 = _mm_setzero_si128();
+  auto joined1 = _mm_setzero_si128();
 
   const auto vec_path0 = (__m128i*) path0;
   const auto vec_path1 = (__m128i*) path1;
   const auto vec_case_mask = (__m128i*) case_mask;
   const auto vec_perm_case_mask = (__m128i*) perm_case_mask;
 
-  for(int k = 0; k < width_dq; k++) {
+  uint64_t uint_8qw[8] __attribute__ ((aligned (gs_align_size)));
+  auto vec_8qw = (__m128i*) uint_8qw;
 
-    joined = _mm_or_si128(vec_path0[k], vec_path1[k]);
+  unsigned short perm_count_k[iters] __attribute__ ((aligned (gs_align_size)));
+  auto vec_perm_count_k = (__m128i*) perm_count_k;
+  // TODO no need to init
+  // zero_vector(perm_count_k, iters / 4);
 
-    if(!_mm_test_all_zeros(joined, joined)) {
+  for(int kqq = 0; kqq < width_qq; kqq++) {
 
-      auto vec_case_mask_k = _mm_load_si128(vec_case_mask + k);
+    int kdq = kqq * 2;
 
-      auto vec_cases = _mm_and_si128(vec_case_mask_k, joined);
-      cases += __builtin_popcountll(_mm_extract_epi64(vec_cases, 0));
-      cases += __builtin_popcountll(_mm_extract_epi64(vec_cases, 1));
+    joined0 = _mm_or_si128(vec_path0[kdq+0], vec_path1[kdq+0]);
+    joined1 = _mm_or_si128(vec_path0[kdq+1], vec_path1[kdq+1]);
 
-      auto vec_ctrls = _mm_andnot_si128(vec_case_mask_k, joined);
-      ctrls += __builtin_popcountll(_mm_extract_epi64(vec_ctrls, 0));
-      ctrls += __builtin_popcountll(_mm_extract_epi64(vec_ctrls, 1));
+    // yeah this will confuse me...
+    joined = _mm256_set_m128i(joined1, joined0);
 
-      const auto p_mask = perm_case_mask + k;
+    if(!_mm256_testz_si256(joined, joined)) {
+
+      auto vec_case_mask_k0 = _mm_load_si128(vec_case_mask + kdq + 0);
+      auto vec_case_mask_k1 = _mm_load_si128(vec_case_mask + kdq + 1);
+
+      _mm_store_si128(vec_8qw + 0, _mm_and_si128(vec_case_mask_k0, joined0));
+      _mm_store_si128(vec_8qw + 1, _mm_and_si128(vec_case_mask_k1, joined1));
+      _mm_store_si128(vec_8qw + 2, _mm_andnot_si128(vec_case_mask_k0, joined0));
+      _mm_store_si128(vec_8qw + 3, _mm_andnot_si128(vec_case_mask_k1, joined1));
+
+      cases += __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
+      ctrls += __builtin_popcountl(uint_8qw[4]) + __builtin_popcountl(uint_8qw[5]) + __builtin_popcountl(uint_8qw[6]) + __builtin_popcountl(uint_8qw[7]);
+
+      const auto p_mask0 = perm_case_mask + kdq + 0;
+      const auto p_mask1 = perm_case_mask + kdq + 1;
       for(int r = 0; r < iters; r++) {
-        auto perm_cases = _mm_and_si128(_mm_load_si128(vec_perm_case_mask + r * width_dq), joined);
-        perm_count_block[r] += __builtin_popcountll(_mm_extract_epi64(perm_cases, 0)) + __builtin_popcountll(_mm_extract_epi64(perm_cases, 1));
+        _mm_store_si128(vec_8qw + 0, _mm_and_si128(vec_perm_case_mask[r * width_dq], joined0));
+        _mm_store_si128(vec_8qw + 1, _mm_and_si128(vec_perm_case_mask[r * width_dq], joined1));
+        perm_count_k[r] = __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
+      }
+      for(int v = 0; v < iters / 8; v++) {
+        _mm_store_si128(vec_perm_count + v, _mm_adds_epu16(vec_perm_count[v], vec_perm_count_k[v]));
       }
 
-      _mm_storeu_si128(vec_joined_block + k, joined);
+      _mm256_store_si256(vec_joined_block + kqq, joined);
     }
 
   }
 
   double score = value_table[cases][ctrls];
   double flips = value_table[ctrls][cases];
+
+  auto local_perm_count = (unsigned short*) perm_count_block;
 
   if(score > scores.top().score)
     scores.push(Score(score, idx, loc));
@@ -76,18 +106,21 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
   while(scores.size() > top_k)
     scores.pop();
 
-
   int total = cases + ctrls;
+  double p_scores[iters] __attribute__ ((aligned (gs_align_size)));
   for(int r = 0; r < iters; r++){
-    int p_cases = perm_count_block[r];
-    double p_score = value_table_max[p_cases][total - p_cases];
-    if(p_score > perm_scores[r])
-      perm_scores[r] = p_score;
+    int p_cases = local_perm_count[r];
+    p_scores[r] = value_table_max[p_cases][total - p_cases];
   }
+
+  auto vec_perm_scores = (__m256d*) perm_scores;
+  auto vec_p_scores = (__m256d*) p_scores;
+  for(int v = 0; v < iters / 4; v++)
+    _mm256_stream_pd(perm_scores + v * 4, _mm256_max_pd(vec_perm_scores[v], vec_p_scores[v]));
 
 }
 
-void JoinMethod2::score_permute_sse2(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
+void JoinMethod2::score_permute_sse4(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
 
   // avoid de-refs like the plague
   const int top_k = exec->top_k;

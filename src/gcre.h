@@ -55,7 +55,7 @@ const std::string gs_impl_label = "SSE2";
 #endif
 #endif
 
-constexpr int gs_align_size = 32;
+constexpr int gs_align_size = gs_vec_width / 8;
 
 constexpr int gs_vec_width_b  = gs_vec_width / 8;
 constexpr int gs_vec_width_dw = gs_vec_width / 32;
