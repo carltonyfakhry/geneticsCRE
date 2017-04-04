@@ -1,0 +1,3 @@
+PKG_CXXFLAGS += -fopenmp -mpopcnt -ftree-vectorize
+#-faggressive-loop-optimizations
+CXX_STD = CXX11
