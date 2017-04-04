@@ -75,7 +75,7 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 1, threshold_perce
   dataset <- geneticsCRE:::PreprocessTable(dataset, threshold_percent, nCases, nControls)
   genes <- dataset$genes
   data <- dataset$data
-  genes_data <- data.frame(genes = genes, data)
+  genes_data <- data.frame(genes = genes, data, stringsAsFactors = F)
   patients <- dataset$patients
   rm(dataset)
 
@@ -301,6 +301,16 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 1, threshold_perce
   uids_CountLoc5 <- geneticsCRE:::getUidsCountsLocations(trguids5, Rels3$srcuid)
 
 
+  # lsts <- geneticsCRE:::ProcessPaths2(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1,
+  #                                    srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,
+  #                                    srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2,
+  #                                    srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3,
+  #                                    srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4,
+  #                                    srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5,
+  #                                    data_inds1, data_inds1_2, data_inds2, data_inds3,
+  #                                    data, data2, ValueTable, nCases, nControls, K,
+  #                                    iterations, CaseORControl, method, pathLength, nthreads)
+
   lsts <- geneticsCRE:::ProcessPaths(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1,
                                      srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,
                                      srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2,
@@ -357,135 +367,5 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 1, threshold_perce
   BestPaths <- BestPaths[order(BestPaths$UserPvalues),]
   names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues")
   return(BestPaths)
-
-  # dest_path_pos1 <- paste(path, "geneticsCRE_joined_pos1", sep = "")
-  # dest_path_neg1 <- paste(path, "geneticsCRE_joined_neg1", sep = "")
-  # dest_path_conflict1 <- paste(path, "geneticsCRE_joined_conflict1", sep = "")
-  # dest_path_pos2 <- paste(path, "geneticsCRE_joined_pos2", sep = "")
-  # dest_path_neg2 <- paste(path, "geneticsCRE_joined_neg2", sep = "")
-  # dest_path_conflict2 <- paste(path, "geneticsCRE_joined_conflict2", sep = "")
-  # dest_path_pos3 <- paste(path, "geneticsCRE_joined_pos3", sep = "")
-  # dest_path_neg3 <- paste(path, "geneticsCRE_joined_neg3", sep = "")
-  # dest_path_conflict3 <- paste(path, "geneticsCRE_joined_conflict3", sep = "")
-  #
-  # # Processing the paths
-  # for(path_length in 1:pathLength){
-  #
-  #   if(path_length == 1){
-  #
-  #     print("Processing paths of length 1...")
-  #
-  #     path_data_file <- paste(path, "data_geneticsCRE", sep = "")
-  #     geneticsCRE:::parsePaths(data, nCases, nControls, path_data_file)
-  #     rm(data)
-  #
-  #     lst1 <- geneticsCRE:::ProcessPaths(Rels_data, Rels_data, Rels_data$srcuid, Rels_data$srcuid, rep(1,length(Ents$uid)), Rels_data$srcuid,
-  #                                        1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data_file, "", "",dest_path_pos1,
-  #                                        dest_path_neg1, dest_path_conflict1)
-  #     file.remove(path_data_file)
-  #
-  #
-  #     path_data2_file <- paste(path, "data2_geneticsCRE", sep = "")
-  #     geneticsCRE:::parsePaths(data2, nCases, nControls, path_data2_file)
-  #     rm(data2)
-  #
-  #     lst <- geneticsCRE:::ProcessPaths(Rels_data2, Rels_data2, Rels_data2$srcuid, Rels_data2$srcuid, rep(1,length(Ents2$uid)), Rels_data2$srcuid,
-  #                                       1, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, "", "", "", path_data2_file, "", "", "",
-  #                                       "", "")
-  #     file.remove(path_data2_file)
-  #
-  #   }else if(path_length == 2){
-  #
-  #     print("Processing paths of length 2...")
-  #
-  #     path_data3_file <- paste(path, "data3_geneticsCRE", sep = "")
-  #     data3 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
-  #     geneticsCRE:::parsePaths(data3, nCases, nControls, path_data3_file)
-  #     rm(data3)
-  #
-  #     lst2 <- geneticsCRE:::ProcessPaths(Rels_data, Rels, Rels_data$srcuid, Rels_data$srcuid, Rels$sign, Rels$srcuid,
-  #                                         2, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads, dest_path_pos1,
-  #                                        dest_path_neg1, dest_path_conflict1, path_data3_file, "", "", dest_path_pos2,
-  #                                        dest_path_neg2, dest_path_conflict2)
-  #     lst <- lst2
-  #     file.remove(path_data3_file)
-  #
-  #   }else if(path_length == 3){
-  #
-  #     print("Processing paths of length 3...")
-  #
-  #     path_data4_file <- paste(path, "data4_geneticsCRE", sep = "")
-  #     data4 <- geneticsCRE:::matchData(genes_data, Rels$trguid)
-  #     geneticsCRE:::parsePaths(data4, nCases, nControls, path_data4_file)
-  #     rm(data4)
-  #
-  #     lst3 <- geneticsCRE:::ProcessPaths(Rels, Rels, Rels$srcuid, Rels$trguid, Rels$sign, Rels$srcuid,
-  #                                        3, ValueTable, nCases, nControls, K, iterations, CaseORControl, method, nthreads,
-  #                                        dest_path_pos2, dest_path_neg2, dest_path_conflict2, path_data4_file, "", "",
-  #                                        dest_path_pos3, dest_path_neg3, dest_path_conflict3)
-  #
-  #     lst <- lst3
-  #     file.remove(path_data4_file)
-  #
-  #   }
-  #   else if(path_length == 4){
-  #
-  #     print("Processing paths of length 4...")
-  #
-  #
-  #     lst4 <- geneticsCRE:::ProcessPaths(Rels3, Rels, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels$srcuid,
-  #                                        4, ValueTable, nCases, nControls, K, iterations,
-  #                                        CaseORControl, method, nthreads,
-  #                                        dest_path_pos3, dest_path_neg3, dest_path_conflict3,
-  #                                        dest_path_pos2, dest_path_neg2, dest_path_conflict2,
-  #                                        "", "", "")
-  #     lst <- lst4
-  #
-  #   }
-  #   else if(path_length == 5){
-  #
-  #
-  #     print("Processing paths of length 5...")
-  #
-  #     lst5 <- geneticsCRE:::ProcessPaths(Rels3, Rels3, Rels3$srcuid, Rels3$trguid2, third_gene_sign, Rels3$srcuid,
-  #                                        5, ValueTable, nCases, nControls, K, iterations,
-  #                                        CaseORControl, method, nthreads,
-  #                                        dest_path_pos3, dest_path_neg3, dest_path_conflict3,
-  #                                        dest_path_pos3, dest_path_neg3, dest_path_conflict3,
-  #                                        "", "", "")
-  #
-  #     lst <- lst5
-  #
-  #   }
-  #
-  #   UserScores <- c(UserScores, lst$scores)
-  #   UserKpaths <- c(UserKpaths, lst$path)
-  #   if(path_length == 1){
-  #     UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents2, lst$path))
-  #   }else{
-  #     UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents, lst$path))
-  #   }
-  #   UserKsignpaths <- c(UserKsignpaths, lst$signpath)
-  #   if(path_length == 1){
-  #     UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents2, lst$signpath))
-  #   }else{
-  #     UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents, lst$signpath))
-  #   }
-  #   TestScores <- lst$TestScores
-  #
-  #   Pvalues <- sapply(lst$scores, function(x, y) {length(which(TestScores >= x))/length(TestScores)}, y = TestScores)
-  #   UserPvalues <- c(UserPvalues, Pvalues)
-  #   UserLengths <- c(UserLengths, rep(path_length, length(Pvalues)))
-  #
-  # }
-  #
-  # suppressWarnings(file.remove(dest_path_pos1, dest_path_neg1, dest_path_conflict1))
-  # suppressWarnings(file.remove(dest_path_pos2, dest_path_neg2, dest_path_conflict2))
-  # suppressWarnings(file.remove(dest_path_pos3, dest_path_neg3, dest_path_conflict3))
-  #
-  # BestPaths <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, stringsAsFactors = F)
-  # BestPaths <- BestPaths[order(BestPaths$UserPvalues),]
-  # names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues")
-  # return(BestPaths)
 
 }

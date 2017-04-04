@@ -13,6 +13,12 @@
 // using namespace Rcpp;
 //
 //
+// #define ALIGN __attribute__ (( aligned(16) ))
+//
+//
+//
+//
+//
 //
 // /**
 // *
@@ -20,7 +26,7 @@
 // *
 // */
 //
-// int getTotalPaths(IntegerVector trguids, List uids_CountLoc){
+// int getTotalPaths2(IntegerVector trguids, List uids_CountLoc){
 //
 //   int total_paths = 0;
 //
@@ -41,22 +47,15 @@
 //
 // /**
 // *
-// * Get the total counts in uids_CountLoc.
+// * Copy ValueTable into an aligned array.
 // *
 // */
 //
-// int getTotalCountsCountLoc(List uids_CountLoc){
+// void copyValueTable2(double *ValueTable2, NumericMatrix ValueTable){
 //
-//   int total_paths = 0;
-//
-//   for(List::iterator it = uids_CountLoc.begin(); it != uids_CountLoc.end(); ++it){
-//
-//     IntegerVector temp = as<IntegerVector>(*it);
-//     total_paths += temp[0];
-//
-//   }
-//
-//   return total_paths;
+//   for(int i = 0; i < ValueTable.nrow(); i++)
+//     for(int j = 0; j < ValueTable.ncol(); j++){}
+//       // *ValueTable2 = ValueTable(i,j);
 //
 // }
 //
@@ -64,82 +63,56 @@
 //
 // /**
 // *
-// * Copy ValueTable into a C 1D array.
+// * Convert CaseORControl from 0/1 values to their 64 bit representations and
+// * store them into an aligned array.
 // *
 // */
 //
-// void copyValueTable(NumericMatrix ValueTable, double *ValueTable2){
+// void parseCaseORControl2(uint64_t *CaseORControl2, IntegerMatrix CaseORControl, int nCases, int nControls, int vlen1, int vlen2){
 //
-//   for(int i = 0, k = 0; i < ValueTable.nrow(); i++)
-//     for(int j = 0; j < ValueTable.ncol(); j++, k++)
-//       ValueTable2[k] = ValueTable(i,j);
+//   int vlen = vlen1 + vlen2;
 //
-// }
-
-
-
-// /**
-// *
-// * Convert CaseORControl from 0/1 values to 64 bit representations.
-// *
-// */
-//
-// std::vector<std::vector<uint64_t> > parseCaseORControl(IntegerMatrix CaseORControl, int nCases, int nControls){
-//
-//
-//   int vlen = (int) ceil(nCases/64.0);
-//   int vlen2 = (int) ceil(nControls/64.0);
-//
-//   std::vector<std::vector<uint64_t> > CaseORControl2(CaseORControl.nrow(), std::vector<uint64_t>(vlen + vlen2, 0));
 //   for(int i = 0; i < CaseORControl.nrow(); i++){
 //
-//     for(int j = 0; j < nCases; j++){
-//       int index = j/64;
+//     for(int j = 0; j < nCases; j++)
 //       if(CaseORControl(i,j) == 1)
-//         CaseORControl2[i][index] |= one_64bit << j % 64;
-//     }
+//         CaseORControl2[i * vlen + j/64] |= one_64bit << j % 64;
 //
-//     for(int j = nCases; j < nCases + nControls; j++){
-//       int index = vlen + (j-nCases)/64;
+//     for(int j = nCases; j < nCases + nControls; j++)
 //       if(CaseORControl(i,j) == 1)
-//         CaseORControl2[i][index] |= one_64bit << (j-nCases) % 64;
-//     }
+//         CaseORControl2[i * vlen + vlen1 + (j-nCases)/64] |= one_64bit << (j-nCases) % 64;
 //
 //   }
-//
-//   return CaseORControl2;
 //
 // }
 //
 //
 //
-// std::vector<std::vector<uint64_t> > parseData(IntegerMatrix data, int nCases, int nControls, int vlen, int vlen2){
+// /**
+//  *
+//  * Parse data into its 64 bit representation, and store it into an aligned vector.
+//  *
+//  */
 //
-//   std::vector<std::vector<uint64_t> > parseddata(data.nrow(), std::vector<uint64_t>(vlen + vlen2));
+// void parseData2(uint64_t *parsed_data, IntegerMatrix data, int nCases, int nControls, int vlen1, int vlen2){
 //
-//   for(int i = 0; i < data.nrow(); i++){
+//   int vlen = vlen1 + vlen2;
 //
-//     for(int j = 0; j < data.ncol(); j++){
-//
+//   for(int i = 0; i < data.nrow(); i++)
+//     for(int j = 0; j < data.ncol(); j++)
 //       if(data(i,j) != 0){
 //
 //         if(j < nCases)
-//           parseddata[i][j/64] |= one_64bit << j % 64;
+//           parsed_data[i * vlen + j/64] |= one_64bit << j % 64;
 //         else
-//           parseddata[i][vlen + (j-nCases)/64] |= one_64bit << (j-nCases) % 64;
+//           parsed_data[i * vlen + vlen + (j-nCases)/64] |= one_64bit << (j-nCases) % 64;
 //
 //       }
 //
-//     }
-//
-//   }
-//
-//   return parseddata;
-//
 // }
-//
-//
-// std::vector<std::vector<uint64_t> > matchData(const std::vector<std::vector<uint64_t> > &parseddata, IntegerVector data_inds){
+
+
+// std::vector<std::vector<uint64_t> > matchData2(const std::vector<std::vector<uint64_t> > &parseddata, IntegerVector data_inds){
 //
 //   std::vector<std::vector<uint64_t> > matcheddata(data_inds.size(), std::vector<uint64_t>(parseddata[0].size(),0));
 //
@@ -153,9 +126,9 @@
 //   return matcheddata;
 //
 // }
-//
-//
-//
+
+
+
 // inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_pos1, std::vector<uint64_t> &path_pos2,
 //                     std::vector<std::vector<uint64_t> > &joined_paths, const int flipped_pivot_length, int location, int count,
 //                     const std::vector<std::vector<double> > &ValueTable,
@@ -535,11 +508,11 @@
 //
 //
 // }
-//
-//
-//
+
+
+
 // // [[Rcpp::export]]
-// List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_CountLoc1, IntegerVector joining_gene_sign1,
+// List ProcessPaths2(IntegerVector srcuids1, IntegerVector trguids1, List uids_CountLoc1, IntegerVector joining_gene_sign1,
 //                   IntegerVector srcuids1_2, IntegerVector trguids1_2, List uids_CountLoc1_2, IntegerVector joining_gene_sign1_2,
 //                   IntegerVector srcuids2, IntegerVector trguids2, List uids_CountLoc2, IntegerVector joining_gene_sign2,
 //                   IntegerVector srcuids3, IntegerVector trguids3, List uids_CountLoc3, IntegerVector joining_gene_sign3,
@@ -552,122 +525,128 @@
 //   int vlen = (int) ceil(nCases/64.0);
 //   int vlen2 = (int) ceil(nControls/64.0);
 //
-//   // Copy ValueTable into a C++ 2D vector to be used in an openmp for loop
-//   static const std::vector<std::vector<double> > ValueTable2 = copyValueTable(ValueTable);
+//   // Copy ValueTable into an aligned array
+//   double ValueTable_scores[ValueTable.nrow()*ValueTable.ncol()] ALIGN;
+//   copyValueTable2(ValueTable_scores, ValueTable);
 //
-//   // Parse CaseORControl matrix into a single aligned vector
-//   std::vector<std::vector<uint64_t> > CaseORControl2 = parseCaseORControl(CaseORControl, nCases, nControls);
-//   uint64_t CaseORControl22[iterations*(vlen+vlen2)] __attribute__ ((aligned (16)));
-//   for(int i = 0, k = 0; i < iterations; i++)
-//     for(int j = 0; j < vlen + vlen2; j++, k++)
-//       CaseORControl22[k] = CaseORControl2[i][j];
+//   // double ValueTable_scores_flipped[ValueTable.nrow()*ValueTable.ncol()] ALIGN;
+//   // copyValueTable2(ValueTable_scores_flipped, ValueTable);
 //
-//   // Get the parsed data
-//   std::vector<std::vector<uint64_t> > parsed_data = parseData(data, nCases, nControls, vlen, vlen2);
-//   std::vector<std::vector<uint64_t> > parsed_data2 = parseData(data2, nCases, nControls, vlen, vlen2);
-//
-//
-//   // Process paths of length 1
-//   List lst1;
-//   int total_paths = getTotalPaths(trguids1, uids_CountLoc1);
-//   std::vector<std::vector<uint64_t> > paths_pos1 = getZeroMatrix(total_paths, vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_neg1;
-//   if(method == 2) paths_neg1 = getZeroMatrix(total_paths, vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_pos0 = getZeroMatrix(data_inds1.size(), vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_neg0;
-//   if(method == 2) paths_neg0 = getZeroMatrix(data_inds1.size(), vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_data_pos = matchData(parsed_data, data_inds1);
-//   std::vector<std::vector<uint64_t> > paths_data_neg;
-//   if(method == 2) paths_data_neg = getZeroMatrix(data_inds1.size(), vlen + vlen2);
-//   int nnodes1 = unique(srcuids1).size();
-//
-//   std::cout << nnodes1 << " source nodes for paths of length " << 1 << " and their permutations will be processed!" << std::endl;
-//
-//   lst1 = JoinPaths(paths_pos0, paths_neg0, paths_data_pos, paths_data_neg, paths_pos1, paths_neg1,
-//                    srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1, ValueTable2, CaseORControl22,
-//                    nCases, nControls, K, iterations, method, 1, nthreads);
+//   // // Parse CaseORControl matrix into a single aligned vector
+//   // uint64_t CaseORControl2[iterations*(vlen+vlen2)] ALIGN;
+//   // parseCaseORControl2(CaseORControl2, CaseORControl, nCases, nControls, vlen, vlen2);
+//   //
+//   // // Get the parsed data and store it into an aligned array
+//   // uint64_t parsed_data[data.nrow()*(vlen + vlen2)] ALIGN;
+//   // parseData2(parsed_data, data, nCases, nControls, vlen, vlen2);
+//   //
+//   // uint64_t parsed_data2[data2.nrow()*(vlen + vlen2)] ALIGN;
+//   // parseData2(parsed_data2, data2, nCases, nControls, vlen, vlen2);
 //
 //
-//   List lst1_2;
-//   total_paths = getTotalPaths(trguids1_2, uids_CountLoc1_2);
-//   std::vector<std::vector<uint64_t> > paths_pos1_2 = getZeroMatrix(total_paths, vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_neg1_2;
-//   if(method == 2) paths_neg1_2 = getZeroMatrix(total_paths, vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_pos0_2 = getZeroMatrix(data_inds1_2.size(), vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_neg0_2;
-//   if(method == 2) paths_neg0_2 = getZeroMatrix(data_inds1_2.size(), vlen + vlen2);
-//   paths_data_pos = matchData(parsed_data2, data_inds1_2);
-//   if(method == 2) paths_data_neg = getZeroMatrix(data_inds1_2.size(), vlen + vlen2);
-//   nnodes1 = unique(srcuids1_2).size();
+//   // // Process paths of length 1
+//   // List lst1;
+//   // int total_paths = getTotalPaths(trguids1, uids_CountLoc1);
+//   // std::vector<std::vector<uint64_t> > paths_pos1 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_neg1;
+//   // if(method == 2) paths_neg1 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_pos0 = getZeroMatrix(data_inds1.size(), vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_neg0;
+//   // if(method == 2) paths_neg0 = getZeroMatrix(data_inds1.size(), vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_data_pos = matchData(parsed_data, data_inds1);
+//   // std::vector<std::vector<uint64_t> > paths_data_neg;
+//   // if(method == 2) paths_data_neg = getZeroMatrix(data_inds1.size(), vlen + vlen2);
+//   // int nnodes1 = unique(srcuids1).size();
+//   //
+//   // std::cout << nnodes1 << " source nodes for paths of length " << 1 << " and their permutations will be processed!" << std::endl;
+//   //
+//   // lst1 = JoinPaths(paths_pos0, paths_neg0, paths_data_pos, paths_data_neg, paths_pos1, paths_neg1,
+//   //                  srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1, ValueTable2, CaseORControl22,
+//   //                  nCases, nControls, K, iterations, method, 1, nthreads);
+//   //
+//   //
+//   // List lst1_2;
+//   // total_paths = getTotalPaths(trguids1_2, uids_CountLoc1_2);
+//   // std::vector<std::vector<uint64_t> > paths_pos1_2 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_neg1_2;
+//   // if(method == 2) paths_neg1_2 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_pos0_2 = getZeroMatrix(data_inds1_2.size(), vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_neg0_2;
+//   // if(method == 2) paths_neg0_2 = getZeroMatrix(data_inds1_2.size(), vlen + vlen2);
+//   // paths_data_pos = matchData(parsed_data2, data_inds1_2);
+//   // if(method == 2) paths_data_neg = getZeroMatrix(data_inds1_2.size(), vlen + vlen2);
+//   // nnodes1 = unique(srcuids1_2).size();
+//   //
+//   // std::cout << nnodes1 << " source nodes for paths of length " << 1 << " and their permutations will be processed!" << std::endl;
+//   //
+//   // lst1_2 = JoinPaths(paths_pos0_2, paths_neg0_2, paths_data_pos, paths_data_neg, paths_pos1_2, paths_neg1_2,
+//   //                    srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2, ValueTable2, CaseORControl22,
+//   //                    nCases, nControls, K, iterations, method, 1, nthreads);
+//   //
+//   //
+//   // // Process Paths of length 2
+//   // List lst2;
+//   // total_paths = getTotalPaths(trguids2, uids_CountLoc2);
+//   // std::vector<std::vector<uint64_t> > paths_pos2 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_neg2;
+//   // if(method == 2) paths_neg2 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // paths_data_pos = matchData(parsed_data, data_inds2);
+//   // if(method == 2) paths_data_neg = getZeroMatrix(data_inds2.size(), vlen + vlen2);
+//   // int nnodes2 = unique(srcuids2).size();
+//   //
+//   // std::cout << nnodes2 << " source nodes for paths of length " << 2 << " and their permutations will be processed!" << std::endl;
+//   //
+//   // lst2 = JoinPaths(paths_pos1, paths_neg1, paths_data_pos, paths_data_neg, paths_pos2, paths_neg2,
+//   //                  srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2, ValueTable2,
+//   //                  CaseORControl22, nCases, nControls, K, iterations, method, 2, nthreads);
+//   //
+//   // // Process Paths of length 3
+//   // List lst3;
+//   // total_paths = getTotalPaths(trguids3, uids_CountLoc3);
+//   // std::vector<std::vector<uint64_t> > paths_pos3 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // std::vector<std::vector<uint64_t> > paths_neg3;
+//   // if(method == 2) paths_neg3 = getZeroMatrix(total_paths, vlen + vlen2);
+//   // paths_data_pos = matchData(parsed_data, data_inds3);
+//   // if(method == 2) paths_data_neg = getZeroMatrix(data_inds3.size(), vlen + vlen2);
+//   // int nnodes3 = unique(srcuids3).size();
+//   //
+//   // std::cout << nnodes3 << " source nodes for paths of length " << 3 << " and their permutations will be processed!" << std::endl;
+//   //
+//   // lst3 = JoinPaths(paths_pos2, paths_neg2, paths_data_pos, paths_data_neg, paths_pos3, paths_neg3,
+//   //                  srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3, ValueTable2,
+//   //                  CaseORControl22, nCases, nControls, K, iterations, method, 3, nthreads);
+//   //
+//   // // Process Paths of length 4
+//   // List lst4;
+//   // std::vector<std::vector<uint64_t> > paths_pos4;
+//   // std::vector<std::vector<uint64_t> > paths_neg4;
+//   // int nnodes4 = unique(srcuids4).size();
+//   //
+//   // std::cout << nnodes4 << " source nodes for paths of length " << 4 << " and their permutations will be processed!" << std::endl;
+//   //
+//   // lst4 = JoinPaths(paths_pos3, paths_neg3, paths_pos2, paths_neg2, paths_pos4, paths_neg4,
+//   //                  srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4, ValueTable2,
+//   //                  CaseORControl22, nCases, nControls, K, iterations, method, 4, nthreads);
+//   //
+//   // // Process Paths of length 5
+//   // List lst5;
+//   // std::vector<std::vector<uint64_t> > paths_pos5;
+//   // std::vector<std::vector<uint64_t> > paths_neg5;
+//   // int nnodes5 = unique(srcuids5).size();
+//   //
+//   // std::cout << nnodes5 << " source nodes for paths of length " << 5 << " and their permutations will be processed!" << std::endl;
+//   //
+//   // lst5 = JoinPaths(paths_pos3, paths_neg3, paths_pos3, paths_neg3, paths_pos5, paths_neg5,
+//   //                  srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5, ValueTable2,
+//   //                  CaseORControl22, nCases, nControls, K, iterations, method, 5, nthreads);
+//   //
+//   // return List::create(Named("lst1") = lst1_2,
+//   //                     Named("lst2") = lst2,
+//   //                     Named("lst3") = lst3,
+//   //                     Named("lst4") = lst4,
+//   //                     Named("lst5") = lst5);
 //
-//   std::cout << nnodes1 << " source nodes for paths of length " << 1 << " and their permutations will be processed!" << std::endl;
-//
-//   lst1_2 = JoinPaths(paths_pos0_2, paths_neg0_2, paths_data_pos, paths_data_neg, paths_pos1_2, paths_neg1_2,
-//                      srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2, ValueTable2, CaseORControl22,
-//                      nCases, nControls, K, iterations, method, 1, nthreads);
-//
-//
-//   // Process Paths of length 2
-//   List lst2;
-//   total_paths = getTotalPaths(trguids2, uids_CountLoc2);
-//   std::vector<std::vector<uint64_t> > paths_pos2 = getZeroMatrix(total_paths, vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_neg2;
-//   if(method == 2) paths_neg2 = getZeroMatrix(total_paths, vlen + vlen2);
-//   paths_data_pos = matchData(parsed_data, data_inds2);
-//   if(method == 2) paths_data_neg = getZeroMatrix(data_inds2.size(), vlen + vlen2);
-//   int nnodes2 = unique(srcuids2).size();
-//
-//   std::cout << nnodes2 << " source nodes for paths of length " << 2 << " and their permutations will be processed!" << std::endl;
-//
-//   lst2 = JoinPaths(paths_pos1, paths_neg1, paths_data_pos, paths_data_neg, paths_pos2, paths_neg2,
-//                    srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2, ValueTable2,
-//                    CaseORControl22, nCases, nControls, K, iterations, method, 2, nthreads);
-//
-//   // Process Paths of length 3
-//   List lst3;
-//   total_paths = getTotalPaths(trguids3, uids_CountLoc3);
-//   std::vector<std::vector<uint64_t> > paths_pos3 = getZeroMatrix(total_paths, vlen + vlen2);
-//   std::vector<std::vector<uint64_t> > paths_neg3;
-//   if(method == 2) paths_neg3 = getZeroMatrix(total_paths, vlen + vlen2);
-//   paths_data_pos = matchData(parsed_data, data_inds3);
-//   if(method == 2) paths_data_neg = getZeroMatrix(data_inds3.size(), vlen + vlen2);
-//   int nnodes3 = unique(srcuids3).size();
-//
-//   std::cout << nnodes3 << " source nodes for paths of length " << 3 << " and their permutations will be processed!" << std::endl;
-//
-//   lst3 = JoinPaths(paths_pos2, paths_neg2, paths_data_pos, paths_data_neg, paths_pos3, paths_neg3,
-//                    srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3, ValueTable2,
-//                    CaseORControl22, nCases, nControls, K, iterations, method, 3, nthreads);
-//
-//   // Process Paths of length 4
-//   List lst4;
-//   std::vector<std::vector<uint64_t> > paths_pos4;
-//   std::vector<std::vector<uint64_t> > paths_neg4;
-//   int nnodes4 = unique(srcuids4).size();
-//
-//   std::cout << nnodes4 << " source nodes for paths of length " << 4 << " and their permutations will be processed!" << std::endl;
-//
-//   lst4 = JoinPaths(paths_pos3, paths_neg3, paths_pos2, paths_neg2, paths_pos4, paths_neg4,
-//                    srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4, ValueTable2,
-//                    CaseORControl22, nCases, nControls, K, iterations, method, 4, nthreads);
-//
-//   // Process Paths of length 5
-//   List lst5;
-//   std::vector<std::vector<uint64_t> > paths_pos5;
-//   std::vector<std::vector<uint64_t> > paths_neg5;
-//   int nnodes5 = unique(srcuids5).size();
-//
-//   std::cout << nnodes5 << " source nodes for paths of length " << 5 << " and their permutations will be processed!" << std::endl;
-//
-//   lst5 = JoinPaths(paths_pos3, paths_neg3, paths_pos3, paths_neg3, paths_pos5, paths_neg5,
-//                    srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5, ValueTable2,
-//                    CaseORControl22, nCases, nControls, K, iterations, method, 5, nthreads);
-//
-//   return List::create(Named("lst1") = lst1_2,
-//                       Named("lst2") = lst2,
-//                       Named("lst3") = lst3,
-//                       Named("lst4") = lst4,
-//                       Named("lst5") = lst5);
+//   return List::create();
 //
 // }
-//
+
