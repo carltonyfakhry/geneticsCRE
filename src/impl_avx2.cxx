@@ -15,6 +15,9 @@ static inline void zero_vector(void* p_vec, int size) {
     _mm256_store_si256(vec++, _mm256_setzero_si256());
 }
 
+  uint64_t uint_8qw[13 * 8] __attribute__ ((aligned (gs_align_size)));
+  unsigned short perm_count_k[112] __attribute__ ((aligned (gs_align_size)));
+
 void JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
 
   // avoid de-refs like the plague
@@ -29,9 +32,6 @@ void JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, co
   // TODO set consistently
   const int iters_dw = iters / 4;
 
-  int cases = 0;
-  int ctrls = 0;
-
   zero_vector(joined_block, width_qq);
   zero_vector(perm_count_block, iters_dw / 4);
 
@@ -45,37 +45,82 @@ void JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, co
   const auto vec_case_mask = (__m256i*) case_mask;
   const auto vec_perm_case_mask = (__m256i*) perm_case_mask;
 
-  uint64_t uint_8qw[8] __attribute__ ((aligned (gs_align_size)));
   auto vec_8qw = (__m256i*) uint_8qw;
-  unsigned short perm_count_k[iters] __attribute__ ((aligned (gs_align_size)));
+  zero_vector(perm_count_k, iters * 2 / 32);
   auto vec_perm_count_k = (__m256i*) perm_count_k;
 
   for(int kqq = 0; kqq < width_qq; kqq++) {
 
     joined = _mm256_or_si256(vec_path0[kqq], vec_path1[kqq]);
 
-    if(!_mm256_testz_si256(joined, joined)) {
-      auto vec_case_mask_k = _mm256_load_si256(vec_case_mask + kqq);
+    // if(!_mm256_testz_si256(joined, joined)) {
 
-      _mm256_store_si256(vec_8qw + 0, _mm256_and_si256(vec_case_mask_k, joined));
-      _mm256_store_si256(vec_8qw + 1, _mm256_andnot_si256(vec_case_mask_k, joined));
+    auto vec_case_mask_k = _mm256_load_si256(vec_case_mask + kqq);
 
-      cases += __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
-      ctrls += __builtin_popcountl(uint_8qw[4]) + __builtin_popcountl(uint_8qw[5]) + __builtin_popcountl(uint_8qw[6]) + __builtin_popcountl(uint_8qw[7]);
+    _mm256_store_si256(vec_8qw + 2*kqq + 0, _mm256_and_si256(vec_case_mask_k, joined));
+    _mm256_store_si256(vec_8qw + 2*kqq + 1, _mm256_andnot_si256(vec_case_mask_k, joined));
 
-      const auto p_mask = perm_case_mask + kqq;
-      for(int r = 0; r < iters; r++) {
-        _mm256_store_si256(vec_8qw, _mm256_and_si256(vec_perm_case_mask[r * width_qq], joined));
-        perm_count_k[r] = __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
-      }
-      for(int v = 0; v < iters / 16; v++) {
-        _mm256_store_si256(vec_perm_count + v, _mm256_adds_epu16(vec_perm_count[v], vec_perm_count_k[v]));
-      }
+      // const auto p_mask = perm_case_mask + kqq;
+      // for(int r = 0; r < iters; r++) {
+      //   _mm256_store_si256(vec_8qw, _mm256_and_si256(vec_perm_case_mask[r * width_qq], joined));
+      //   perm_count_k[r] = __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
+      // }
+      // for(int v = 0; v < iters / 16; v++) {
+      //   _mm256_store_si256(vec_perm_count + v, _mm256_adds_epu16(vec_perm_count[v], vec_perm_count_k[v]));
+      // }
 
-      _mm256_store_si256(vec_joined_block + kqq, joined);
-    }
+    _mm256_store_si256(vec_joined_block + kqq, joined);
+    // }
 
   }
+  int cases = 0;
+  int ctrls = 0;
+  for(int k = 0; k < width_qq * 8; k += 8) {
+    cases += __builtin_popcountl(uint_8qw[k + 0]) + __builtin_popcountl(uint_8qw[k + 1]) + __builtin_popcountl(uint_8qw[k + 2]) + __builtin_popcountl(uint_8qw[k + 3]);
+    ctrls += __builtin_popcountl(uint_8qw[k + 4]) + __builtin_popcountl(uint_8qw[k + 5]) + __builtin_popcountl(uint_8qw[k + 6]) + __builtin_popcountl(uint_8qw[k + 7]);
+  }
+
+  for(int r = 0; r < iters; r++) {
+    const auto p_mask = vec_perm_case_mask + r * width_qq;
+    for(int k = 0; k < width_qq ; k++) {
+      _mm256_store_si256(vec_8qw + k, _mm256_and_si256(p_mask[k], vec_joined_block[k]));
+    }
+    for(int v = 0; v < width_qq * 4; v += 4) {
+      perm_count_k[r] += __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
+    }
+  }
+
+  for(int k = 0; k < iters / 16; k++) {
+    _mm256_store_si256(vec_perm_count + k, _mm256_adds_epu16(vec_perm_count[k], vec_perm_count_k[k]));
+  }
+
+  // for(int kqq = 0; kqq < width_qq; kqq++) {
+
+  //   joined = _mm256_or_si256(vec_path0[kqq], vec_path1[kqq]);
+
+  //   if(!_mm256_testz_si256(joined, joined)) {
+  //     auto vec_case_mask_k = _mm256_load_si256(vec_case_mask + kqq);
+
+  //     _mm256_store_si256(vec_8qw + 0, _mm256_and_si256(vec_case_mask_k, joined));
+  //     _mm256_store_si256(vec_8qw + 1, _mm256_andnot_si256(vec_case_mask_k, joined));
+
+  //     cases += __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
+  //     ctrls += __builtin_popcountl(uint_8qw[4]) + __builtin_popcountl(uint_8qw[5]) + __builtin_popcountl(uint_8qw[6]) + __builtin_popcountl(uint_8qw[7]);
+
+  //     const auto p_mask = perm_case_mask + kqq;
+  //     for(int r = 0; r < iters; r++) {
+  //       _mm256_store_si256(vec_8qw, _mm256_and_si256(vec_perm_case_mask[r * width_qq], joined));
+  //       perm_count_k[r] = __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
+  //     }
+  //     for(int v = 0; v < iters / 16; v++) {
+  //       _mm256_store_si256(vec_perm_count + v, _mm256_adds_epu16(vec_perm_count[v], vec_perm_count_k[v]));
+  //     }
+
+  //     _mm256_store_si256(vec_joined_block + kqq, joined);
+  //   }
+
+  // }
+
 
   double score = value_table[cases][ctrls];
   double flips = value_table[ctrls][cases];
@@ -92,7 +137,7 @@ void JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, co
   int total = cases + ctrls;
   float p_scores[iters] __attribute__ ((aligned (gs_align_size)));
   for(int r = 0; r < iters; r++){
-    int p_cases = local_perm_count[r];
+    int p_cases = perm_count_k[r];
     p_scores[r] = (float) value_table_max[p_cases][total - p_cases];
   }
 
