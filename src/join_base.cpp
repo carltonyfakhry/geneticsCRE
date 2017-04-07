@@ -109,6 +109,8 @@ num_ctrls(num_ctrls),
 width_ul(vector_width_ul(num_cases, num_ctrls)),
 iterations(iter_size(iters)) {
 
+  check_true(num_cases > 0 && num_ctrls > 0 && iters > 0);
+
   width_vec = width_ul / gs_vec_width_ul;
 
   // create case mask from case/control ranges
@@ -125,8 +127,14 @@ iterations(iter_size(iters)) {
 void JoinExec::setValueTable(vec2d_d table){
   // TODO size check
   printf("setting value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
-  value_table = table;
 
+  // indices can be flipped and counts could include all 0 to all cases/controls (so max index == size)
+  int max_idx = max(num_cases, num_ctrls);
+  check_index(max_idx, table.size());
+  for(const auto& row : table)
+    check_index(max_idx, row.size());
+
+  value_table = table;
   // precompute max including flipped indices
   value_table_max = vec2d_d(value_table.size(), vec_d(value_table.front().size()));
   for(int r = 0; r < value_table.size(); r++) {
@@ -155,13 +163,19 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
     uint64_t perm[width_ul];
     for(int k = 0; k < width_ul; k++)
       perm[k] = bit_zero_ul;
+    check_equal(num_cases + num_ctrls, data[r].size());
     for(int c = 0; c < data[r].size(); c++) {
       if(data[r][c] != 1)
         perm[c/64] |= bit_one_ul << c % 64;
     }
+    int count_cases = 0;
     for(int k = 0; k < width_ul; k++) {
-      perm_case_mask[r * width_ul + k] = case_mask[k] ^ perm[k];
+      uint64_t mask_k = case_mask[k] ^ perm[k];
+      perm_case_mask[r * width_ul + k] = mask_k;
+      count_cases += __builtin_popcountl(mask_k);
     }
+    if(count_cases != num_cases)
+      printf("  ** WARN perm mask did not set correct number of cases: %d != %d (mask %04d)\n", count_cases, num_cases, r);
   }
 
   // TODO correct padding behavior
@@ -195,6 +209,11 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
   while(!scores.empty())
     scores.pop();
   scores.push(Score());
+
+  check_equal(uids.size(), paths0.size);
+  check_true(paths_res.size == 0 || paths_res.size == uids.count_total_paths());
+  for(const auto& uid : uids.uids)
+    check_index(uid.location + uid.count - 1, paths1.size);
 
   double perm_scores[iterations];
   for(int k = 0; k < iterations; k++)
