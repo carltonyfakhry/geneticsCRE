@@ -81,6 +81,26 @@ typedef std::vector<std::vector<int8_t>> vec2d_i8;
 typedef std::vector<std::vector<uint16_t>> vec2d_u16;
 typedef std::vector<std::vector<uint64_t>> vec2d_u64;
 
+inline void check_true(bool condition) {
+  if(!condition)
+    throw std::logic_error("assertion");
+}
+
+inline void check_equal(size_t one, size_t two) {
+  if(one != two)
+    throw std::logic_error("assertion");
+}
+
+inline void check_index(long value, size_t size) {
+  if(value < 0 || value >= size)
+    throw std::out_of_range("assertion");
+}
+
+inline void check_range(long value, long min, long max) {
+  if(value < min || value > max)
+    throw std::out_of_range("assertion");
+}
+
 enum class Method { method1 = 1, method2 = 2 };
 
 class Score {
@@ -120,6 +140,7 @@ public:
 
   // TODO will this copy?
   inline const uid_ref& operator[](int idx) const {
+    check_index(idx, uids.size());
     return uids[idx];
   }
 
@@ -172,10 +193,12 @@ public:
   }
 
   inline const uint64_t* operator[](int idx) const {
+    check_index(idx, size);
     return block.get() + idx * vlen;
   }
 
   inline void set(int idx, const uint64_t* data) {
+    check_index(idx, size);
     memcpy(block.get() + idx * vlen, data, vlen * sizeof(uint64_t));
   }
 
@@ -185,12 +208,14 @@ public:
 
     printf("loading data to path-set (%lu x %lu): ", data.size(), data.size() > 0 ? data.front().size() : 0);
 
+    check_true(size == data.size());
     int count_in = 0;
     for(int r = 0; r < data.size(); r++) {
+      check_index(data[r].size(), width_ul * 64);
       for(int c = 0; c < data[r].size(); c++) {
         if(data[r][c] != 0) {
-          block[r * vlen + c/64] |= bit_one_ul << c % 64;
           count_in += 1;
+          block[r * vlen + c/64] |= bit_one_ul << c % 64;
         }
       }
     }
@@ -200,12 +225,14 @@ public:
       count_set += __builtin_popcountl(block[k]);
 
     printf("%d (of %d)\n", count_set, count_in);
+    check_true(count_set == count_in);
   }
 
   // create new path set from provided indices
   unique_ptr<PathSet> select(const vector<int>& indices) const {
     unique_ptr<PathSet> pset(new PathSet(indices.size(), width_ul, vlen));
     for(int k = 0; k < pset->size; k++) {
+      check_index(indices[k], size);
       memcpy(pset->block.get() + vlen * k, block.get() + vlen * indices[k], vlen * sizeof(uint64_t));
     }
     int count_set = 0;
@@ -315,6 +342,7 @@ protected:
   }
 
   static int iter_size_dw(int iters) {
+    check_true(iters > 0);
     return gs_vec_width_dw * (int) ceil(iters / (double) gs_vec_width_dw);
   }
 
