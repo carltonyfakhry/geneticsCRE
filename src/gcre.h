@@ -14,47 +14,17 @@
 
 #include <unistd.h>
 
-// will not compile without sse2, but cpu can be enable manually for testing
-#ifdef COMPILE_CPU
 
+// will not compile without sse2 (it's a clang thing), but cpu can be enabled manually for testing
+#ifdef COMPILE_CPU
 #define SCORE_METHOD_NAME score_permute_cpu
 constexpr int gs_vec_width = 64;
 const std::string gs_impl_label = "CPU";
-
 #else
-
-#if defined __AVX512__
-
-#define COMPILE_EVEX
-#define SCORE_METHOD_NAME score_permute_evex
-constexpr int gs_vec_width = 512;
-const std::string gs_impl_label = "AVX-512";
-
-#elif defined __AVX2__
-
-#define COMPILE_AVX2
-#define SCORE_METHOD_NAME score_permute_avx2
-constexpr int gs_vec_width = 256;
-const std::string gs_impl_label = "AVX2";
-
-// SSE4 also requires AVX (don't think that affects many CPUs)
-#elif defined __AVX__
-
-#define COMPILE_SSE4
-#define SCORE_METHOD_NAME score_permute_sse4
-constexpr int gs_vec_width = 256;
-const std::string gs_impl_label = "SSE4";
-
-#else
-
-#define COMPILE_SSE2
-#define SCORE_METHOD_NAME score_permute_sse2
-constexpr int gs_vec_width = 128;
-// constexpr int gs_vec_width = 64;
-const std::string gs_impl_label = "SSE2";
-
+#include "gcre_instr.h"
 #endif
-#endif
+
+#include "gcre_types.h"
 
 constexpr int gs_align_size = gs_vec_width / 8;
 
@@ -66,20 +36,6 @@ constexpr int gs_vec_width_qq = gs_vec_width / 256;
 constexpr int gs_vec_width_oq = gs_vec_width / 512;
 
 using namespace std;
-
-const uint64_t bit_zero_ul = 0;
-const uint64_t bit_one_ul = 1;
-
-// TODO apparently aliases are now the thing?
-typedef std::vector<int> vec_i;
-typedef std::vector<double> vec_d;
-typedef std::vector<uint64_t> vec_u64;
-
-typedef std::vector<std::vector<double>> vec2d_d;
-typedef std::vector<std::vector<int>> vec2d_i;
-typedef std::vector<std::vector<int8_t>> vec2d_i8;
-typedef std::vector<std::vector<uint16_t>> vec2d_u16;
-typedef std::vector<std::vector<uint64_t>> vec2d_u64;
 
 inline void check_true(bool condition) {
   if(!condition)
@@ -112,14 +68,6 @@ public:
   inline Score(double score, int src, int trg) : score(score), src(src), trg(trg) {}
   // reverse sort for priority queue
   friend bool operator<(Score a, Score b) { return a.score > b.score; }
-};
-
-struct uid_ref {
-  int src;
-  int trg;
-  int count;
-  int location;
-  int path_idx;
 };
 
 // TODO need to check memory use and performance for larger lengths

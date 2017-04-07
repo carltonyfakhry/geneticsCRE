@@ -4,7 +4,7 @@
 #include <fstream>
 #include <vector>
 
-#include "gcre.h"
+#include "gcre_types.h"
 
 using namespace std;
 
