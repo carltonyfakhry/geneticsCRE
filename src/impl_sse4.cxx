@@ -96,17 +96,9 @@ void JoinMethod1::score_permute_sse4(int idx, int loc, const uint64_t* path0, co
 
   }
 
-  double score = value_table[cases][ctrls];
-  double flips = value_table[ctrls][cases];
+  keep_score(idx, loc, cases, ctrls);
 
   auto local_perm_count = (unsigned short*) perm_count_block;
-
-  if(score > scores.top().score)
-    scores.push(Score(score, idx, loc));
-  if(flips > scores.top().score)
-    scores.push(Score(flips, idx, loc + flip_pivot_len));
-  while(scores.size() > top_k)
-    scores.pop();
 
   int total = cases + ctrls;
   float p_scores[iters] __attribute__ ((aligned (gs_align_size)));

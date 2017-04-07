@@ -16,6 +16,7 @@ public:
   JoinMethod(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
 
   exec(exec),
+  top_k(exec->top_k),
   flip_pivot_len(flip_pivot_len),
   case_mask(exec->case_mask),
   perm_case_mask(exec->perm_case_mask),
@@ -53,6 +54,7 @@ public:
 protected:
 
   const JoinExec* exec;
+  const int top_k;
   const int flip_pivot_len;
 
   const uint64_t* case_mask;
@@ -63,6 +65,20 @@ protected:
 
   uint64_t* joined_block;
   int* perm_count_block;
+
+  void keep_score(int idx, int loc, int cases, int ctrls) {
+
+    double score = value_table[cases][ctrls];
+    if(score > scores.top().score)
+      scores.push(Score(score, idx, loc));
+    
+    double flips = value_table[ctrls][cases];
+    if(flips > scores.top().score)
+      scores.push(Score(flips, idx, loc + flip_pivot_len));
+    while(scores.size() > top_k)
+      scores.pop();
+
+  }
 
 };
 

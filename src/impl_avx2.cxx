@@ -121,18 +121,10 @@ void JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, co
 
   // }
 
-
-  double score = value_table[cases][ctrls];
-  double flips = value_table[ctrls][cases];
+  keep_score(idx, loc, cases, ctrls);
 
   auto local_perm_count = (unsigned short*) perm_count_block;
 
-  if(score > scores.top().score)
-    scores.push(Score(score, idx, loc));
-  if(flips > scores.top().score)
-    scores.push(Score(flips, idx, loc + flip_pivot_len));
-  while(scores.size() > top_k)
-    scores.pop();
 
   int total = cases + ctrls;
   float p_scores[iters] __attribute__ ((aligned (gs_align_size)));
@@ -217,15 +209,7 @@ void JoinMethod2::score_permute_avx2(int idx, int loc, const uint64_t* path_pos0
   int cases = case_pos + case_neg;
   int ctrls = ctrl_pos + ctrl_neg;
 
-  double score = value_table[cases][ctrls];
-  double flips = value_table[ctrls][cases];
-
-  if(score > scores.top().score)
-    scores.push(Score(score, idx, loc));
-  if(flips > scores.top().score)
-    scores.push(Score(flips, idx, loc + flip_pivot_len));
-  while(scores.size() > top_k)
-    scores.pop();
+  keep_score(idx, loc, cases, ctrls);
 
   for(int r = 0; r < iters; r++){
     int perm_cases = perm_case_pos[r] + (total_neg - perm_ctrl_pos[r]);

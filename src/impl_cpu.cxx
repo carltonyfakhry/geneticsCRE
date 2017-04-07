@@ -35,15 +35,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
 
   }
 
-  double score = value_table[cases][ctrls];
-  double flips = value_table[ctrls][cases];
-
-  if(score > scores.top().score)
-    scores.push(Score(score, idx, loc));
-  if(flips > scores.top().score)
-    scores.push(Score(flips, idx, loc + flip_pivot_len));
-  while(scores.size() > top_k)
-    scores.pop();
+  keep_score(idx, loc, cases, ctrls);
 
   int total = cases + ctrls;
   for(int r = 0; r < iters; r++){
@@ -124,15 +116,7 @@ void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0,
   int cases = case_pos + case_neg;
   int ctrls = ctrl_pos + ctrl_neg;
 
-  double score = value_table[cases][ctrls];
-  double flips = value_table[ctrls][cases];
-
-  if(score > scores.top().score)
-    scores.push(Score(score, idx, loc));
-  if(flips > scores.top().score)
-    scores.push(Score(flips, idx, loc + flip_pivot_len));
-  while(scores.size() > top_k)
-    scores.pop();
+  keep_score(idx, loc, cases, ctrls);
 
   for(int r = 0; r < iters; r++){
     int perm_cases = perm_case_pos[r] + (total_neg - perm_ctrl_pos[r]);
