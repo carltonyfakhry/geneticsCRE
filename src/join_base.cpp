@@ -420,7 +420,8 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
 #endif
 
 #ifdef COMPILE_SSE2
-#include "impl_sse2.cxx"
+#warning "using sse2b"
+#include "impl_sse2b.cxx"
 #endif
 
 #ifdef COMPILE_SSE4

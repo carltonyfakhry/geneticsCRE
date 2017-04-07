@@ -50,6 +50,7 @@ const std::string gs_impl_label = "SSE4";
 #define COMPILE_SSE2
 #define SCORE_METHOD_NAME score_permute_sse2
 constexpr int gs_vec_width = 128;
+// constexpr int gs_vec_width = 64;
 const std::string gs_impl_label = "SSE2";
 
 #endif
@@ -302,6 +303,7 @@ protected:
   joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
   static int vector_width(int num_cases, int num_ctrls) {
+    // return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
     return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
   }
 
@@ -335,7 +337,7 @@ public:
 
   ~Timer(){
     auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("\nTIME:%d %s %d %d %d %lu %d %d %lu\n\n", getpid(), gs_impl_label.c_str(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
+    printf("\nTIME:%d %s m%d %d %d %lu %d %d %lu\n\n", getpid(), gs_impl_label.c_str(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
   }
 
 private:
