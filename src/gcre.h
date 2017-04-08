@@ -32,6 +32,7 @@ const std::string gs_impl_label = "CPU";
 #include "gcre_types.h"
 
 constexpr int gs_align_size = gs_vec_width / 8;
+#define ALIGNED __attribute__ ((aligned (gs_align_size)))
 
 constexpr int gs_vec_width_b  = gs_vec_width / 8;
 constexpr int gs_vec_width_dw = gs_vec_width / 32;
@@ -204,6 +205,8 @@ protected:
 class JoinExec {
 
   friend class JoinMethod;
+  friend class JoinMethod1;
+  friend class JoinMethod2;
 
 public:
 

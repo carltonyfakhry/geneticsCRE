@@ -1,43 +1,48 @@
 
 #warning "using cpu"
 
-void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
+size_t JoinMethod1::workspace_size_b() {
+  size_t size = 0;
+  // joined path
+  size += exec->width_ul * sizeof(uint64_t);
+  // per-iteration case-counts
+  size += exec->iterations * sizeof(uint32_t);
+  return size;
+}
+
+
+const uint64_t* JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work) {
 
   // avoid de-refs like the plague
-  const int top_k = exec->top_k;
   const int iters = exec->iterations;
   const int width_ul = exec->width_ul;
-  const int flip_pivot_len = this->flip_pivot_len;
-  float* perm_scores = this->perm_scores;
+  const auto case_mask = exec->case_mask;
+  const auto perm_case_mask = exec->perm_case_mask;
 
+  uint64_t joined = 0;
   int cases = 0;
   int ctrls = 0;
 
-  // zero out join path holder
-  memset(joined_block, 0, width_ul * sizeof(uint64_t));
-  memset(perm_count_block, 0, iters * sizeof(int));
+  // clear workspace
+  memset(work, 0, work_size);
 
-  uint64_t joined = 0;
+  auto joined_full = (uint64_t*) work;
+  auto perm_cases = (uint32_t*) (joined_full + width_ul);
+
+  auto p = (void*) (perm_cases + iters);
 
   for(int k = 0; k < width_ul; k++) {
 
-    joined = path0[k] | path1[k];
-
-    if(joined != 0) {
-
-      joined_block[k] = joined;
+    if((joined = path0[k] | path1[k]) != 0) {
 
       cases += __builtin_popcountl(joined &  case_mask[k]);
       ctrls += __builtin_popcountl(joined & ~case_mask[k]);
 
-      // const uint64_t* p_mask = perm_case_mask + k;
-      // for(int r = 0; r < iters; r++)
-      //   perm_count_block[r] += __builtin_popcountl(joined & p_mask[r * iters]);
-
       const uint64_t* p_mask = perm_case_mask + k * iters;
       for(int r = 0; r < iters; r++)
-        perm_count_block[r] += __builtin_popcountl(joined & p_mask[r]);
+        perm_cases[r] += __builtin_popcountl(joined & p_mask[r]);
 
+      joined_full[k] = joined;
     }
 
   }
@@ -45,15 +50,18 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
   keep_score(idx, loc, cases, ctrls);
 
   int total = cases + ctrls;
+  auto perm_scores = this->perm_scores;
   for(int r = 0; r < iters; r++){
-    int p_cases = perm_count_block[r];
-    float p_score = (float) value_table_max[p_cases][total - p_cases];
+    auto p_cases = perm_cases[r];
+    auto p_score = value_table_max[p_cases][total - p_cases];
     if(p_score > perm_scores[r])
       perm_scores[r] = p_score;
   }
 
+  return joined_full;
 }
 
+/*
 // FIXME mask order
 void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
 
@@ -136,3 +144,4 @@ void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0,
   }
 
 }
+*/

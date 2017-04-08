@@ -7,16 +7,10 @@ class JoinMethod {
 
 public:
 
-  priority_queue<Score> scores;
-  float* perm_scores;
-
-  JoinMethod(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) :
+  JoinMethod(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores) :
 
   exec(exec),
-  top_k(exec->top_k),
   flip_pivot_len(flip_pivot_len),
-  case_mask(exec->case_mask),
-  perm_case_mask(exec->perm_case_mask),
   value_table(exec->value_table),
   value_table_max(exec->value_table_max) {
 
@@ -25,9 +19,6 @@ public:
     perm_scores = p_perm_scores;
     for(int k = 0; k < exec->iterations; k++)
       perm_scores[k] = 0;
-
-    joined_block = p_joined_block;
-    perm_count_block = p_perm_count_block;
 
   }
 
@@ -51,17 +42,13 @@ public:
 protected:
 
   const JoinExec* exec;
-  const int top_k;
   const int flip_pivot_len;
-
-  const uint64_t* case_mask;
-  const uint64_t* perm_case_mask;
 
   const vec2d_d& value_table;
   const vec2d_d& value_table_max;
 
-  uint64_t* joined_block;
-  int* perm_count_block;
+  priority_queue<Score> scores;
+  float* perm_scores;
 
   void keep_score(int idx, int loc, int cases, int ctrls) {
 
@@ -72,7 +59,7 @@ protected:
     double flips = value_table[ctrls][cases];
     if(flips > scores.top().score)
       scores.push(Score(flips, idx, loc + flip_pivot_len));
-    while(scores.size() > top_k)
+    while(scores.size() > exec->top_k)
       scores.pop();
 
   }
@@ -83,15 +70,19 @@ class JoinMethod1 : public JoinMethod {
 
 public:
 
-  JoinMethod1(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {}
+  JoinMethod1(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores) : JoinMethod(exec, flip_pivot_len, p_perm_scores) {}
 
-  void score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
+  // memory block to pass to score method; size can be different per implementation
+  size_t workspace_size_b();
+
+  const uint64_t* score_permute_cpu (int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
   void score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
   void score_permute_sse4(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
   void score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
 
 };
 
+/*
 class JoinMethod2 : public JoinMethod {
 
 public:
@@ -106,7 +97,7 @@ public:
 
   }
 
-  void score_permute_cpu(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
+  void score_permute_cpu (int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
   void score_permute_sse2(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
   void score_permute_sse4(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
   void score_permute_avx2(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
@@ -119,6 +110,7 @@ protected:
   int* perm_ctrl_pos;
 
 };
+*/
 
 JoinExec::JoinExec(string method_name, int num_cases, int num_ctrls, int iters) :
 
@@ -151,7 +143,7 @@ iterations(iter_size_dw(iters)) {
 
 // create a copy of the vt for simplicity
 void JoinExec::setValueTable(vec2d_d table){
-  // TODO size check
+
   printf("setting value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
 
   // indices can be flipped and counts could include all 0 to all cases/controls (so max index == size)
@@ -178,7 +170,7 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
 
   printf("loading permuted case masks: %lu x %lu (iterations: %d)\n", data.size(), data.size() > 0 ? data.front().size() : 0, iterations);
 
-  if(iterations < data.size())
+  if(iters_requested < data.size())
     printf("  ** WARN more permuted cases than iterations, input will be truncated\n");
 
   // when iterations > iters_requested, the tails are zeroed out
@@ -198,10 +190,7 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
     int count_cases = 0;
     for(int k = 0; k < width_ul; k++) {
       uint64_t mask_k = case_mask[k] ^ perm[k];
-      // group by slice
       perm_case_mask[k * iterations + r] = mask_k;
-      // group by iteration
-      // perm_case_mask[r * width_ul + k] = mask_k;
       count_cases += __builtin_popcountl(mask_k);
     }
     if(count_cases != num_cases)
@@ -241,7 +230,7 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
   for(const auto& uid : uids.uids)
     check_index(uid.location + uid.count - 1, paths1.size);
 
-  float perm_scores[iterations];
+  float perm_scores[iterations] ALIGNED;
 
   for(int k = 0; k < iterations; k++)
     perm_scores[k] = 0;
@@ -297,19 +286,17 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 
     const bool keep_paths = paths_res.size != 0;
 
-    // TODO method implementation should request size
-
-    uint64_t joined_block[width_ul] __attribute__ ((aligned (gs_align_size)));
     float perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
-    int perm_count_block[iters] __attribute__ ((aligned (gs_align_size)));
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
-    JoinMethod1 method(this, paths1.size, perm_scores_block, joined_block, perm_count_block);
+    JoinMethod1 method(this, paths1.size, perm_scores_block);
+
+    size_t work_size = method.workspace_size_b();
+    uint8_t workspace[work_size] ALIGNED;
 
     const size_t prog_size = uids.size();
-
     size_t idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
 
@@ -325,9 +312,9 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
         const uint64_t* path0 = paths0[idx];
 
         for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
-          method.SCORE_METHOD_NAME(idx, loc, path0, paths1[loc]);
+          auto joined_path = method.SCORE_METHOD_NAME(idx, loc, path0, paths1[loc], work_size, workspace);
           if(keep_paths) {
-            paths_res.set(path_idx, joined_block);
+            paths_res.set(path_idx, joined_path);
             path_idx += 1;
           }
         }
@@ -347,6 +334,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 // TODO check where path set sizes exceed max int
 joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
+/*
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
 
@@ -412,6 +400,8 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
   };
 
   return execute(worker, uids.size() >= prog_min_size);
+*/
+  return joined_res();
 }
 
 // .cxx extensions so that these don't get picked up by Rcpps' makefile (also that they shouldn't be compiled independently)
