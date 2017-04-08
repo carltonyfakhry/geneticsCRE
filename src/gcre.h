@@ -5,8 +5,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cmath>
-#include <limits>
+#include <ctime>
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <vector>
 #include <queue>
@@ -306,18 +307,20 @@ class Timer {
 public:
 
   static void print_header() {
-    printf("\nTIME:PID IMPL METHOD WIDTH LENGTH PATHS PERMS THREADS MS\n\n");
+    printf("\nTIME:PID IMPL METHOD WIDTH LENGTH PATHS PERMS THREADS CYCLES MS\n\n");
   }
 
   Timer(const JoinExec& exec, int path_length, uint64_t total_paths) : exec(exec), path_length(path_length), total_paths(total_paths) {}
 
   ~Timer(){
     auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("\nTIME:%d %s m%d %d %d %lu %d %d %lu\n\n", getpid(), gs_impl_label.c_str(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
+    printf("\nTIME:%d %s m%d %d %d %lu %d %d %lu %lu\n\n", getpid(), gs_impl_label.c_str(), exec.method, exec.width_ul * 64,
+      path_length, total_paths, exec.iterations, exec.nthreads, std::clock() - clock_start, (unsigned long) time.count());
   }
 
 private:
 
+  const clock_t clock_start = std::clock();
   const chrono::system_clock::time_point start = chrono::system_clock::now();
   const JoinExec& exec;
   const int path_length;

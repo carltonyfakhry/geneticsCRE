@@ -200,7 +200,10 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
     int count_cases = 0;
     for(int k = 0; k < width_ul; k++) {
       uint64_t mask_k = case_mask[k] ^ perm[k];
-      perm_case_mask[r * width_ul + k] = mask_k;
+      // group by slice
+      perm_case_mask[k * iterations + r] = mask_k;
+      // group by iteration
+      // perm_case_mask[r * width_ul + k] = mask_k;
       count_cases += __builtin_popcountl(mask_k);
     }
     if(count_cases != num_cases)
@@ -216,7 +219,7 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
     for(int r = data.size(); r < iterations; r++) {
       int c = r % data.size();
       for(int k = 0; k < width_ul; k++) 
-        perm_case_mask[r * width_ul + k] = perm_case_mask[c * width_ul + k];
+        perm_case_mask[k * iterations + r] = perm_case_mask[k * iterations + c];
     }
   }
 
@@ -455,7 +458,6 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
 #endif
 
 #ifdef COMPILE_SSE2
-#warning "using sse2b"
 #include "impl_sse2b.cxx"
 #endif
 

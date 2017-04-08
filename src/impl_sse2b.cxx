@@ -1,4 +1,6 @@
 
+#warning "using sse2b"
+
 // sse2
 #include <emmintrin.h>
 

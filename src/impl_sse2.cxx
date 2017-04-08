@@ -1,4 +1,6 @@
 
+#warning "using sse2"
+
 // TODO warn about patient limit
 
 // sse2

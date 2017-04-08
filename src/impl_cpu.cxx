@@ -1,3 +1,6 @@
+
+#warning "using cpu"
+
 void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
 
   // avoid de-refs like the plague
@@ -27,9 +30,13 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
       cases += __builtin_popcountl(joined &  case_mask[k]);
       ctrls += __builtin_popcountl(joined & ~case_mask[k]);
 
-      const uint64_t* p_mask = perm_case_mask + k;
+      // const uint64_t* p_mask = perm_case_mask + k;
+      // for(int r = 0; r < iters; r++)
+      //   perm_count_block[r] += __builtin_popcountl(joined & p_mask[r * iters]);
+
+      const uint64_t* p_mask = perm_case_mask + k * iters;
       for(int r = 0; r < iters; r++)
-        perm_count_block[r] += __builtin_popcountl(joined & p_mask[r * width_ul]);
+        perm_count_block[r] += __builtin_popcountl(joined & p_mask[r]);
 
     }
 
@@ -47,6 +54,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
 
 }
 
+// FIXME mask order
 void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
 
   // avoid de-refs like the plague
