@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
     }
     printf("\n");
     printf("    perms :");
-    for(int k = 0; k < min(12, (int) res4.permuted_scores.size()); k++)
+    for(int k = 0; k < min(24, (int) res4.permuted_scores.size()); k++)
       printf(" %0.2f", res4.permuted_scores[k]);
     printf("\n");
 

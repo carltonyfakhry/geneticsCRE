@@ -184,11 +184,12 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
   if(iterations < data.size())
     printf("  ** WARN more permuted cases than iterations, input will be truncated\n");
 
+  // when iterations > iters_requested, the tails are zeroed out
   perm_case_mask = new uint64_t[iterations * width_ul];
   for(int k = 0; k < iterations * width_ul; k++)
     perm_case_mask[k] = bit_zero_ul;
 
-  for(int r = 0; r < min( (size_t) iterations, data.size()); r++) {
+  for(int r = 0; r < min( (size_t) iters_requested, data.size()); r++) {
     uint64_t perm[width_ul];
     for(int k = 0; k < width_ul; k++)
       perm[k] = bit_zero_ul;
@@ -210,13 +211,9 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
       printf("  ** WARN perm mask did not set correct number of cases: %d != %d (mask %04d)\n", count_cases, num_cases, r);
   }
 
-  // TODO correct padding behavior
-
-  if(iterations > data.size()) {
-
+  if(iters_requested > data.size()) {
     printf("  ** WARN not enough permuted cases, some will be reused to match iterations - hope this is for testing!\n");
-
-    for(int r = data.size(); r < iterations; r++) {
+    for(int r = data.size(); r < iters_requested; r++) {
       int c = r % data.size();
       for(int k = 0; k < width_ul; k++) 
         perm_case_mask[k * iterations + r] = perm_case_mask[k * iterations + c];
@@ -267,8 +264,8 @@ joined_res JoinExec::format_result() const {
     scores.pop();
 
   joined_res res;
-  res.permuted_scores.resize(iterations, 0);
-  for(int k = 0; k < iterations; k++)
+  res.permuted_scores.resize(iters_requested, 0);
+  for(int k = 0; k < iters_requested; k++)
     res.permuted_scores[k] = perm_scores[k];
   res.scores.clear();
   while(!scores.empty()){
