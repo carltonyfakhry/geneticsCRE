@@ -287,7 +287,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 
     const bool keep_paths = paths_res.size != 0;
 
-    float perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
+    float perm_scores_block[iters] ALIGNED;
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field

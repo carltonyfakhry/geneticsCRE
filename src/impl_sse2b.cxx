@@ -14,46 +14,14 @@ size_t JoinMethod1::workspace_size_b() {
   size_t size = 0;
   // joined path
   size += exec->width_ul * sizeof(uint64_t);
+  // joined path holder for permutations
+  size += exec->width_ul * sizeof(uint64_t);
   // per-iteration case-counts
   size += exec->iterations * sizeof(uint32_t);
   return size;
 }
 
-/*
-const uint64_t* JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work) {
-
-
-  for(int k = 0; k < width_ul; k++) {
-
-    if((joined = path0[k] | path1[k]) != 0) {
-
-      cases += __builtin_popcountl(joined &  case_mask[k]);
-      ctrls += __builtin_popcountl(joined & ~case_mask[k]);
-
-      const uint64_t* p_mask = perm_case_mask + k * iters;
-      for(int r = 0; r < iters; r++)
-        perm_cases[r] += __builtin_popcountl(joined & p_mask[r]);
-
-      joined_full[k] = joined;
-    }
-
-  }
-
-  keep_score(idx, loc, cases, ctrls);
-
-  int total = cases + ctrls;
-  auto perm_scores = this->perm_scores;
-  for(int r = 0; r < iters; r++){
-    auto p_cases = perm_cases[r];
-    auto p_score = value_table_max[p_cases][total - p_cases];
-    if(p_score > perm_scores[r])
-      perm_scores[r] = p_score;
-  }
-
-  return joined_full;
-}
-*/
-
+// local vec_joined may have been faster
 const uint64_t* JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work) {
 
   // avoid de-refs like the plague
@@ -64,18 +32,14 @@ const uint64_t* JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t
 
   const int width_dq = (width_qw + 1) / 2;
 
-
   // clear workspace
-  memset(work, 0, work_size);
+  // memset(work, 0, work_size);
+  zero_vector_dq(work, work_size / 16);
 
   auto joined_full = (uint64_t*) work;
-  auto perm_cases = (uint32_t*) (joined_full + width_qw);
-
-
-  __m128i vec_joined[width_dq];
-  memset(vec_joined, 0, width_dq * 16);
-
-  uint64_t* joined = (uint64_t*) vec_joined;
+  auto vec_joined = (__m128i*) (joined_full + width_qw);
+  auto perm_cases = (uint32_t*) (vec_joined + width_dq);
+  auto joined = (uint64_t*) vec_joined;
 
   int cases = 0;
   int ctrls = 0;
@@ -98,47 +62,42 @@ const uint64_t* JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t
 
   }
 
-  uint64_t t2qw[2];
+  // auto vec_2qw =  _mm_setzero_si128();
+  // auto t2qw = (uint64_t*) &vec_2qw;
+
+  uint64_t t2qw[2] ALIGNED;
   auto vec_2qw = (__m128i*) t2qw;
 
   for(int k = 0; k < nkept; k += 2){
-    int k0 = kept[k+0];
-    int k1 = kept[k+1];
+    const int k0 = kept[k+0];
+    const int k1 = kept[k+1];
     const auto p_mask_k0 = perm_case_mask + k0 * iters;
     const auto p_mask_k1 = perm_case_mask + k1 * iters;
     for(int r = 0; r < iters; r++) {
-      _mm_storeu_si128(vec_2qw, _mm_and_si128(_mm_set_epi64x(p_mask_k1[r], p_mask_k0[r]), vec_joined[k/2]));
+      _mm_store_si128(vec_2qw, _mm_and_si128(_mm_set_epi64x(p_mask_k1[r], p_mask_k0[r]), vec_joined[k/2]));
       perm_cases[r] += __builtin_popcountl(t2qw[0]) + __builtin_popcountl(t2qw[1]);
     }
   }
 
   keep_score(idx, loc, cases, ctrls);
 
+  // doesn't win much, really
   int total = cases + ctrls;
-  auto perm_scores = this->perm_scores;
-  for(int r = 0; r < iters; r++){
-    auto p_cases = perm_cases[r];
-    auto p_score = value_table_max[p_cases][total - p_cases];
-    if(p_score > perm_scores[r])
-      perm_scores[r] = p_score;
+  const auto& vt_max = value_table_max;
+  auto perm_scores = (__m128*) this->perm_scores;
+  for(int r = 0; r < iters; r += 4) {
+
+    auto pc0 = perm_cases[r+0];
+    auto pc1 = perm_cases[r+1];
+    auto pc2 = perm_cases[r+2];
+    auto pc3 = perm_cases[r+3];
+    
+    auto packed = _mm_setr_ps(vt_max[pc0][total - pc0], vt_max[pc1][total - pc1], vt_max[pc2][total - pc2], vt_max[pc3][total - pc3]);
+    _mm_store_ps((float*) perm_scores, _mm_max_ps(*perm_scores, packed));
+    perm_scores++;    
   }
 
-
-/*
-  int total = cases + ctrls;
-  for(int r = 0; r < iters; r++){
-    int p_cases = perm_counts[r];
-    float p_score = (float) value_table_max[p_cases][total - p_cases];
-    // if(p_score > perm_scores[r])
-    //   perm_scores[r] = p_score;
-  }
-
-  // float p_score = (float) value_table_max[p_cases][total - p_cases];
-  // if(p_score > perm_scores[r])
-  //   perm_scores[r] = p_score;
-*/
   return joined_full;
-
 }
 
 /*
