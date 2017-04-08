@@ -1,6 +1,3 @@
-#include <thread>
-#include <atomic>
-#include <mutex>
 
 #include "gcre.h"
 
@@ -291,9 +288,6 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
   atomic<size_t> uid_idx(0);
   mutex g_mutex;
 
-  if(uids.size() >= prog_min_size)
-    printf("\nprogress:");
-
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
   auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res](int tid) {
@@ -347,21 +341,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     method.drain_scores(this);
   };
 
-  if(nthreads > 0) {
-    vector<thread> pool(nthreads);
-    for(int tid = 0; tid < pool.size(); tid++)
-      pool[tid] = thread(worker, tid + 1);
-    for(auto& t : pool)
-      t.join();
-  } else {
-    // '0' is main thread
-    worker(0);
-  }
-
-  if(uids.size() >= prog_min_size)
-    printf(" - done!\n");
-
-  return format_result();
+  return execute(worker, uids.size() >= prog_min_size);
 }
 
 // TODO check where path set sizes exceed max int
@@ -431,21 +411,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     method.drain_scores(this);
   };
 
-  if(nthreads > 0) {
-    vector<thread> pool(nthreads);
-    for(int tid = 0; tid < pool.size(); tid++)
-      pool[tid] = thread(worker, tid + 1);
-    for(auto& t : pool)
-      t.join();
-  } else {
-    // '0' is main thread
-    worker(0);
-  }
-
-  if(uids.size() >= prog_min_size)
-    printf(" - done!\n");
-
-  return format_result();
+  return execute(worker, uids.size() >= prog_min_size);
 }
 
 // .cxx extensions so that these don't get picked up by Rcpps' makefile (also that they shouldn't be compiled independently)

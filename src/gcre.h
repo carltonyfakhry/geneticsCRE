@@ -13,6 +13,10 @@
 #include <queue>
 #include <iostream>
 
+#include <thread>
+#include <atomic>
+#include <mutex>
+
 #include <unistd.h>
 
 
@@ -299,6 +303,31 @@ protected:
   vec2d_d value_table_max;
   uint64_t* case_mask = nullptr;
   uint64_t* perm_case_mask = nullptr;
+
+  // TODO constness isn't really true here
+  template<typename Worker>
+  joined_res execute(const Worker& worker, bool show_progress) const {
+
+    if(show_progress)
+      printf("\nprogress:");
+
+    // use '0' to identify main thread
+    if(max(0, nthreads) == 0) {
+      worker(0);
+    } else {
+      vector<thread> pool(nthreads);
+      for(int tid = 0; tid < pool.size(); tid++)
+        pool[tid] = thread(worker, tid + 1);
+      for(auto& th : pool)
+        th.join();
+    }
+
+    if(show_progress)
+      printf(" - done!\n");
+
+    return format_result();
+  }
+
 
 };
 
