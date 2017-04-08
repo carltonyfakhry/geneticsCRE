@@ -34,6 +34,16 @@ const std::string gs_impl_label = "CPU";
 constexpr int gs_align_size = gs_vec_width / 8;
 #define ALIGNED __attribute__ ((aligned (gs_align_size)))
 
+// 'size' is the input element count, 'width' is bits needed for each element
+// returns count that fits evenly into current vector size
+inline int pad_vector_size(int size, int width) {
+  int bits = size * width;
+  int nvec = (int) ceil(bits / (double) gs_vec_width);
+  int vlen = nvec * gs_vec_width / width;
+  printf("size: %d, bits: %d --> bits: %d, vectors: %d, count: %d\n", size, bits, nvec * gs_vec_width, nvec, vlen);
+  return vlen;
+}
+
 constexpr int gs_vec_width_b  = gs_vec_width / 8;
 constexpr int gs_vec_width_dw = gs_vec_width / 32;
 constexpr int gs_vec_width_qw = gs_vec_width / 64;
@@ -202,6 +212,7 @@ protected:
 
 };
 
+
 class JoinExec {
 
   friend class JoinMethod;
@@ -286,7 +297,6 @@ protected:
   joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
   static int vector_width(int num_cases, int num_ctrls) {
-    // return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
     return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
   }
 
@@ -295,11 +305,6 @@ protected:
     if(width > gs_vec_width)
       return 0;
     return vector_width(num_cases, num_ctrls) / width;
-  }
-
-  static int iter_size_dw(int iters) {
-    check_true(iters > 0);
-    return gs_vec_width_dw * (int) ceil(iters / (double) gs_vec_width_dw);
   }
 
   vec2d_d value_table;

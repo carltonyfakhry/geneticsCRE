@@ -76,7 +76,7 @@ public:
   size_t workspace_size_b();
 
   const uint64_t* score_permute_cpu (int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
-  void score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
+  const uint64_t* score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
   void score_permute_sse4(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
   void score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
 
@@ -123,10 +123,11 @@ width_qw(vector_width_cast(num_cases, num_ctrls, 64)),
 width_dq(vector_width_cast(num_cases, num_ctrls, 128)),
 width_qq(vector_width_cast(num_cases, num_ctrls, 256)),
 width_oq(vector_width_cast(num_cases, num_ctrls, 512)),
+// need to store 32-bit ints and single-precision floats per iteration
 iters_requested(iters),
-iterations(iter_size_dw(iters)) {
+iterations(pad_vector_size(iters, 32)) {
 
-  check_true(num_cases > 0 && num_ctrls > 0 && iters > 0);
+  check_true(num_cases > 0 && num_ctrls > 0 && iters >= 0);
   width_vec = width_ul / gs_vec_width_qw;
 
   // create case mask from case/control ranges

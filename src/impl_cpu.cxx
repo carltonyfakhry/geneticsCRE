@@ -10,7 +10,6 @@ size_t JoinMethod1::workspace_size_b() {
   return size;
 }
 
-
 const uint64_t* JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work) {
 
   // avoid de-refs like the plague
@@ -28,8 +27,6 @@ const uint64_t* JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t*
 
   auto joined_full = (uint64_t*) work;
   auto perm_cases = (uint32_t*) (joined_full + width_ul);
-
-  auto p = (void*) (perm_cases + iters);
 
   for(int k = 0; k < width_ul; k++) {
 
@@ -58,6 +55,7 @@ const uint64_t* JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t*
       perm_scores[r] = p_score;
   }
 
+  // pointer to work segment we got from the caller
   return joined_full;
 }
 

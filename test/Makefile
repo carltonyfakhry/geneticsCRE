@@ -1,12 +1,13 @@
 CC=clang
 CXX=clang++
-CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -mno-avx2 -mno-avx -fno-vectorize -DCOMPILE_CPU
+CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -mno-avx2 -mno-avx -fno-vectorize
 
 # CXX1XFLAGS=-I../src -std=c++11 -g -O2 -march=native -mpopcnt -mno-avx2 -mno-avx -fno-vectorize -DBACKWARD_HAS_DW -DCOMPILE_CPU
 # CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize -DCOMPILE_CPU
 # CXX1XFLAGS=-I../src -std=c++11 -g -O3 -march=native -fno-vectorize -mno-avx -mno-avx2 -mpopcnt -Rpass=loop-vectorize
+
 LDFLAGS=-Wl -O3
-#LDFLAGS=-Wl -O3 -ldw
+# LDFLAGS=-Wl -O3 -ldw
 
 # CC=gcc
 # CXX=g++
@@ -19,7 +20,7 @@ LDLIBS= -pthread
 
 # -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
 
-#SRCS=harness.cpp tools.cpp test.cpp ../src/join_base.cpp
+# SRCS=harness.cpp tools.cpp test.cpp ../src/join_base.cpp
 SRCS=harness.cpp test.cpp ../src/join_base.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
 

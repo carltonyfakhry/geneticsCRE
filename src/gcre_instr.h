@@ -28,7 +28,6 @@ const std::string gs_impl_label = "SSE4";
 #define COMPILE_SSE2
 #define SCORE_METHOD_NAME score_permute_sse2
 constexpr int gs_vec_width = 128;
-// constexpr int gs_vec_width = 64;
 const std::string gs_impl_label = "SSE2";
 
 #endif

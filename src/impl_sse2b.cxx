@@ -1,40 +1,94 @@
 
 #warning "using sse2b"
 
-// sse2
 #include <emmintrin.h>
 
-void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
+static inline void zero_vector_dq(void* p_vec, int size_dq) {
+  auto vec = (__m128i*) p_vec;
+  auto end = vec + size_dq;
+  while(vec < end)
+    _mm_store_si128(vec++, _mm_setzero_si128());
+}
+
+size_t JoinMethod1::workspace_size_b() {
+  size_t size = 0;
+  // joined path
+  size += exec->width_ul * sizeof(uint64_t);
+  // per-iteration case-counts
+  size += exec->iterations * sizeof(uint32_t);
+  return size;
+}
+
+/*
+const uint64_t* JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work) {
+
+
+  for(int k = 0; k < width_ul; k++) {
+
+    if((joined = path0[k] | path1[k]) != 0) {
+
+      cases += __builtin_popcountl(joined &  case_mask[k]);
+      ctrls += __builtin_popcountl(joined & ~case_mask[k]);
+
+      const uint64_t* p_mask = perm_case_mask + k * iters;
+      for(int r = 0; r < iters; r++)
+        perm_cases[r] += __builtin_popcountl(joined & p_mask[r]);
+
+      joined_full[k] = joined;
+    }
+
+  }
+
+  keep_score(idx, loc, cases, ctrls);
+
+  int total = cases + ctrls;
+  auto perm_scores = this->perm_scores;
+  for(int r = 0; r < iters; r++){
+    auto p_cases = perm_cases[r];
+    auto p_score = value_table_max[p_cases][total - p_cases];
+    if(p_score > perm_scores[r])
+      perm_scores[r] = p_score;
+  }
+
+  return joined_full;
+}
+*/
+
+const uint64_t* JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work) {
 
   // avoid de-refs like the plague
-  const int top_k = exec->top_k;
   const int iters = exec->iterations;
-  const int width_ul = exec->width_ul;
-  const int flip_pivot_len = this->flip_pivot_len;
-  float* perm_scores = this->perm_scores;
+  const int width_qw = exec->width_ul;
+  const auto case_mask = exec->case_mask;
+  const auto perm_case_mask = exec->perm_case_mask;
+
+  const int width_dq = (width_qw + 1) / 2;
+
+
+  // clear workspace
+  memset(work, 0, work_size);
+
+  auto joined_full = (uint64_t*) work;
+  auto perm_cases = (uint32_t*) (joined_full + width_qw);
+
+
+  __m128i vec_joined[width_dq];
+  memset(vec_joined, 0, width_dq * 16);
+
+  uint64_t* joined = (uint64_t*) vec_joined;
 
   int cases = 0;
   int ctrls = 0;
 
-  int width_dq = (width_ul + 1) / 2;
-
-  // zero out join path holder
-  memset(joined_block, 0, width_ul * sizeof(uint64_t));
-
-  __m128i vec_joined[width_dq];
-  memset(vec_joined, 0, width_dq * 16);
-  uint64_t* joined = (uint64_t*) vec_joined;
-
   int nkept = 0;
-  uint16_t kept[width_ul];
+  uint32_t kept[width_qw];
+  memset(kept, 0, width_qw * 4);
 
-  for(int k = 0; k < width_ul; k++) {
+  for(int k = 0; k < width_qw; k++) {
 
-    joined[nkept] = path0[k] | path1[k];
+    if((joined[nkept] = path0[k] | path1[k]) != 0) {
 
-    if(joined[nkept] != 0) {
-
-      joined_block[k] = joined[nkept];
+      joined_full[k] = joined[nkept];
 
       cases += __builtin_popcountl(joined[nkept] &  case_mask[k]);
       ctrls += __builtin_popcountl(joined[nkept] & ~case_mask[k]);
@@ -42,66 +96,35 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
       kept[nkept++] = k;
     }
 
-
   }
 
-  // uint64_t j = 0;
   uint64_t t2qw[2];
-
-  int perm_counts[iters];
-  memset(perm_counts, 0, iters * 4);
   auto vec_2qw = (__m128i*) t2qw;
 
-  // for(int r = 0; r < iters; r++) {
-  //   perm_counts[r] = 0;
-  //   const uint64_t* p_mask = perm_case_mask + r * width_ul;
-  //   for(int k = 0; k < nkept; k += 2){
-  //     _mm_storeu_si128(vec_2qw, _mm_and_si128(_mm_set_epi64x(p_mask[kept[k+1]], p_mask[kept[k]]), vec_joined[k/2]));
-  //     perm_counts[r] += __builtin_popcountl(t2qw[0]) + __builtin_popcountl(t2qw[1]);
-  //   }
-  // }
-
-  // for(int p = 0; p < iters * width_ul; p += 16)
-    // _mm_prefetch((char*) (perm_case_mask + p), _MM_HINT_T1);
-
-// marginally faster with reordered mask elements
   for(int k = 0; k < nkept; k += 2){
-    int k0 = kept[k];
+    int k0 = kept[k+0];
     int k1 = kept[k+1];
-    const uint64_t* p_mask_k0 = perm_case_mask + k0;
-    const uint64_t* p_mask_k1 = perm_case_mask + k1;
+    const auto p_mask_k0 = perm_case_mask + k0 * iters;
+    const auto p_mask_k1 = perm_case_mask + k1 * iters;
     for(int r = 0; r < iters; r++) {
-      // const int off = r * width_ul;
       _mm_storeu_si128(vec_2qw, _mm_and_si128(_mm_set_epi64x(p_mask_k1[r], p_mask_k0[r]), vec_joined[k/2]));
-      // _mm_storeu_si128(vec_2qw, _mm_and_si128(_mm_set_epi64x(k, k+1), vec_joined[k/2]));
-      perm_counts[r] += __builtin_popcountl(t2qw[0]) + __builtin_popcountl(t2qw[1]);
+      perm_cases[r] += __builtin_popcountl(t2qw[0]) + __builtin_popcountl(t2qw[1]);
     }
   }
-
-/* not faster than cpu
-  for(int k = 0; k < nkept; k++){
-    int kidx = kept[k];
-    int k1 = kept[k+1];
-
-    __m128i j = _mm_set1_epi64x(joined[k]);
-
-    const __m128i* p_mask = (__m128i*) perm_case_mask + kept[k];
-    // const uint64_t* p_mask_k0 = perm_case_mask + k0;
-    // const uint64_t* p_mask_k1 = perm_case_mask + k1;
-    for(int r = 0; r < iters / 2; r++) {
-      // const int off = r * width_ul;
-      _mm_storeu_si128(vec_2qw, _mm_and_si128(p_mask[r], j));
-      // _mm_storeu_si128(vec_2qw, _mm_and_si128(_mm_set_epi64x(k, k+1), vec_joined[k/2]));
-      perm_counts[r*2+0] += __builtin_popcountl(t2qw[0]);
-      perm_counts[r*2+1] += __builtin_popcountl(t2qw[1]);
-    }
-  }
-*/
-
-  // printf("nkept: %d\n", nkept);
 
   keep_score(idx, loc, cases, ctrls);
 
+  int total = cases + ctrls;
+  auto perm_scores = this->perm_scores;
+  for(int r = 0; r < iters; r++){
+    auto p_cases = perm_cases[r];
+    auto p_score = value_table_max[p_cases][total - p_cases];
+    if(p_score > perm_scores[r])
+      perm_scores[r] = p_score;
+  }
+
+
+/*
   int total = cases + ctrls;
   for(int r = 0; r < iters; r++){
     int p_cases = perm_counts[r];
@@ -113,9 +136,12 @@ void JoinMethod1::score_permute_sse2(int idx, int loc, const uint64_t* path0, co
   // float p_score = (float) value_table_max[p_cases][total - p_cases];
   // if(p_score > perm_scores[r])
   //   perm_scores[r] = p_score;
+*/
+  return joined_full;
 
 }
 
+/*
 void JoinMethod2::score_permute_sse2(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
 
   // avoid de-refs like the plague
@@ -197,3 +223,4 @@ void JoinMethod2::score_permute_sse2(int idx, int loc, const uint64_t* path_pos0
   }
 
 }
+*/

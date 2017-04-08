@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   if(has_opt(argv, arge, "-t"))
     exec.nthreads = stoi(get_opt(argv, arge, "-t"));
 
-  int repeat = 5;
+  int repeat = 1;
   if(has_opt(argv, arge, "-r"))
     repeat = stoi(get_opt(argv, arge, "-r"));
 
@@ -150,9 +150,11 @@ int main(int argc, char* argv[]) {
 
   if(path_length >= 4) {
 
-
-    Timer timer(exec, 4, uids4.count_total_paths());
-    auto res4 = exec.join(uids4, *paths3, *paths2, *zero_set);
+    joined_res res4;
+    for(int r = 0; r < repeat; r++){
+      Timer timer(exec, 4, uids4.count_total_paths());
+      res4 = exec.join(uids4, *paths3, *paths2, *zero_set);
+    }
 
     printf("\n################################\n");
     printf("   length : %d  width: %d  iters: %d  thread: %d\n", path_length, exec.width_ul, exec.iterations, exec.nthreads);
@@ -177,16 +179,5 @@ int main(int argc, char* argv[]) {
     auto res5 = exec.join(uids5, *paths3, *paths3, *zero_set);
   }
 
-/*
-  printf("\n");
-  for(int r = 0; r < repeat; r++){
-    clock_t time = clock();
-    res = method.join(conf, uids, signs, value_table, permute_cases, paths0, paths1, NULL, total_paths);
-    time = clock() - time;
-    printf("[%d] time: %lu (%f ms)\n", r, time, time / (double) CLOCKS_PER_SEC * 1000);
-  }
-  printf("\n");
-
-  */
   printf("done\n");
 }
