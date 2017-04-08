@@ -1,6 +1,6 @@
 CC=clang
 CXX=clang++
-CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -mno-avx2
+CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize -DCOMPILE_CPU
 
 # CXX1XFLAGS=-I../src -std=c++11 -g -O2 -march=native -mpopcnt -mno-avx2 -mno-avx -fno-vectorize -DBACKWARD_HAS_DW -DCOMPILE_CPU
 # CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize -DCOMPILE_CPU
@@ -9,10 +9,10 @@ CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -mno-avx2
 LDFLAGS=-Wl -O3
 # LDFLAGS=-Wl -O3 -ldw
 
-# CC=gcc
-# CXX=g++
-# CXX1XFLAGS=-I../src -std=c++11 -g -O3 -march=native -mpopcnt
-# LDFLAGS=-g -Wall -O3
+ # CC=gcc
+ # CXX=g++
+ # CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt 
+ # LDFLAGS=-Wall -O3
 
 CXXFLAGS=$(CXX1XFLAGS)
 RM=rm -f

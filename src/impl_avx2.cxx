@@ -1,145 +1,95 @@
+#warning "using avx2"
 
-// avx2
 #include "immintrin.h"
 
-// TODO warn about patient limit
-
-// width: quad quad (256-bit)
-
-// TODO check about single precision
-
-static inline void zero_vector(void* p_vec, int size) {
-  auto vec = (__m256i*) p_vec;
-  auto end = vec + size;
-  while(vec < end)
-    _mm256_store_si256(vec++, _mm256_setzero_si256());
+size_t JoinMethod1::workspace_size_b() {
+  size_t size = 0;
+  // joined path
+  size += exec->width_ul * sizeof(uint64_t);
+  // joined path holder for permutations
+  size += exec->width_ul * sizeof(uint64_t);
+  // per-iteration case-counts
+  size += exec->iterations * sizeof(uint32_t);
+  return size;
 }
 
-  uint64_t uint_8qw[13 * 8] __attribute__ ((aligned (gs_align_size)));
-  unsigned short perm_count_k[112] __attribute__ ((aligned (gs_align_size)));
-
-void JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1) {
+// local vec_joined may have been faster
+const uint64_t* JoinMethod1::score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work) {
 
   // avoid de-refs like the plague
-  const int top_k = exec->top_k;
   const int iters = exec->iterations;
-  // TODO should never need ul
-  const int width_ul = exec->width_ul;
-  const int width_dq = exec->width_dq;
-  const int width_qq = exec->width_qq;
-  const int flip_pivot_len = this->flip_pivot_len;
+  const int width_qw = exec->width_ul;
+  const auto case_mask = exec->case_mask;
+  const auto perm_case_mask = exec->perm_case_mask;
 
-  // TODO set consistently
-  const int iters_dw = iters / 4;
+  const int width_qq = (width_qw + 3) / 4;
 
-  zero_vector(joined_block, width_qq);
-  zero_vector(perm_count_block, iters_dw / 4);
+  // clear workspace
+  memset(work, 0, work_size);
+  // zero_vector_qq(work, work_size / 32);
 
-  auto vec_joined_block = (__m256i*) joined_block;
-  auto vec_perm_count = (__m256i*) perm_count_block;
+  auto joined_full = (uint64_t*) work;
+  auto vec_joined = (__m256i*) (joined_full + width_qw);
+  auto perm_cases = (uint32_t*) (vec_joined + width_qq);
+  auto joined = (uint64_t*) vec_joined;
 
-  __m256i joined = _mm256_setzero_si256();
-
-  const auto vec_path0 = (__m256i*) path0;
-  const auto vec_path1 = (__m256i*) path1;
-  const auto vec_case_mask = (__m256i*) case_mask;
-  const auto vec_perm_case_mask = (__m256i*) perm_case_mask;
-
-  auto vec_8qw = (__m256i*) uint_8qw;
-  zero_vector(perm_count_k, iters * 2 / 32);
-  auto vec_perm_count_k = (__m256i*) perm_count_k;
-
-  for(int kqq = 0; kqq < width_qq; kqq++) {
-
-    joined = _mm256_or_si256(vec_path0[kqq], vec_path1[kqq]);
-
-    // if(!_mm256_testz_si256(joined, joined)) {
-
-    auto vec_case_mask_k = _mm256_load_si256(vec_case_mask + kqq);
-
-    _mm256_store_si256(vec_8qw + 2*kqq + 0, _mm256_and_si256(vec_case_mask_k, joined));
-    _mm256_store_si256(vec_8qw + 2*kqq + 1, _mm256_andnot_si256(vec_case_mask_k, joined));
-
-      // const auto p_mask = perm_case_mask + kqq;
-      // for(int r = 0; r < iters; r++) {
-      //   _mm256_store_si256(vec_8qw, _mm256_and_si256(vec_perm_case_mask[r * width_qq], joined));
-      //   perm_count_k[r] = __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
-      // }
-      // for(int v = 0; v < iters / 16; v++) {
-      //   _mm256_store_si256(vec_perm_count + v, _mm256_adds_epu16(vec_perm_count[v], vec_perm_count_k[v]));
-      // }
-
-    _mm256_store_si256(vec_joined_block + kqq, joined);
-    // }
-
-  }
   int cases = 0;
   int ctrls = 0;
-  for(int k = 0; k < width_qq * 8; k += 8) {
-    cases += __builtin_popcountl(uint_8qw[k + 0]) + __builtin_popcountl(uint_8qw[k + 1]) + __builtin_popcountl(uint_8qw[k + 2]) + __builtin_popcountl(uint_8qw[k + 3]);
-    ctrls += __builtin_popcountl(uint_8qw[k + 4]) + __builtin_popcountl(uint_8qw[k + 5]) + __builtin_popcountl(uint_8qw[k + 6]) + __builtin_popcountl(uint_8qw[k + 7]);
-  }
 
-  for(int r = 0; r < iters; r++) {
-    const auto p_mask = vec_perm_case_mask + r * width_qq;
-    for(int k = 0; k < width_qq ; k++) {
-      _mm256_store_si256(vec_8qw + k, _mm256_and_si256(p_mask[k], vec_joined_block[k]));
+  int nkept = 0;
+  uint32_t kept[width_qw];
+  memset(kept, 0, width_qw * 4);
+
+  for(int k = 0; k < width_qw; k++) {
+
+    if((joined[nkept] = path0[k] | path1[k]) != 0) {
+
+      joined_full[k] = joined[nkept];
+
+      cases += __builtin_popcountl(joined[nkept] &  case_mask[k]);
+      ctrls += __builtin_popcountl(joined[nkept] & ~case_mask[k]);
+
+      kept[nkept++] = k;
     }
-    for(int v = 0; v < width_qq * 4; v += 4) {
-      perm_count_k[r] += __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
+
+  }
+
+  for(int k = 0; k < nkept; k += 4){
+    const int k0 = kept[k+0];
+    const int k1 = kept[k+1];
+    const int k2 = kept[k+2];
+    const int k3 = kept[k+3];
+    const auto p_mask_k0 = perm_case_mask + k0 * iters;
+    const auto p_mask_k1 = perm_case_mask + k1 * iters;
+    const auto p_mask_k2 = perm_case_mask + k2 * iters;
+    const auto p_mask_k3 = perm_case_mask + k3 * iters;
+    for(int r = 0; r < iters; r++) {
+      const auto vec_cases = _mm256_and_si256(_mm256_setr_epi64x(p_mask_k0[r], p_mask_k1[r], p_mask_k2[r], p_mask_k3[r]), vec_joined[k/4]);
+      perm_cases[r] += __builtin_popcountl(_mm256_extract_epi64(vec_cases, 0)) + __builtin_popcountl(_mm256_extract_epi64(vec_cases, 1)) + __builtin_popcountl(_mm256_extract_epi64(vec_cases, 2)) + __builtin_popcountl(_mm256_extract_epi64(vec_cases, 3));
     }
   }
-
-  for(int k = 0; k < iters / 16; k++) {
-    _mm256_store_si256(vec_perm_count + k, _mm256_adds_epu16(vec_perm_count[k], vec_perm_count_k[k]));
-  }
-
-  // for(int kqq = 0; kqq < width_qq; kqq++) {
-
-  //   joined = _mm256_or_si256(vec_path0[kqq], vec_path1[kqq]);
-
-  //   if(!_mm256_testz_si256(joined, joined)) {
-  //     auto vec_case_mask_k = _mm256_load_si256(vec_case_mask + kqq);
-
-  //     _mm256_store_si256(vec_8qw + 0, _mm256_and_si256(vec_case_mask_k, joined));
-  //     _mm256_store_si256(vec_8qw + 1, _mm256_andnot_si256(vec_case_mask_k, joined));
-
-  //     cases += __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
-  //     ctrls += __builtin_popcountl(uint_8qw[4]) + __builtin_popcountl(uint_8qw[5]) + __builtin_popcountl(uint_8qw[6]) + __builtin_popcountl(uint_8qw[7]);
-
-  //     const auto p_mask = perm_case_mask + kqq;
-  //     for(int r = 0; r < iters; r++) {
-  //       _mm256_store_si256(vec_8qw, _mm256_and_si256(vec_perm_case_mask[r * width_qq], joined));
-  //       perm_count_k[r] = __builtin_popcountl(uint_8qw[0]) + __builtin_popcountl(uint_8qw[1]) + __builtin_popcountl(uint_8qw[2]) + __builtin_popcountl(uint_8qw[3]);
-  //     }
-  //     for(int v = 0; v < iters / 16; v++) {
-  //       _mm256_store_si256(vec_perm_count + v, _mm256_adds_epu16(vec_perm_count[v], vec_perm_count_k[v]));
-  //     }
-
-  //     _mm256_store_si256(vec_joined_block + kqq, joined);
-  //   }
-
-  // }
 
   keep_score(idx, loc, cases, ctrls);
 
-  auto local_perm_count = (unsigned short*) perm_count_block;
+  // doesn't win much, really
+  auto total = _mm256_set1_epi32(cases + ctrls);
+  const auto& vt_max = value_table_max;
+  auto perm_scores = (__m256*) this->perm_scores;
+  for(int r = 0; r < iters; r += 8) {
 
-
-  int total = cases + ctrls;
-  float p_scores[iters] __attribute__ ((aligned (gs_align_size)));
-  for(int r = 0; r < iters; r++){
-    int p_cases = perm_count_k[r];
-    p_scores[r] = (float) value_table_max[p_cases][total - p_cases];
+    const auto pc = perm_cases + r;
+    const auto ptv = _mm256_sub_epi32(total, *(__m256i*)(pc));
+    const auto pt = (int*) &ptv;
+    
+    const auto packed = _mm256_setr_ps(vt_max[pc[0]][pt[0]], vt_max[pc[1]][pt[1]], vt_max[pc[2]][pt[2]], vt_max[pc[3]][pt[3]], vt_max[pc[4]][pt[4]], vt_max[pc[5]][pt[5]], vt_max[pc[6]][pt[6]], vt_max[pc[7]][pt[7]]);
+    _mm256_store_ps((float*) perm_scores, _mm256_max_ps(*perm_scores, packed));
+    perm_scores++;    
   }
 
-  auto vec_perm_scores = (__m256*) perm_scores;
-  auto vec_p_scores = (__m256*) p_scores;
-  for(int v = 0; v < iters / 8; v++)
-    _mm256_stream_ps(perm_scores + v * 8, _mm256_max_ps(vec_perm_scores[v], vec_p_scores[v]));
-
+  return joined_full;
 }
 
+/*
 void JoinMethod2::score_permute_avx2(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1) {
 
   // avoid de-refs like the plague
@@ -221,3 +171,4 @@ void JoinMethod2::score_permute_avx2(int idx, int loc, const uint64_t* path_pos0
   }
 
 }
+*/

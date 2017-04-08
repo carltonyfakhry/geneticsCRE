@@ -78,7 +78,7 @@ public:
   const uint64_t* score_permute_cpu (int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
   const uint64_t* score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
   const uint64_t* score_permute_sse4(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
-  void score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1);
+  const uint64_t* score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
 
 };
 
