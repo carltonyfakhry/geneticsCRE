@@ -1,3 +1,4 @@
-PKG_CXXFLAGS =-fopenmp -mpopcnt -ftree-vectorize -msse -msse2 -msse3 -msse4
-PKG_CXX1XFLAGS = -mpopcnt -mpopcnt -std=c++11
-CXX_STD = CXX11
+PKG_CXX1XFLAGS = -std=c++11 -fopenmp=libomp -mpopcnt -O3 -mno-avx2 -mno-avx
+PKG_CXXFLAGS = $(PKG_CXX1XFLAGS)
+
+PKG_LIBS=-lomp
