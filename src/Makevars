@@ -1,4 +1,4 @@
-PKG_CXX1XFLAGS = -std=c++11 -fopenmp=libomp -mpopcnt -O3 -mno-avx2 -mno-avx
+PKG_CXX1XFLAGS = -std=c++11 -fopenmp=libomp -mpopcnt
 PKG_CXXFLAGS = $(PKG_CXX1XFLAGS)
 
 PKG_LIBS=-lomp
