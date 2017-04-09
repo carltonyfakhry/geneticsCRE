@@ -10,6 +10,10 @@
 #include <vector>
 #include <bitset>
 
+// for timer
+#include <ctime>
+#include <chrono>
+#include <unistd.h>
 
 
 using namespace Rcpp;
@@ -77,3 +81,44 @@ uint64_t StringToInt(std::string str);
  *
  */
 Rcpp::List getMatchingList(Rcpp::IntegerVector uids, Rcpp::IntegerVector counts, Rcpp::IntegerVector location);
+
+
+// timer class for benchmarking --dmitri
+
+using namespace std;
+
+class Timer {
+
+public:
+
+  static void print_header() {
+    printf("\nTIME:PID IMPL METHOD WIDTH LENGTH PATHS PERMS THREADS CYCLES MS\n\n");
+  }
+
+  Timer(int method, int width_ul, int path_length, int iters, int nthreads) : 
+  method(method),
+  width_ul(width_ul),
+  path_length(path_length),
+  iters(iters),
+  nthreads(nthreads)
+  {}
+
+  ~Timer(){
+    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
+    printf("\nTIME:%d CPU-OMP m%d %d %d %lu %d %d %lu %lu\n\n", getpid(), method, width_ul * 64,
+      path_length, total_paths, iters, nthreads, std::clock() - clock_start, (unsigned long) time.count());
+  }
+
+  uint64_t total_paths = 0;
+
+private:
+
+  const clock_t clock_start = std::clock();
+  const chrono::system_clock::time_point start = chrono::system_clock::now();
+  const int method;
+  const int width_ul;
+  const int path_length;
+  const int iters;
+  const int nthreads;
+
+};
