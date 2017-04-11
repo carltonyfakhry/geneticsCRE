@@ -82,35 +82,21 @@ public:
 
 };
 
-/*
 class JoinMethod2 : public JoinMethod {
 
 public:
 
-  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores, uint64_t* p_joined_block, int* p_perm_count_block) : JoinMethod(exec, flip_pivot_len, p_perm_scores, p_joined_block, p_perm_count_block) {
+  JoinMethod2(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores) : JoinMethod(exec, flip_pivot_len, p_perm_scores) {}
 
-    joined_pos = joined_block;
-    joined_neg = joined_block + exec->width_ul;
+  // memory block to pass to score method; size can be different per implementation
+  size_t workspace_size_b();
 
-    perm_case_pos = perm_count_block;
-    perm_ctrl_pos = perm_count_block + exec->iterations;
-
-  }
-
-  void score_permute_cpu (int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
+  const uint64_t* score_permute_cpu (int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg, const size_t work_size, void* work);
   void score_permute_sse2(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
   void score_permute_sse4(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
   void score_permute_avx2(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
 
-protected:
-
-  uint64_t* joined_pos;
-  uint64_t* joined_neg;
-  int* perm_case_pos;
-  int* perm_ctrl_pos;
-
 };
-*/
 
 JoinExec::JoinExec(string method_name, int num_cases, int num_ctrls, int iters) :
 
@@ -335,12 +321,8 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 // TODO check where path set sizes exceed max int
 joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
-/*
   atomic<unsigned> uid_idx(0);
   mutex g_mutex;
-
-  if(uids.size() >= prog_min_size)
-    printf("\nprogress:");
 
   // C++14 capture init syntax would be nice,
   // const auto exec = this;
@@ -348,20 +330,17 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
 
     const int iters = this->iterations;
     const int width_ul = this->width_ul;
-
     const bool keep_paths = paths_res.size != 0;
-    // TODO clean these up
-    const int width_full_ul = width_ul * 2;
-    const int p_block_size = iters * 2;
 
-    float perm_scores_block[iters] __attribute__ ((aligned (gs_align_size)));
-    uint64_t joined_block[width_ul * 2] __attribute__ ((aligned (gs_align_size)));
-    int perm_pos_block[p_block_size] __attribute__ ((aligned (gs_align_size)));
+    float perm_scores_block[iters] ALIGNED;
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
-    JoinMethod2 method(this, paths1.size, perm_scores_block, joined_block, perm_pos_block);
+    JoinMethod2 method(this, paths1.size, perm_scores_block);
+
+    size_t work_size = method.workspace_size_b();
+    uint8_t workspace[work_size] ALIGNED;
 
     const size_t prog_size = uids.size();
 
@@ -384,9 +363,9 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
           const auto do_flip = uids.need_flip(idx, loc);
           const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
           const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
-          method.SCORE_METHOD_NAME(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1);
+          auto joined_path = method.SCORE_METHOD_NAME(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1, work_size, workspace);
           if(keep_paths) {
-            paths_res.set(path_idx, joined_block);
+            paths_res.set(path_idx, joined_path);
             path_idx += 1;
           }
         }
@@ -401,8 +380,6 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
   };
 
   return execute(worker, uids.size() >= prog_min_size);
-*/
-  return joined_res();
 }
 
 // .cxx extensions so that these don't get picked up by Rcpps' makefile (also that they shouldn't be compiled independently)
