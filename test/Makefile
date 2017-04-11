@@ -1,6 +1,6 @@
 CC=clang
 CXX=clang++
-CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -DCOMPILE_CPU -Rpass=loop-vectorize
+CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize
 
 # CXX1XFLAGS=-I../src -std=c++11 -g -O2 -march=native -mpopcnt -mno-avx2 -mno-avx -fno-vectorize -DBACKWARD_HAS_DW -DCOMPILE_CPU
 # CXX1XFLAGS=-I../src -std=c++11 -O3 -march=native -mpopcnt -Rpass=loop-vectorize -DCOMPILE_CPU

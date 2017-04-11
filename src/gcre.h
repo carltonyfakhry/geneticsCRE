@@ -22,11 +22,20 @@
 
 // will not compile without sse2 (it's a clang thing), but cpu can be enabled manually for testing
 #ifdef COMPILE_CPU
-#define SCORE_METHOD_NAME score_permute_cpu
 constexpr int gs_vec_width = 64;
-const std::string gs_impl_label = "CPU";
+const std::string gs_impl_label = "x86-64";
+#elif defined __AVX512__
+constexpr int gs_vec_width = 512;
+const std::string gs_impl_label = "AVX-512";
+#elif defined __AVX2__
+constexpr int gs_vec_width = 256;
+const std::string gs_impl_label = "AVX2";
+#elif defined __SSE4_2__
+constexpr int gs_vec_width = 256;
+const std::string gs_impl_label = "SSE4";
 #else
-#include "gcre_instr.h"
+constexpr int gs_vec_width = 128;
+const std::string gs_impl_label = "SSE2";
 #endif
 
 #include "gcre_types.h"
@@ -43,13 +52,6 @@ inline int pad_vector_size(int size, int width) {
   printf("size: %d, bits: %d --> bits: %d, vectors: %d, count: %d\n", size, bits, nvec * gs_vec_width, nvec, vlen);
   return vlen;
 }
-
-constexpr int gs_vec_width_b  = gs_vec_width / 8;
-constexpr int gs_vec_width_dw = gs_vec_width / 32;
-constexpr int gs_vec_width_qw = gs_vec_width / 64;
-constexpr int gs_vec_width_dq = gs_vec_width / 128;
-constexpr int gs_vec_width_qq = gs_vec_width / 256;
-constexpr int gs_vec_width_oq = gs_vec_width / 512;
 
 using namespace std;
 
@@ -225,11 +227,6 @@ public:
   const int num_cases;
   const int num_ctrls;
   const int width_ul;
-  const int width_dw;
-  const int width_qw;
-  const int width_dq;
-  const int width_qq;
-  const int width_oq;
   const int iterations;
   const int iters_requested;
   
@@ -259,23 +256,10 @@ public:
   void print_vector_info() {
     printf("\n");
     printf("########################\n");
-    printf("  vector sizes with: %s\n", gs_impl_label.c_str());
+    printf("  instruction set: %s\n", gs_impl_label.c_str());
+    printf("     vector width: %u\n", gs_vec_width);
+    printf("        alignment: %u\n", gs_align_size);
     printf("########################\n");
-    printf("\n    aligned to: %u\n", gs_align_size);
-    printf("\n  vector width: %u\n", gs_vec_width);
-    printf("    bytes: %u\n", gs_vec_width_b);
-    printf("    dword: %u\n", gs_vec_width_dw);
-    printf("    qword: %u\n", gs_vec_width_qw);
-    printf("    dquad: %u\n", gs_vec_width_dq);
-    printf("    qquad: %u\n", gs_vec_width_qq);
-    printf("    oquad: %u\n", gs_vec_width_oq);
-    printf("\n   input width: %d (%d)\n", width_ul * 64, num_cases + num_ctrls);
-    printf("    dword: %u\n", width_dw);
-    printf("    qword: %u\n", width_qw);
-    printf("    dquad: %u\n", width_dq);
-    printf("    qquad: %u\n", width_qq);
-    printf("    oquad: %u\n", width_oq);
-    printf("\n########################\n");
     printf("\n");
   }
 

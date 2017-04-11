@@ -75,10 +75,7 @@ public:
   // memory block to pass to score method; size can be different per implementation
   size_t workspace_size_b();
 
-  const uint64_t* score_permute_cpu (int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
-  const uint64_t* score_permute_sse2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
-  const uint64_t* score_permute_sse4(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
-  const uint64_t* score_permute_avx2(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
+  const uint64_t* score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
 
 };
 
@@ -91,10 +88,7 @@ public:
   // memory block to pass to score method; size can be different per implementation
   size_t workspace_size_b();
 
-  const uint64_t* score_permute_cpu (int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg, const size_t work_size, void* work);
-  void score_permute_sse2(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
-  void score_permute_sse4(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
-  void score_permute_avx2(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg);
+  const uint64_t* score_permute_cpu(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg, const size_t work_size, void* work);
 
 };
 
@@ -104,17 +98,11 @@ method(to_method(method_name)),
 num_cases(num_cases),
 num_ctrls(num_ctrls),
 width_ul(vector_width_cast(num_cases, num_ctrls, 64)),
-width_dw(vector_width_cast(num_cases, num_ctrls, 32)),
-width_qw(vector_width_cast(num_cases, num_ctrls, 64)),
-width_dq(vector_width_cast(num_cases, num_ctrls, 128)),
-width_qq(vector_width_cast(num_cases, num_ctrls, 256)),
-width_oq(vector_width_cast(num_cases, num_ctrls, 512)),
 // need to store 32-bit ints and single-precision floats per iteration
 iters_requested(iters),
 iterations(pad_vector_size(iters, 32)) {
 
   check_true(num_cases > 0 && num_ctrls > 0 && iters >= 0);
-  width_vec = width_ul / gs_vec_width_qw;
 
   // create case mask from case/control ranges
   case_mask = new uint64_t[width_ul];
@@ -299,7 +287,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
         const uint64_t* path0 = paths0[idx];
 
         for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
-          auto joined_path = method.SCORE_METHOD_NAME(idx, loc, path0, paths1[loc], work_size, workspace);
+          auto joined_path = method.score_permute_cpu(idx, loc, path0, paths1[loc], work_size, workspace);
           if(keep_paths) {
             paths_res.set(path_idx, joined_path);
             path_idx += 1;
@@ -363,7 +351,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
           const auto do_flip = uids.need_flip(idx, loc);
           const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
           const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
-          auto joined_path = method.SCORE_METHOD_NAME(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1, work_size, workspace);
+          auto joined_path = method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1, work_size, workspace);
           if(keep_paths) {
             paths_res.set(path_idx, joined_path);
             path_idx += 1;
@@ -384,18 +372,4 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
 
 // .cxx extensions so that these don't get picked up by Rcpps' makefile (also that they shouldn't be compiled independently)
 
-#ifdef COMPILE_CPU
 #include "impl_cpu.cxx"
-#endif
-
-#ifdef COMPILE_SSE2
-#include "impl_sse2.cxx"
-#endif
-
-#ifdef COMPILE_SSE4
-#include "impl_sse4.cxx"
-#endif
-
-#ifdef COMPILE_AVX2
-#include "impl_avx2.cxx"
-#endif
