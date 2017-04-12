@@ -1,4 +1,5 @@
 #include "gcre.h"
+#include "util.h"
 #include "test.h"
 
 using namespace std;

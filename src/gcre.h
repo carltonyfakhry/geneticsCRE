@@ -5,9 +5,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cmath>
-#include <ctime>
-#include <chrono>
-#include <limits>
 #include <memory>
 #include <vector>
 #include <queue>
@@ -17,31 +14,29 @@
 #include <atomic>
 #include <mutex>
 
-#include <unistd.h>
 
-
-// will not compile without sse2 (it's a clang thing), but cpu can be enabled manually for testing
+// will not compile without sse2 (it's a clang thing), but cpu-only can be enabled manually for testing
 #ifdef COMPILE_CPU
 constexpr int gs_vec_width = 64;
-const std::string gs_impl_label = "x86-64";
+const std::string gs_instr_label = "x86-64";
 #elif defined __AVX512__
 constexpr int gs_vec_width = 512;
-const std::string gs_impl_label = "AVX-512";
+const std::string gs_instr_label = "AVX-512";
 #elif defined __AVX2__
 constexpr int gs_vec_width = 256;
-const std::string gs_impl_label = "AVX2";
+const std::string gs_instr_label = "AVX2";
 #elif defined __SSE4_2__
 constexpr int gs_vec_width = 256;
-const std::string gs_impl_label = "SSE4";
+const std::string gs_instr_label = "SSE4";
 #else
 constexpr int gs_vec_width = 128;
-const std::string gs_impl_label = "SSE2";
+const std::string gs_instr_label = "SSE2";
 #endif
-
-#include "gcre_types.h"
 
 constexpr int gs_align_size = gs_vec_width / 8;
 #define ALIGNED __attribute__ ((aligned (gs_align_size)))
+
+#include "gcre_types.h"
 
 // 'size' is the input element count, 'width' is bits needed for each element
 // returns count that fits evenly into current vector size
@@ -49,7 +44,6 @@ inline int pad_vector_size(int size, int width) {
   int bits = size * width;
   int nvec = (int) ceil(bits / (double) gs_vec_width);
   int vlen = nvec * gs_vec_width / width;
-  printf("size: %d, bits: %d --> bits: %d, vectors: %d, count: %d\n", size, bits, nvec * gs_vec_width, nvec, vlen);
   return vlen;
 }
 
@@ -75,18 +69,6 @@ inline void check_range(long value, long min, long max) {
     throw std::out_of_range("assertion");
 }
 
-enum class Method { method1 = 1, method2 = 2 };
-
-class Score {
-public:
-  double score = -numeric_limits<double>::infinity();
-  int src = -1;
-  int trg = -1;
-  inline Score() {}
-  inline Score(double score, int src, int trg) : score(score), src(src), trg(trg) {}
-  // reverse sort for priority queue
-  friend bool operator<(Score a, Score b) { return a.score > b.score; }
-};
 
 // TODO need to check memory use and performance for larger lengths
 class UidRelSet {
@@ -130,11 +112,6 @@ public:
     return total;
   }
 
-};
-
-struct joined_res {
-  vector<Score> scores;
-  vec_d permuted_scores;
 };
 
 class PathSet {
@@ -214,7 +191,6 @@ protected:
 
 };
 
-
 class JoinExec {
 
   friend class JoinMethod;
@@ -256,7 +232,7 @@ public:
   void print_vector_info() {
     printf("\n");
     printf("########################\n");
-    printf("  instruction set: %s\n", gs_impl_label.c_str());
+    printf("  instruction set: %s\n", gs_instr_label.c_str());
     printf("     vector width: %u\n", gs_vec_width);
     printf("        alignment: %u\n", gs_align_size);
     printf("########################\n");
@@ -320,32 +296,6 @@ protected:
     return format_result();
   }
 
-
-};
-
-class Timer {
-
-public:
-
-  static void print_header() {
-    printf("\nTIME:PID IMPL METHOD WIDTH LENGTH PATHS PERMS THREADS CYCLES MS\n\n");
-  }
-
-  Timer(const JoinExec& exec, int path_length, uint64_t total_paths) : exec(exec), path_length(path_length), total_paths(total_paths) {}
-
-  ~Timer(){
-    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("\nTIME:%d %s m%d %d %d %lu %d %d %lu %lu\n\n", getpid(), gs_impl_label.c_str(), exec.method, exec.width_ul * 64,
-      path_length, total_paths, exec.iterations, exec.nthreads, std::clock() - clock_start, (unsigned long) time.count());
-  }
-
-private:
-
-  const clock_t clock_start = std::clock();
-  const chrono::system_clock::time_point start = chrono::system_clock::now();
-  const JoinExec& exec;
-  const int path_length;
-  const uint64_t total_paths;
 
 };
 

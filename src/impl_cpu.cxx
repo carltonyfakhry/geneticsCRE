@@ -1,6 +1,4 @@
 
-#warning "using cpu"
-
 size_t JoinMethod1::workspace_size_b() {
   size_t size = 0;
   // joined path
