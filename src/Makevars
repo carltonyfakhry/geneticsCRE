@@ -1,3 +1,2 @@
-PKG_CXXFLAGS = -std=c++11 -mpopcnt -msse2 -msse4 -mno-avx2
+PKG_CXXFLAGS = -std=c++11 -mpopcnt -mno-avx512f
 PKG_CXX1XFLAGS = $(PKG_CXXFLAGS)
-CXX_STD = CXX11

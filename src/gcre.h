@@ -19,7 +19,7 @@
 #ifdef COMPILE_CPU
 constexpr int gs_vec_width = 64;
 const std::string gs_instr_label = "x86-64";
-#elif defined __AVX512__
+#elif defined __AVX512F__
 constexpr int gs_vec_width = 512;
 const std::string gs_instr_label = "AVX-512";
 #elif defined __AVX2__
