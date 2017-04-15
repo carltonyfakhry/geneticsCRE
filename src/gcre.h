@@ -5,36 +5,49 @@
 #include <cstdint>
 #include <cstdio>
 #include <cmath>
-#include <limits>
-#include <chrono>
 #include <memory>
 #include <vector>
 #include <queue>
 #include <iostream>
 
-#include <unistd.h>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
-constexpr int gs_vec_width    = 64;
 
-constexpr int gs_vec_width_b  = gs_vec_width / 8;
-constexpr int gs_vec_width_32 = gs_vec_width / 32;
-constexpr int gs_vec_width_ul = gs_vec_width / 64;
+// will not compile without sse2 (it's a clang thing), but cpu-only can be enabled manually for testing
+#ifdef COMPILE_CPU
+constexpr int gs_vec_width = 64;
+const std::string gs_instr_label = "x86-64";
+#elif defined __AVX512F__
+constexpr int gs_vec_width = 512;
+const std::string gs_instr_label = "AVX-512";
+#elif defined __AVX2__
+constexpr int gs_vec_width = 256;
+const std::string gs_instr_label = "AVX2";
+#elif defined __SSE4_2__
+constexpr int gs_vec_width = 256;
+const std::string gs_instr_label = "SSE4";
+#else
+constexpr int gs_vec_width = 128;
+const std::string gs_instr_label = "SSE2";
+#endif
+
+constexpr int gs_align_size = gs_vec_width / 8;
+#define ALIGNED __attribute__ ((aligned (gs_align_size)))
+
+#include "gcre_types.h"
+
+// 'size' is the input element count, 'width' is bits needed for each element
+// returns count that fits evenly into current vector size
+inline int pad_vector_size(int size, int width) {
+  int bits = size * width;
+  int nvec = (int) ceil(bits / (double) gs_vec_width);
+  int vlen = nvec * gs_vec_width / width;
+  return vlen;
+}
 
 using namespace std;
-
-const uint64_t bit_zero_ul = 0;
-const uint64_t bit_one_ul = 1;
-
-// TODO apparently aliases are now the thing?
-typedef std::vector<int> vec_i;
-typedef std::vector<double> vec_d;
-typedef std::vector<uint64_t> vec_u64;
-
-typedef std::vector<std::vector<double>> vec2d_d;
-typedef std::vector<std::vector<int>> vec2d_i;
-typedef std::vector<std::vector<int8_t>> vec2d_i8;
-typedef std::vector<std::vector<uint16_t>> vec2d_u16;
-typedef std::vector<std::vector<uint64_t>> vec2d_u64;
 
 inline void check_true(bool condition) {
   if(!condition)
@@ -56,26 +69,6 @@ inline void check_range(long value, long min, long max) {
     throw std::out_of_range("assertion");
 }
 
-enum class Method { method1 = 1, method2 = 2 };
-
-class Score {
-public:
-  double score = -numeric_limits<double>::infinity();
-  int src = -1;
-  int trg = -1;
-  inline Score() {}
-  inline Score(double score, int src, int trg) : score(score), src(src), trg(trg) {}
-  // reverse sort for priority queue
-  friend bool operator<(Score a, Score b) { return a.score > b.score; }
-};
-
-struct uid_ref {
-  int src;
-  int trg;
-  int count;
-  int location;
-  int path_idx;
-};
 
 // TODO need to check memory use and performance for larger lengths
 class UidRelSet {
@@ -121,11 +114,6 @@ public:
 
 };
 
-struct joined_res {
-  vector<Score> scores;
-  vec_d permuted_scores;
-};
-
 class PathSet {
 
 public:
@@ -140,7 +128,7 @@ public:
     const size_t block_size = size * vlen * sizeof(uint64_t);
     if(block_size > min_block_size)
       printf("allocate block for path-set (%5d x %d ul) %'15lu bytes: ", size, vlen, block_size);
-    block = unique_ptr<uint64_t[]>(new uint64_t[size * vlen]);
+    block = unique_ptr<uint64_t[]>((uint64_t*) aligned_alloc(gs_align_size, sizeof(uint64_t) * size * vlen));
     for(int k = 0; k < size * vlen; k++)
       block[k] = bit_zero_ul;
     if(block_size > min_block_size)
@@ -178,6 +166,7 @@ public:
     int count_set = 0;
     for(int k = 0; k < size * vlen; k++)
       count_set += __builtin_popcountl(block[k]);
+
     printf("%d (of %d)\n", count_set, count_in);
     check_true(count_set == count_in);
   }
@@ -205,6 +194,8 @@ protected:
 class JoinExec {
 
   friend class JoinMethod;
+  friend class JoinMethod1;
+  friend class JoinMethod2;
 
 public:
 
@@ -213,6 +204,7 @@ public:
   const int num_ctrls;
   const int width_ul;
   const int iterations;
+  const int iters_requested;
   
   int top_k = 12;
   int nthreads = 0;
@@ -237,6 +229,16 @@ public:
       delete[] perm_case_mask;
   }
 
+  void print_vector_info() {
+    printf("\n");
+    printf("########################\n");
+    printf("  instruction set: %s\n", gs_instr_label.c_str());
+    printf("     vector width: %u\n", gs_vec_width);
+    printf("        alignment: %u\n", gs_align_size);
+    printf("########################\n");
+    printf("\n");
+  }
+
   void setValueTable(vec2d_d table);
 
   void setPermutedCases(const vec2d_i& perm_cases);
@@ -248,24 +250,21 @@ public:
 protected:
 
   mutable priority_queue<Score> scores;
-  mutable double* perm_scores;
+  mutable float* perm_scores;
 
   joined_res format_result() const;
   joined_res join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
   joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
-  static int vector_width_ul(int num_cases, int num_ctrls) {
-    check_true(num_cases > 0 && num_ctrls > 0);
-    int width = (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
-    printf("adjusting input to vector width: %d -> %d\n", num_cases + num_ctrls, width * gs_vec_width);
-    return width * gs_vec_width_ul;
+  static int vector_width(int num_cases, int num_ctrls) {
+    return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
   }
 
-  static int iter_size(int iters) {
-    check_true(iters > 0);
-    int width = gs_vec_width_32 * (int) ceil(iters / (double) gs_vec_width_32);
-    printf("adjusting iterations to vector width: %d -> %d\n", iters, width);
-    return width;
+  // width larger than current will not be set
+  static int vector_width_cast(int num_cases, int num_ctrls, int width) {
+    if(width > gs_vec_width)
+      return 0;
+    return vector_width(num_cases, num_ctrls) / width;
   }
 
   vec2d_d value_table;
@@ -273,29 +272,30 @@ protected:
   uint64_t* case_mask = nullptr;
   uint64_t* perm_case_mask = nullptr;
 
-};
+  // TODO constness isn't really true here
+  template<typename Worker>
+  joined_res execute(const Worker& worker, bool show_progress) const {
 
-class Timer {
+    if(show_progress)
+      printf("\nprogress:");
 
-public:
+    // use '0' to identify main thread
+    if(max(0, nthreads) == 0) {
+      worker(0);
+    } else {
+      vector<thread> pool(nthreads);
+      for(int tid = 0; tid < pool.size(); tid++)
+        pool[tid] = thread(worker, tid + 1);
+      for(auto& th : pool)
+        th.join();
+    }
 
-  static void print_header() {
-    printf("\nTIME:PID IMPL METHOD WIDTH LENGTH PATHS PERMS THREADS MS\n\n");
+    if(show_progress)
+      printf(" - done!\n");
+
+    return format_result();
   }
 
-  Timer(const JoinExec& exec, int path_length, uint64_t total_paths) : exec(exec), path_length(path_length), total_paths(total_paths) {}
-
-  ~Timer(){
-    auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-    printf("\nTIME:%d CPU %d %d %d %lu %d %d %lu\n\n", getpid(), exec.method, exec.width_ul * 64, path_length, total_paths, exec.iterations, exec.nthreads, (unsigned long) time.count());
-  }
-
-private:
-
-  const chrono::system_clock::time_point start = chrono::system_clock::now();
-  const JoinExec& exec;
-  const int path_length;
-  const uint64_t total_paths;
 
 };
 
