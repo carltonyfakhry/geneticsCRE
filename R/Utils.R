@@ -238,8 +238,9 @@ check_input <- function(nCases, nControls, method, threshold_percent, K, pathLen
     stop("K must be an integer greater than 0!")
   }
 
-  if(!is.numeric(method) | length(method) != 1 | floor(method) != method | (method != 1 & method != 2)){
-    stop("method must be set to either 1 and 2!")
+  # methods can have additional tags to specify an implementation (eg 'method2-lomem') --dmitri
+  if(!grepl('^method[12]', method)) {
+    stop("method must be one of: 'method1', 'method2'!")
   }
 
   if(!is.numeric(threshold_percent) | length(threshold_percent) != 1 | threshold_percent > 1 | threshold_percent < 0){
