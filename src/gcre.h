@@ -25,6 +25,10 @@ using namespace std;
 const uint64_t bit_zero_ul = 0;
 const uint64_t bit_one_ul = 1;
 
+// types that can hold max allowed values for various entities
+using st_pathset_size = uint32_t;
+using st_total_paths = uint64_t;
+
 // TODO apparently aliases are now the thing?
 typedef std::vector<int> vec_i;
 typedef std::vector<double> vec_d;
@@ -112,8 +116,8 @@ public:
     return sign == 1;
   }
 
-  uint64_t count_total_paths() const {
-    uint64_t total = 0;
+  st_total_paths count_total_paths() const {
+    st_total_paths total = 0;
     for(const auto& uid : uids)
       total += uid.count;
     return total;
@@ -130,12 +134,12 @@ class PathSet {
 
 public:
 
-  const int size;
-  const int width_ul;
-  const int vlen;
+  const st_pathset_size size;
+  const uint16_t width_ul;
+  const uint16_t vlen;
 
   // TODO abstract interface for other storage types
-  PathSet(const int size, const int width_ul, const int vlen) : size(size), width_ul(width_ul), vlen(vlen) {
+  PathSet(st_pathset_size size, const int width_ul, const uint16_t vlen) : size(size), width_ul(width_ul), vlen(vlen) {
     const size_t min_block_size = 16 * 1024 * 1024;
     const size_t block_size = size * vlen * sizeof(uint64_t);
     if(block_size > min_block_size)
@@ -147,12 +151,12 @@ public:
       printf("[%p]\n", block.get());
   }
 
-  inline const uint64_t* operator[](int idx) const {
+  inline const uint64_t* operator[](st_pathset_size idx) const {
     check_index(idx, size);
     return block.get() + idx * vlen;
   }
 
-  inline void set(int idx, const uint64_t* data) {
+  inline void set(st_pathset_size idx, const uint64_t* data) {
     check_index(idx, size);
     memcpy(block.get() + idx * vlen, data, vlen * sizeof(uint64_t));
   }
@@ -164,10 +168,10 @@ public:
     printf("loading data to path-set (%lu x %lu): ", data.size(), data.size() > 0 ? data.front().size() : 0);
 
     check_true(size == data.size());
-    int count_in = 0;
-    for(int r = 0; r < data.size(); r++) {
+    long count_in = 0;
+    for(auto r = 0; r < data.size(); r++) {
       check_index(data[r].size(), width_ul * 64);
-      for(int c = 0; c < data[r].size(); c++) {
+      for(auto c = 0; c < data[r].size(); c++) {
         if(data[r][c] != 0) {
           count_in += 1;
           block[r * vlen + c/64] |= bit_one_ul << c % 64;
@@ -175,14 +179,15 @@ public:
       }
     }
 
-    int count_set = 0;
-    for(int k = 0; k < size * vlen; k++)
+    long count_set = 0;
+    for(auto k = 0; k < size * vlen; k++)
       count_set += __builtin_popcountl(block[k]);
-    printf("%d (of %d)\n", count_set, count_in);
+    printf("%ld (of %ld)\n", count_set, count_in);
     check_true(count_set == count_in);
   }
 
   // create new path set from provided indices
+  // this is only done for the initial path sets, and the index values come from R, so int instead of st_pathset_size
   unique_ptr<PathSet> select(const vector<int>& indices) const {
     unique_ptr<PathSet> pset(new PathSet(indices.size(), width_ul, vlen));
     for(int k = 0; k < pset->size; k++) {
@@ -241,7 +246,7 @@ public:
 
   void setPermutedCases(const vec2d_i& perm_cases);
 
-  unique_ptr<PathSet> createPathSet(int size) const;
+  unique_ptr<PathSet> createPathSet(st_pathset_size size) const;
   
   joined_res join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
@@ -283,7 +288,7 @@ public:
     printf("\nTIME:PID IMPL METHOD WIDTH LENGTH PATHS PERMS THREADS MS\n\n");
   }
 
-  Timer(const JoinExec& exec, int path_length, uint64_t total_paths) : exec(exec), path_length(path_length), total_paths(total_paths) {}
+  Timer(const JoinExec& exec, int path_length, st_total_paths total_paths) : exec(exec), path_length(path_length), total_paths(total_paths) {}
 
   ~Timer(){
     auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
@@ -295,7 +300,7 @@ private:
   const chrono::system_clock::time_point start = chrono::system_clock::now();
   const JoinExec& exec;
   const int path_length;
-  const uint64_t total_paths;
+  const st_total_paths total_paths;
 
 };
 

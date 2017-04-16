@@ -6,6 +6,8 @@
 
 using namespace std;
 
+// TODO uid and loc index integer sizes
+
 class JoinMethod {
 
 public:
@@ -194,9 +196,9 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
 }
 
 // TODO width based on method needs
-unique_ptr<PathSet> JoinExec::createPathSet(int size) const {
+unique_ptr<PathSet> JoinExec::createPathSet(st_pathset_size size) const {
   // std::make_unique is C++14
-  // also the size parameter is a ridiculous hack
+  // also the vlen size parameter is a ridiculous hack
   return unique_ptr<PathSet>(new PathSet(size, width_ul, width_ul * (int) method));
 }
 
@@ -258,6 +260,7 @@ static inline void prog_print(mutex& g_mutex, const int prog_size, size_t idx) {
 
 joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
+  // TODO not really size_t, should be limited to max total_paths size
   atomic<size_t> uid_idx(0);
   mutex g_mutex;
 
