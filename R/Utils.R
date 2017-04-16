@@ -133,35 +133,9 @@ getListEmptyPaths <- function(len_counts){
 
 }
 
-
-
-# # This function computes the values table
-# getValuesTable <- function(nControls, nCases){
-#
-#   probTable <- matrix(NA, nCases + 1, nCases + nControls + 1)
-#   valuesTable <- matrix(NA, nCases + 1, nControls + 1)
-#   n <- nCases + nControls
-#   for (i in 0:n) {
-#     i_vector = (max(0, (i - nControls)):min(i, nCases))
-#     probTable[i_vector + 1, i + 1] = dhyper(i_vector, nCases, nControls, i)
-#   }
-#
-#   ## Now compute the p-values
-#   for (i in 0:n) {
-#     i_max = max(0, (i - nControls))
-#     i_min = min(i, nCases)
-#     i_vector =  i_max:i_min
-#     valuesTable[cbind(i_vector + 1, i - i_vector + 1)] = -log(rev(cumsum(probTable[(i_min:i_max) + 1, i + 1])))
-#   }
-#   valuesTable[is.infinite(valuesTable)] = max(valuesTable[is.finite(valuesTable)]) + 1;
-#   return(valuesTable)
-#
-# }
-
-
-
+# TODO extend to support "flipped" scores
 # This function computes the values table
-getValuesTable <- function(nControls, nCases){
+getValuesTable <- function(nCases, nControls){
 
   probTable <- matrix(NA, nCases + 1, nCases + nControls + 1)
   valuesTable <- matrix(NA, nCases + 1, nControls + 1)
