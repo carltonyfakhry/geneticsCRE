@@ -23,9 +23,9 @@ namespace test {
   string read_line(ifstream& fdata){
     string line;
     getline(fdata, line, ' ');
-    cout << line << " (";
+    // cout << line << " (";
     getline(fdata, line);
-    cout << line.size() << ")" << endl;
+    // cout << line.size() << ")" << endl;
     return line;
   }
 
@@ -35,7 +35,7 @@ namespace test {
     vector<uid_ref> uids;
 
     getline(fdata, line, ' ');
-    cout << line << ": ";
+    // cout << line << ": ";
     getline(fdata, line);
     buf.str(line);
     buf.clear();
@@ -53,7 +53,7 @@ namespace test {
       uid.location = stoi(v);
       uids.push_back(uid);
     }
-    cout << uids.size() << endl;
+    // cout << uids.size() << endl;
     return uids;
   }
 
@@ -62,14 +62,14 @@ namespace test {
     stringstream buf;
     vector<int> data;
     getline(fdata, line, ' ');
-    cout << line << ": ";
+    // cout << line << ": ";
     getline(fdata, line);
     buf.str(line);
     buf.clear();
     while (getline(buf, val, ' ')) {
       data.push_back(stoi(val));
     }
-    cout << data.size() << endl;
+    // cout << data.size() << endl;
     return data;
   }
 
@@ -79,7 +79,7 @@ namespace test {
     vec2d_i data;
 
     getline(fdata, line, ' ');
-    cout << line << ": ";
+    // cout << line << ": ";
     getline(fdata, line);
     buf.str(line);
     buf.clear();
@@ -91,7 +91,7 @@ namespace test {
       while (getline(ub, v, ','))
         data.back().push_back(stoi(v));
     }
-    cout << data.size() << " x " << data.front().size() << endl;
+    // cout << data.size() << " x " << data.front().size() << endl;
     return data;
   }
 
@@ -101,7 +101,7 @@ namespace test {
     vec2d_d data;
 
     getline(fdata, line, ' ');
-    cout << line << ": ";
+    // cout << line << ": ";
     getline(fdata, line);
     buf.str(line);
     buf.clear();
@@ -113,7 +113,7 @@ namespace test {
       while (getline(ub, v, ','))
         data.back().push_back(stod(v));
     }
-    cout << data.size() << " x " << data.front().size() << endl;
+    // cout << data.size() << " x " << data.front().size() << endl;
     return data;
   }
 

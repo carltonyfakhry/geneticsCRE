@@ -1,7 +1,10 @@
 #include <unordered_map>
 #include <array>
+
 #include <Rcpp.h>
+
 #include "gcre.h"
+#include "util.h"
 
 using namespace std;
 
