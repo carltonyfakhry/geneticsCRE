@@ -44,10 +44,10 @@
 #'
 #' @return This function returns a list with the following items:
 #'         \item{SignedPaths}{The top K signed paths for each length.}
-#'         \item{UserKpaths}{The top K paths for each length.}
-#'         \item{UserLengths}{The lengths of each path.}
-#'         \item{UserScores}{The scores of each path.}
-#'         \item{UserPvalues}{The p-values of each path.}
+#'         \item{Paths}{The top K paths for each length.}
+#'         \item{Lengths}{The lengths of each path.}
+#'         \item{Scores}{The scores of each path.}
+#'         \item{Pvalues}{The p-values of each path.}
 #'
 #' @author Carl Tony Fakhry
 #'
@@ -250,20 +250,20 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 1, threshold_perce
   Rels_data <- data.frame(srcuid = Ents$uid)
   Rels_data2 <- data.frame(srcuid = Ents2$uid)
 
-  # Create the relations data frame for paths of length 3
-  Rels <- Rels[order(Rels$srcuid, Rels$trguid),]
+  # # Create the relations data frame for paths of length 3
+  Rels <- Rels[order(Rels$srcuid, Rels$trguid, Rels$sign),]
   Rels2 <- Rels
   names(Rels2) <- c("trguid", "trguid2", "sign2")
-  Rels3 <- dplyr::left_join(Rels, Rels2, by = "trguid")
-  Rels3 <- Rels3 %>% filter(complete.cases(.))
-  Rels3 <- Rels3[order(Rels3$srcuid, Rels3$trguid, Rels3$trguid2),]
-  rm(Rels2)
-
-  # Get the sign of the third gene in a path of length 3 assuming the first
-  # gene in the path has a positive sign
-  third_gene_sign <- rep(1, nrow(Rels3))
-  third_gene_sign[Rels3$sign == -1 & Rels3$sign2 == 1] <- -1
-  third_gene_sign[Rels3$sign == 1 & Rels3$sign2 == -1] <- -1
+  # Rels3 <- dplyr::left_join(Rels, Rels2, by = "trguid")
+  # Rels3 <- Rels3 %>% filter(complete.cases(.))
+  # # Rels3 <- Rels3[order(Rels3$srcuid, Rels3$trguid, Rels3$trguid2, Rels3$sign, Rels3$sign2),]
+  # rm(Rels2)
+  #
+  # # Get the sign of the third gene in a path of length 3 assuming the first
+  # # gene in the path has a positive sign
+  # third_gene_sign <- rep(1, nrow(Rels3))
+  # third_gene_sign[Rels3$sign == -1 & Rels3$sign2 == 1] <- -1
+  # third_gene_sign[Rels3$sign == 1 & Rels3$sign2 == -1] <- -1
 
   srcuids1 <- Rels_data$srcuid
   trguids1 <- Rels_data$srcuid
@@ -289,27 +289,37 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 1, threshold_perce
   uids_CountLoc3 <- geneticsCRE:::getUidsCountsLocations(trguids3, Rels$srcuid)
   data_inds3 <- geneticsCRE:::matchDataIndices(genes_data, Rels$trguid) - 1
 
+  # Rels3 <- data.frame()
+  # j = 1
+  # for(i in trguids3){
+  #   count_loc <- uids_CountLoc3[[toString(i)]]
+  #   if(count_loc[1] == 0){
+  #     next
+  #   }
+  #   indices <- (count_loc[2]+1):(count_loc[2]+1 + count_loc[1] - 1)
+  #   Rels3 <- rbind(Rels3, cbind(rep(Rels$srcuid[j], count_loc[1]), rep(Rels$sign[j], count_loc[1]), Rels2[indices,]))
+  #   j = j + 1
+  # }
+  # Rels3 <- Rels3[,c(1,3,2,4,5)]
+  # names(Rels3) <- c("srcuid", "trguid", "sign", "trguid2", "sign2")
+
+  Rels3 <- geneticsCRE:::getRels3(Rels$srcuid, Rels$trguid, Rels$sign, uids_CountLoc3)
+
+  # Get the sign of the third gene in a path of length 3 assuming the first
+  # gene in the path has a positive sign
+  third_gene_sign <- rep(1, nrow(Rels3))
+  third_gene_sign[Rels3$sign == -1 & Rels3$sign2 == 1] <- -1
+  third_gene_sign[Rels3$sign == 1 & Rels3$sign2 == -1] <- -1
+
   srcuids4 <- Rels3$srcuid
   trguids4 <- Rels3$trguid2
   joining_gene_sign4 <- third_gene_sign
   uids_CountLoc4 <- geneticsCRE:::getUidsCountsLocations(trguids4, Rels$srcuid)
 
-
   srcuids5 <- Rels3$srcuid
   trguids5 <- Rels3$trguid2
   joining_gene_sign5 <- third_gene_sign
   uids_CountLoc5 <- geneticsCRE:::getUidsCountsLocations(trguids5, Rels3$srcuid)
-
-
-  # lsts <- geneticsCRE:::ProcessPaths2(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1,
-  #                                    srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,
-  #                                    srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2,
-  #                                    srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3,
-  #                                    srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4,
-  #                                    srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5,
-  #                                    data_inds1, data_inds1_2, data_inds2, data_inds3,
-  #                                    data, data2, ValueTable, nCases, nControls, K,
-  #                                    iterations, CaseORControl, method, pathLength, nthreads)
 
   lsts <- geneticsCRE:::ProcessPaths(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1,
                                      srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,

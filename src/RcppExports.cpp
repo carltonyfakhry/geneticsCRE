@@ -5,6 +5,20 @@
 
 using namespace Rcpp;
 
+// getRels3
+Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid, Rcpp::IntegerVector sign, Rcpp::List uids_CountLoc3);
+RcppExport SEXP geneticsCRE_getRels3(SEXP srcuidSEXP, SEXP trguidSEXP, SEXP signSEXP, SEXP uids_CountLoc3SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type srcuid(srcuidSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type trguid(trguidSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type sign(signSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type uids_CountLoc3(uids_CountLoc3SEXP);
+    rcpp_result_gen = Rcpp::wrap(getRels3(srcuid, trguid, sign, uids_CountLoc3));
+    return rcpp_result_gen;
+END_RCPP
+}
 // ProcessPaths
 List ProcessPaths(IntegerVector srcuids1, IntegerVector trguids1, List uids_CountLoc1, IntegerVector joining_gene_sign1, IntegerVector srcuids1_2, IntegerVector trguids1_2, List uids_CountLoc1_2, IntegerVector joining_gene_sign1_2, IntegerVector srcuids2, IntegerVector trguids2, List uids_CountLoc2, IntegerVector joining_gene_sign2, IntegerVector srcuids3, IntegerVector trguids3, List uids_CountLoc3, IntegerVector joining_gene_sign3, IntegerVector srcuids4, IntegerVector trguids4, List uids_CountLoc4, IntegerVector joining_gene_sign4, IntegerVector srcuids5, IntegerVector trguids5, List uids_CountLoc5, IntegerVector joining_gene_sign5, IntegerVector data_inds1, IntegerVector data_inds1_2, IntegerVector data_inds2, IntegerVector data_inds3, IntegerMatrix data, IntegerMatrix data2, NumericMatrix ValueTable, int nCases, int nControls, int K, int iterations, IntegerMatrix CaseORControl, int method, int pathLength, int nthreads);
 RcppExport SEXP geneticsCRE_ProcessPaths(SEXP srcuids1SEXP, SEXP trguids1SEXP, SEXP uids_CountLoc1SEXP, SEXP joining_gene_sign1SEXP, SEXP srcuids1_2SEXP, SEXP trguids1_2SEXP, SEXP uids_CountLoc1_2SEXP, SEXP joining_gene_sign1_2SEXP, SEXP srcuids2SEXP, SEXP trguids2SEXP, SEXP uids_CountLoc2SEXP, SEXP joining_gene_sign2SEXP, SEXP srcuids3SEXP, SEXP trguids3SEXP, SEXP uids_CountLoc3SEXP, SEXP joining_gene_sign3SEXP, SEXP srcuids4SEXP, SEXP trguids4SEXP, SEXP uids_CountLoc4SEXP, SEXP joining_gene_sign4SEXP, SEXP srcuids5SEXP, SEXP trguids5SEXP, SEXP uids_CountLoc5SEXP, SEXP joining_gene_sign5SEXP, SEXP data_inds1SEXP, SEXP data_inds1_2SEXP, SEXP data_inds2SEXP, SEXP data_inds3SEXP, SEXP dataSEXP, SEXP data2SEXP, SEXP ValueTableSEXP, SEXP nCasesSEXP, SEXP nControlsSEXP, SEXP KSEXP, SEXP iterationsSEXP, SEXP CaseORControlSEXP, SEXP methodSEXP, SEXP pathLengthSEXP, SEXP nthreadsSEXP) {

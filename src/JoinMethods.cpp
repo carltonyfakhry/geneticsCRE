@@ -81,6 +81,47 @@ int getTotalPaths(IntegerVector trguids, List uids_CountLoc){
 
 /**
 *
+* Create the relations data frame for paths of length 3.
+*
+*/
+// [[Rcpp::export]]
+Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid, Rcpp::IntegerVector sign,
+                        Rcpp::List uids_CountLoc3){
+
+  int total_paths = getTotalPaths(trguid, uids_CountLoc3);
+  Rcpp::IntegerVector newsrcuid(total_paths);
+  Rcpp::IntegerVector newtrguid(total_paths);
+  Rcpp::IntegerVector trguid2(total_paths);
+  Rcpp::IntegerVector newsign(total_paths);
+  Rcpp::IntegerVector sign2(total_paths);
+
+  int total_paths2 = 0;
+  for(int i = 0; i < trguid.size(); i++){
+
+    Rcpp::IntegerVector count_loc = uids_CountLoc3[std::to_string(trguid[i])];
+    int count = count_loc[0];
+    int location = count_loc[1];
+    if(count == 0) continue;
+    for(int j = location; j < location + count; j++){
+      newsrcuid[total_paths2] = srcuid[i];
+      newtrguid[total_paths2] = trguid[i];
+      newsign[total_paths2] = sign[i];
+      trguid2[total_paths2] = trguid[j];
+      sign2[total_paths2] = sign[j];
+      total_paths2++;
+    }
+
+  }
+
+  return DataFrame::create(_["srcuid"]= newsrcuid, _["trguid"]= newtrguid, _["sign"] = newsign, _["trguid2"] = trguid2, _["sign2"] = sign2);
+
+}
+
+
+
+
+/**
+*
 * Get the total counts in uids_CountLoc.
 *
 */
@@ -224,8 +265,19 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   // Join the paths
   unsigned cases = 0;
   unsigned controls = 0;
+  int cases1 = 0;
+  int cases2 = 0;
+  int controls1 = 0;
+  int controls2 = 0;
   for(int k = 0; k < vlen + vlen2; k++){
     uint64_t temp_pos = path_pos1[k] | path_pos2[k];
+    if(k < vlen){
+      cases1 += __builtin_popcountll(path_pos1[k]);
+      cases2 += __builtin_popcountll(path_pos2[k]);
+    }else{
+      controls1 += __builtin_popcountll(path_pos1[k]);
+      controls2 += __builtin_popcountll(path_pos2[k]);
+    }
     joined_pos[k] = temp_pos;
     if(k < vlen) cases += __builtin_popcountll(temp_pos);
     else controls += __builtin_popcountll(temp_pos);
@@ -239,6 +291,23 @@ inline void Method1(int i, int j, int &total_paths, std::vector<uint64_t> &path_
   if(pathLength <= 3){
     total_paths++;
   }
+
+  // if(pathLength == 1 && total_paths == 180){
+  //   std::cout << total_paths << std::endl;
+  //   std::cout << i << std::endl;
+  //   std::cout << j << std::endl;
+  //   std::cout << cases1 << " " << cases2 << std::endl;
+  //   std::cout << controls1 << " " << controls2 << std::endl;
+  //   std::cout << cases << " " << controls << std::endl;
+  //   std::cout << score << " " << flipped_score << std::endl;
+  // }
+  //
+  // if(pathLength == 4 && i == 14052 && j == 1819){
+  //   std::cout << cases1 << " " << cases2 << std::endl;
+  //   std::cout << controls1 << " " << controls2 << std::endl;
+  //   std::cout << cases << " " << controls << std::endl;
+  //   std::cout << score << " " << flipped_score << std::endl;
+  // }
 
   if(score > tid_localindicesq.top().first){
     #pragma omp critical(dataupdate)
@@ -561,6 +630,12 @@ List JoinPaths(std::vector<std::vector<uint64_t> > &paths_pos1, std::vector<std:
       IndicesScoresQueue &tid_localindicesq = LocalIndicesQ[tid];
       std::vector<double> &tid_max_scores = local_max_scores[tid];
 
+      // if(pathLength == 3 && i == 548 && j == 1565){
+      //   std::cout << src << std::endl;
+      //   std::cout << uid << std::endl;
+      //   std::cout << i << std::endl;
+      //   std::cout << j << std::endl;
+      // }
 
       if(method == 1){
 
@@ -569,6 +644,14 @@ List JoinPaths(std::vector<std::vector<uint64_t> > &paths_pos1, std::vector<std:
         Method1(i,j,total_paths,path_pos1,path_pos2,joined_paths_pos,flipped_pivot_length,
                 location,count,ValueTable,tid_localindicesq,tid_max_scores,p_caseorcontrol,
                 vlen,vlen2,nCases,nControls,iterations,pathLength);
+
+        // if(pathLength == 3 && total_paths == 36637){
+        //   std::cout << "car" << std::endl;
+        //   std::cout << src << " " << uid << std::endl;
+        //   std::cout << total_paths << std::endl;
+        //   std::cout << i << std::endl;
+        //   std::cout << j << std::endl;
+        // }
 
 
       }else{

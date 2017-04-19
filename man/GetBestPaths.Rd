@@ -58,10 +58,10 @@ created by the package.}
 \value{
 This function returns a list with the following items:
         \item{SignedPaths}{The top K signed paths for each length.}
-        \item{UserKpaths}{The top K paths for each length.}
-        \item{UserLengths}{The lengths of each path.}
-        \item{UserScores}{The scores of each path.}
-        \item{UserPvalues}{The p-values of each path.}
+        \item{Paths}{The top K paths for each length.}
+        \item{Lengths}{The lengths of each path.}
+        \item{Scores}{The scores of each path.}
+        \item{Pvalues}{The p-values of each path.}
 }
 \description{
 This function runs the causal engine for a given phenotype dataset.

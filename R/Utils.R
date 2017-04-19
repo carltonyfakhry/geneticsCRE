@@ -116,27 +116,8 @@ matchDataIndices <- function(genes_data, trgs_toB_joined){
 
 
 
-# Get a list of empty paths
-getListEmptyPaths <- function(len_counts){
-
-  lst <- list()
-  lst[["counts_pos"]] <- rep(0, len_counts)
-  lst[["counts_neg"]] <- rep(0, len_counts)
-  lst[["counts_conflict"]] <- rep(0, len_counts)
-  lst[["cols_pos"]] <- vector(mode="numeric", length=0)
-  lst[["cols_neg"]] <- vector(mode="numeric", length=0)
-  lst[["cols_conflict"]] <- vector(mode="numeric", length=0)
-  lst[["locations_pos"]] <- rep(0, len_counts)
-  lst[["locations_neg"]] <- rep(0, len_counts)
-  lst[["locations_conflict"]] <- rep(0, len_counts)
-  return(lst)
-
-}
-
-
-
 # This function computes the values table
-getValuesTable <- function(nControls, nCases){
+getValuesTable <- function(nCases, nControls){
 
   probTable <- matrix(NA, nCases + 1, nCases + nControls + 1)
   valuesTable <- matrix(NA, nCases + 1, nControls + 1)
