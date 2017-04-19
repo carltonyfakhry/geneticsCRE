@@ -1,6 +1,6 @@
-#' This function corrects P-values of the top K paths of each length.
+#' This function computes the decorated p-values for each path.
 #'
-#' @description This function corrects P-values of the top K paths of each length.
+#' @description This function computes the decorated p-values for each path.
 #'
 #' @usage getDecoratedPvalues(dataset, BestPaths, pathLength, nCases,
 #'                                     nControls, method, n_permutations = 100, strataF = NA)
@@ -81,8 +81,8 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
   print("Computing Decorated Pvalues...")
 
   DecoratedBestPaths <- data.frame(SignedPaths = character(0), Paths = character(0), Subpaths1 = character(0),
-                           Subpaths2 = character(0), Direction = integer(0), Lengths = integer(0), Scores = numeric(0),
-                           Pvalues = numeric(0), DecoratedPvalues = numeric(0))
+                                   Subpaths2 = character(0), Direction = integer(0), Lengths = integer(0), Scores = numeric(0),
+                                   Pvalues = numeric(0), DecoratedPvalues = numeric(0))
   total_paths <- 1
 
   # Handle paths of length 1
@@ -118,9 +118,12 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
       path_data_pos <- as.matrix(genes_data[match(genes, genes_data$genes),2:ncol(genes_data)],drop = FALSE)
       path_data_neg <- matrix(0, nrow = nrow(path_data_pos), ncol = ncol(path_data_pos))
       if(method == 2){
+        path_data_neg[which(sign == -1),] = path_data_pos[which(sign == -1),]
         path_data_pos[which(sign == -1),] = 0
-        path_data_neg[which(sign == 1),] = 0
       }
+
+      flipped <- ifelse(sign[1] == -1, T, F)
+      names(flipped) <- NULL
 
       # Compute the p-values for the different splitted paths
       for(j in 1:(path_len-1)){
@@ -133,7 +136,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
         subpath_pos2 <- path_data_pos[j+1,]
         subpath_neg2 <- path_data_neg[j+1,]
         decorated_pvalue <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
-                                              path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF)
+                                                                 path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
         DecoratedBestPaths[total_paths,9] <- decorated_pvalue
         DecoratedBestPaths[total_paths,5] <- "Forward"
         DecoratedBestPaths[total_paths,3] <- paste(genes[1:j], collapse = " -> ")
@@ -152,7 +155,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
         subpath_pos2 <- path_data_pos[j-1,]
         subpath_neg2 <- path_data_neg[j-1,]
         decorated_pvalue <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
-                                              path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF)
+                                                                 path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
         DecoratedBestPaths[total_paths,9] <- decorated_pvalue
         DecoratedBestPaths[total_paths,5] <- "Backward"
         DecoratedBestPaths[total_paths,3] <- paste(genes[path_len:j], collapse = " -> ")
@@ -174,23 +177,24 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
 
 # This function computes the corrected p-value of two given sub-paths
 computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2, path_len,
-                                    nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF){
+                                   nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped){
 
   inds_pos1 <- which(subpath_pos1 != 0)
   inds_neg1 <- which(subpath_neg1 != 0)
   inds_pos2 <- which(subpath_pos2 != 0)
   inds_neg2 <- which(subpath_neg2 != 0)
 
-  subpath_pos2[intersect(inds_pos1,inds_pos2)] <- 0
-  subpath_neg2[intersect(inds_neg1,inds_neg2)] <- 0
+  subpath_pos2[intersect(inds_pos1, inds_pos2)] <- 0
+  subpath_neg2[intersect(inds_neg1, inds_neg2)] <- 0
   inds_pos2 <- setdiff(inds_pos2, inds_pos1)
   inds_neg2 <- setdiff(inds_neg2, inds_neg1)
 
+  # compute the score of the path
   cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[nCases:(nCases+nControls)])
   controls1 <- sum(subpath_pos1[nCases:(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
   cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[nCases:(nCases+nControls)])
   controls2 <- sum(subpath_pos2[nCases:(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
-  score <- ValueTable[(cases1+cases2+1),(controls1+controls2+1)]
+  score <- ifelse(flipped & method == 1, ValueTable[(controls1+controls2+1),(cases1+cases2+1)], ValueTable[(cases1+cases2+1),(controls1+controls2+1)])
   scores <- c()
 
   toSample_pos <- setdiff(1:length(subpath_pos1), inds_pos1)
@@ -205,12 +209,13 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
     }
   }
 
+  # Process the permutations
   for(i in 1:n_permutations){
 
     sample_inds_pos <- NA
     sample_inds_neg <- NA
     stratagroup_numbers2 <- stratagroup_numbers
-    if(length(strataF) == 1 & is.na(strataF)){
+    if(length(strataF) == 1 & !is.na(strataF)){
       sample_inds_pos <- unlist(lapply(stratagroup_numbers2, function(x){sample(x, length(inds_pos2), replace = F)}, inds_pos2))
       stratagroup_numbers2 <- lapply(stratagroup_numbers2, function(x){setdiff(x,inds_pos2)})
       sample_inds_neg <- unlist(lapply(stratagroup_numbers2, function(x){sample(x, length(inds_neg2), replace = F)}, inds_neg2))
@@ -222,12 +227,12 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
     cases_neg <- length(which(sample_inds_neg > nCases))
     perm_cases <- cases_pos + cases_neg
     perm_controls <- (length(sample_inds_pos) - cases_pos) + (length(sample_inds_neg) - cases_neg)
-    perm_score <- ValueTable[(cases1+perm_cases+1),(controls1+perm_controls+1)]
+    perm_score <- ifelse(flipped & method == 1, ValueTable[(controls1+perm_controls+1),(cases1+perm_cases+1)], ValueTable[(cases1+perm_cases+1),(controls1+perm_controls+1)])
     scores <- c(scores, perm_score)
 
   }
 
-  pvalue <- length(which(scores <= score))/length(scores)
+  pvalue <- length(which(scores >= score))/length(scores)
 
   return(pvalue)
 

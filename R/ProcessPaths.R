@@ -44,10 +44,10 @@
 #'
 #' @return This function returns a list with the following items:
 #'         \item{SignedPaths}{The top K signed paths for each length.}
-#'         \item{UserKpaths}{The top K paths for each length.}
-#'         \item{UserLengths}{The lengths of each path.}
-#'         \item{UserScores}{The scores of each path.}
-#'         \item{UserPvalues}{The p-values of each path.}
+#'         \item{Paths}{The top K paths for each length.}
+#'         \item{Lengths}{The lengths of each path.}
+#'         \item{Scores}{The scores of each path.}
+#'         \item{Pvalues}{The p-values of each path.}
 #'
 #' @author Carl Tony Fakhry
 #'
@@ -169,16 +169,6 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
   Rels <- Rels[order(Rels$srcuid, Rels$trguid),]
   Rels2 <- Rels
   names(Rels2) <- c("trguid", "trguid2", "sign2")
-  Rels3 <- dplyr::left_join(Rels, Rels2, by = "trguid")
-  Rels3 <- Rels3 %>% filter(complete.cases(.))
-  Rels3 <- Rels3[order(Rels3$srcuid, Rels3$trguid, Rels3$trguid2),]
-  rm(Rels2)
-
-  # Get the sign of the third gene in a path of length 3 assuming the first
-  # gene in the path has a positive sign
-  third_gene_sign <- rep(1, nrow(Rels3))
-  third_gene_sign[Rels3$sign == -1 & Rels3$sign2 == 1] <- -1
-  third_gene_sign[Rels3$sign == 1 & Rels3$sign2 == -1] <- -1
 
   srcuids1 <- Rels_data$srcuid
   trguids1 <- Rels_data$srcuid
@@ -203,6 +193,15 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
   joining_gene_sign3 <- Rels$sign
   uids_CountLoc3 <- geneticsCRE:::getUidsCountsLocations(trguids3, Rels$srcuid)
   data_inds3 <- geneticsCRE:::matchDataIndices(genes_data, Rels$trguid) - 1
+
+  # Create the relations data frame for paths of length 3
+  Rels3 <- geneticsCRE:::getRels3(Rels$srcuid, Rels$trguid, Rels$sign, uids_CountLoc3)
+
+  # Get the sign of the third gene in a path of length 3 assuming the first
+  # gene in the path has a positive sign
+  third_gene_sign <- rep(1, nrow(Rels3))
+  third_gene_sign[Rels3$sign == -1 & Rels3$sign2 == 1] <- -1
+  third_gene_sign[Rels3$sign == 1 & Rels3$sign2 == -1] <- -1
 
   srcuids4 <- Rels3$srcuid
   trguids4 <- Rels3$trguid2
