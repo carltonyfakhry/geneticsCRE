@@ -60,7 +60,6 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
       score <- ifelse(flipped & method == 1, ValueTable[(controls1+1),(cases1+1)], ValueTable[(cases1+1),(controls1+1)])
 
       # Check for score equality
-      print(c(score,bestpaths$Scores[i]))
       if(score != bestpaths$Scores[i]){
         stop(paste("The following path:", bestpaths[i,1], "has the wrong score!", sep = " "))
       }
