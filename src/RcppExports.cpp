@@ -5,6 +5,20 @@
 
 using namespace Rcpp;
 
+// getRels3
+Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid, Rcpp::IntegerVector sign, Rcpp::List uids_CountLoc3);
+RcppExport SEXP geneticsCRE_getRels3(SEXP srcuidSEXP, SEXP trguidSEXP, SEXP signSEXP, SEXP uids_CountLoc3SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type srcuid(srcuidSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type trguid(trguidSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type sign(signSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type uids_CountLoc3(uids_CountLoc3SEXP);
+    rcpp_result_gen = Rcpp::wrap(getRels3(srcuid, trguid, sign, uids_CountLoc3));
+    return rcpp_result_gen;
+END_RCPP
+}
 // getMatchingList
 Rcpp::List getMatchingList(Rcpp::IntegerVector uids, Rcpp::IntegerVector counts, Rcpp::IntegerVector location);
 RcppExport SEXP geneticsCRE_getMatchingList(SEXP uidsSEXP, SEXP countsSEXP, SEXP locationSEXP) {
