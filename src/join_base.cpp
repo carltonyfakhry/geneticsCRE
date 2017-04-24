@@ -241,7 +241,7 @@ joined_res JoinExec::format_result() const {
 
 constexpr int prog_min_size = 4000;
 
-static inline void prog_print(mutex& g_mutex, const int prog_size, size_t idx) {
+static inline void prog_print(mutex& g_mutex, const int prog_size, st_uids_size idx) {
   if(prog_size >= prog_min_size && idx % (prog_size / 10) == 0) {
     lock_guard<mutex> lock(g_mutex);
     printf(" %1.0lf%%", (idx * 100.0) / prog_size);
@@ -251,8 +251,7 @@ static inline void prog_print(mutex& g_mutex, const int prog_size, size_t idx) {
 
 joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
-  // TODO not really size_t, should be limited to max total_paths size
-  atomic<size_t> uid_idx(0);
+  atomic<st_uids_size> uid_idx(0);
   mutex g_mutex;
 
   // C++14 capture init syntax would be nice,
@@ -274,8 +273,8 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
     size_t work_size = method.workspace_size_b();
     uint8_t workspace[work_size] ALIGNED;
 
-    const size_t prog_size = uids.size();
-    size_t idx = -1;
+    const st_uids_size prog_size = uids.size();
+    st_uids_size idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
 
       const auto& uid = uids[idx];
@@ -284,9 +283,8 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 
       if(uid.count > 0) {
 
-        // TODO long
         // start of result path block for this uid
-        int path_idx = uid.path_idx;
+        st_path_count path_idx = uid.path_idx;
         const uint64_t* path0 = paths0[idx];
 
         for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
@@ -312,7 +310,7 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 // TODO check where path set sizes exceed max int
 joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
-  atomic<unsigned> uid_idx(0);
+  atomic<st_uids_size> uid_idx(0);
   mutex g_mutex;
 
   // C++14 capture init syntax would be nice,
@@ -333,9 +331,9 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     size_t work_size = method.workspace_size_b();
     uint8_t workspace[work_size] ALIGNED;
 
-    const size_t prog_size = uids.size();
+    const st_uids_size prog_size = uids.size();
 
-    int idx = -1;
+    st_uids_size idx = -1;
     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
 
       const auto& uid = uids[idx];
@@ -345,7 +343,7 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
       if(uid.count > 0) {
 
         // start of result path block for this uid
-        int path_idx = uid.path_idx;
+        st_path_count path_idx = uid.path_idx;
 
         const uint64_t* path_pos0 = paths0[idx];
         const uint64_t* path_neg0 = path_pos0 + width_ul;

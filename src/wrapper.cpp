@@ -9,6 +9,44 @@
 using namespace std;
 
 /**
+*
+* Create the relations data frame for paths of length 3.
+*
+*/
+// [[Rcpp::export]]
+Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid, Rcpp::IntegerVector sign,
+                         Rcpp::List uids_CountLoc3){
+
+  int total_paths = 0;
+  for(int i = 0; i < trguid.size(); i++){
+    Rcpp::IntegerVector temp = Rcpp::as<Rcpp::IntegerVector>(uids_CountLoc3[std::to_string(trguid[i])]);
+    total_paths += temp[0];
+  }
+  Rcpp::IntegerVector newsrcuid(total_paths);
+  Rcpp::IntegerVector newtrguid(total_paths);
+  Rcpp::IntegerVector trguid2(total_paths);
+  Rcpp::IntegerVector newsign(total_paths);
+  Rcpp::IntegerVector sign2(total_paths);
+  int total_paths2 = 0;
+  for(int i = 0; i < trguid.size(); i++){
+    Rcpp::IntegerVector count_loc = uids_CountLoc3[std::to_string(trguid[i])];
+    int count = count_loc[0];
+    int location = count_loc[1];
+    if(count == 0) continue;
+    for(int j = location; j < location + count; j++){
+      newsrcuid[total_paths2] = srcuid[i];
+      newtrguid[total_paths2] = trguid[i];
+      newsign[total_paths2] = sign[i];
+      trguid2[total_paths2] = trguid[j];
+      sign2[total_paths2] = sign[j];
+      total_paths2++;
+    }
+  }
+  return Rcpp::DataFrame::create(Rcpp::_["srcuid"]= newsrcuid, Rcpp::_["trguid"]= newtrguid,
+                           Rcpp::_["sign"] = newsign, Rcpp::_["trguid2"] = trguid2, Rcpp::_["sign2"] = sign2);
+}
+
+/**
  *
  * Get the total number of paths to be processed.
  *
@@ -126,7 +164,7 @@ static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src
     count_locs[stoi(uid)] = {count_loc[0], count_loc[1]};
   }
 
-  long total_paths = 0;
+  st_path_count total_paths = 0;
 
   // TODO not entirely sure this allocates the way I think it does
   vector<uid_ref> uids(r_trg_uids.size(), uid_ref());
@@ -147,7 +185,7 @@ static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src
   }
 
   auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-  printf("path_length: %d, uids: %lu, paths: %ld (%'ld ms)\n", path_length, uids.size(), total_paths, time.count());
+  printf("path_length: %d, uids: %lu, paths: %lu (%'ld ms)\n", path_length, uids.size(), total_paths, time.count());
 
   return UidRelSet(path_length, uids, copy_r(r_signs));
 
