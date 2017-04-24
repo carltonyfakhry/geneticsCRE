@@ -48,60 +48,6 @@ Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid,
 
 /**
  *
- * Get the total number of paths to be processed.
- *
- */
-int getTotalPaths(Rcpp::IntegerVector trguids, Rcpp::List uids_CountLoc){
-  int total_paths = 0;
-  for(int i = 0; i < trguids.size(); i++){
-    int uid = trguids[i];
-    std::string geneuid = std::to_string(uid);
-    Rcpp::IntegerVector temp = Rcpp::as<Rcpp::IntegerVector>(uids_CountLoc[geneuid]);
-    total_paths += temp[0];
-  }
-  return total_paths;
-}
-
-/**
-*
-* Create the relations data frame for paths of length 3.
-*
-*/
-// [[Rcpp::export]]
-Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid, Rcpp::IntegerVector sign,
-                         Rcpp::List uids_CountLoc3){
-
-  int total_paths = 0;
-  for(int i = 0; i < trguid.size(); i++){
-    Rcpp::IntegerVector temp = Rcpp::as<Rcpp::IntegerVector>(uids_CountLoc3[std::to_string(trguid[i])]);
-    total_paths += temp[0];
-  }
-  Rcpp::IntegerVector newsrcuid(total_paths);
-  Rcpp::IntegerVector newtrguid(total_paths);
-  Rcpp::IntegerVector trguid2(total_paths);
-  Rcpp::IntegerVector newsign(total_paths);
-  Rcpp::IntegerVector sign2(total_paths);
-  int total_paths2 = 0;
-  for(int i = 0; i < trguid.size(); i++){
-    Rcpp::IntegerVector count_loc = uids_CountLoc3[std::to_string(trguid[i])];
-    int count = count_loc[0];
-    int location = count_loc[1];
-    if(count == 0) continue;
-    for(int j = location; j < location + count; j++){
-      newsrcuid[total_paths2] = srcuid[i];
-      newtrguid[total_paths2] = trguid[i];
-      newsign[total_paths2] = sign[i];
-      trguid2[total_paths2] = trguid[j];
-      sign2[total_paths2] = sign[j];
-      total_paths2++;
-    }
-  }
-  return Rcpp::DataFrame::create(Rcpp::_["srcuid"]= newsrcuid, Rcpp::_["trguid"]= newtrguid,
-                           Rcpp::_["sign"] = newsign, Rcpp::_["trguid2"] = trguid2, Rcpp::_["sign2"] = sign2);
-}
-
-/**
- *
  * Create Rcpp::List indexed by the names of gene uids. Each entry in the Rcpp::List
  * is a vector with the first entry being the count of paths starting
  * with the corresponding gene uids and the second entry be the location
