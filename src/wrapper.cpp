@@ -9,22 +9,6 @@
 using namespace std;
 
 /**
- *
- * Get the total number of paths to be processed.
- *
- */
-int getTotalPaths(Rcpp::IntegerVector trguids, Rcpp::List uids_CountLoc){
-  int total_paths = 0;
-  for(int i = 0; i < trguids.size(); i++){
-    int uid = trguids[i];
-    std::string geneuid = std::to_string(uid);
-    Rcpp::IntegerVector temp = Rcpp::as<Rcpp::IntegerVector>(uids_CountLoc[geneuid]);
-    total_paths += temp[0];
-  }
-  return total_paths;
-}
-
-/**
 *
 * Create the relations data frame for paths of length 3.
 *
@@ -126,7 +110,7 @@ static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src
     count_locs[stoi(uid)] = {count_loc[0], count_loc[1]};
   }
 
-  long total_paths = 0;
+  st_path_count total_paths = 0;
 
   // TODO not entirely sure this allocates the way I think it does
   vector<uid_ref> uids(r_trg_uids.size(), uid_ref());
@@ -147,7 +131,7 @@ static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src
   }
 
   auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-  printf("path_length: %d, uids: %lu, paths: %ld (%'ld ms)\n", path_length, uids.size(), total_paths, time.count());
+  printf("path_length: %d, uids: %lu, paths: %lu (%'ld ms)\n", path_length, uids.size(), total_paths, time.count());
 
   return UidRelSet(path_length, uids, copy_r(r_signs));
 
