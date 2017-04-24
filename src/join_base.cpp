@@ -56,11 +56,11 @@ protected:
 
     double score = value_table[cases][ctrls];
     if(score > scores.top().score)
-      scores.push(Score(score, idx, loc));
+      scores.push(Score(score, idx, loc, cases, ctrls));
     
     double flips = value_table[ctrls][cases];
     if(flips > scores.top().score)
-      scores.push(Score(flips, idx, loc + flip_pivot_len));
+      scores.push(Score(flips, idx, loc + flip_pivot_len, cases, ctrls));
     while(scores.size() > exec->top_k)
       scores.pop();
 

@@ -29,8 +29,10 @@ public:
   double score = -std::numeric_limits<double>::infinity();
   int src = -1;
   int trg = -1;
+  int cases = 0;
+  int ctrls = 0;
   inline Score() {}
-  inline Score(double score, int src, int trg) : score(score), src(src), trg(trg) {}
+  inline Score(double score, int src, int trg, int cases, int ctrls) : score(score), src(src), trg(trg), cases(cases), ctrls(ctrls) {}
   // reverse sort for priority queue
   friend bool operator<(Score a, Score b) { return a.score > b.score; }
 };

@@ -18,6 +18,8 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
   patients <- dataset$patients
   rm(dataset)
 
+  passed <- TRUE
+
   # Handle paths of length 2 and greater
   for(path_len in 1:pathLength){
 
@@ -61,13 +63,16 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
 
       # Check for score equality
       if(score != bestpaths$Scores[i]){
-        stop(paste("The following path:", bestpaths[i,1], "has the wrong score!", sep = " "))
+        passed <- FALSE
+        print(sprintf("bad score for: '%s'", bestpaths[i,1]))
+        print(sprintf("cases: %d, ctrls: %d, check score: %f", cases1, controls1, score))
+        print(bestpaths[i,])
       }
 
     }
 
   }
 
-  return(TRUE)
+  return(passed)
 
 }
