@@ -53,11 +53,18 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
 
       inds_pos1 <- which(subpath_pos1 != 0)
       inds_neg1 <- which(subpath_neg1 != 0)
+      intersect_inds <- intersect(inds_pos1, inds_neg1)
+      inds_pos1 <- setdiff(inds_pos1, intersect_inds)
+      inds_neg1 <- setdiff(inds_neg1, intersect_inds)
 
       # compute the score of the path
-      cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[(nCases+1):(nCases+nControls)])
-      controls1 <- sum(subpath_pos1[(nCases+1):(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
-      score <- ifelse(flipped & method == 1, ValueTable[(controls1+1),(cases1+1)], ValueTable[(cases1+1),(controls1+1)])
+      cases_pos <- length(which(inds_pos1 <= nCases))
+      controls_pos <- length(inds_pos1) - cases_pos
+      cases_neg <- length(which(inds_neg1 > nCases))
+      controls_neg <- length(inds_neg1) - cases_neg
+      cases <- cases_pos + cases_neg
+      controls <- controls_pos + controls_neg
+      score <- ifelse(flipped & method == 1, ValueTable[(controls+1),(cases+1)], ValueTable[(cases+1),(controls+1)])
 
       # Check for score equality
       if(score != bestpaths$Scores[i]){

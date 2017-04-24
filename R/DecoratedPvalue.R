@@ -190,10 +190,10 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
   inds_neg2 <- setdiff(inds_neg2, inds_neg1)
 
   # compute the score of the path
-  cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[nCases:(nCases+nControls)])
-  controls1 <- sum(subpath_pos1[nCases:(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
-  cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[nCases:(nCases+nControls)])
-  controls2 <- sum(subpath_pos2[nCases:(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
+  cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[(nCases+1):(nCases+nControls)])
+  controls1 <- sum(subpath_pos1[(nCases+1):(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
+  cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[(nCases+1):(nCases+nControls)])
+  controls2 <- sum(subpath_pos2[(nCases+1):(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
   score <- ifelse(flipped & method == 1, ValueTable[(controls1+controls2+1),(cases1+cases2+1)], ValueTable[(cases1+cases2+1),(controls1+controls2+1)])
   scores <- c()
 
