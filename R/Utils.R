@@ -4,17 +4,17 @@ getRandomizedDatCols <- function(ncol_data, strataF, nCases, nControls, stratagr
   randomized_data_indices <- NA
   if(length(strataF) == 1 & is.na(strataF)){
     randomized_data_indices <- sample(1:ncol_data, replace = F)
-  }else{
-    randomized_data_indices <- rep(0, ncol_data)
-    for(i in stratagroups){
-      stratainds <- which(stratanumbers == i)
-      samplestratainds <- sample(stratainds, size = length(stratainds), replace = F)
-      randomized_data_indices[stratainds] <- samplestratainds
+    }else{
+      randomized_data_indices <- rep(0, ncol_data)
+      for(i in stratagroups){
+        stratainds <- which(stratanumbers == i)
+        samplestratainds <- sample(stratainds, size = length(stratainds), replace = F)
+        randomized_data_indices[stratainds] <- samplestratainds
+      }
     }
-  }
-  return(randomized_data_indices)
+    return(randomized_data_indices)
 
-}
+  }
 
 
 
@@ -31,19 +31,19 @@ getRandIndicesMat <- function(ncol_data, iterations, strataF, nCases, nControls,
       RandIndicesMat[i,] <- randomized_cols
     }
 
-  }else{
+    }else{
 
-    for(i in 1:iterations){
-      randomized_cols <- geneticsCRE:::getRandomizedDatCols(ncol_data, strataF, nCases, nControls, stratagroups, stratanumbers)
-      randomized_cols <- randomized_cols - 1
-      RandIndicesMat[i,] <- randomized_cols
+      for(i in 1:iterations){
+        randomized_cols <- geneticsCRE:::getRandomizedDatCols(ncol_data, strataF, nCases, nControls, stratagroups, stratanumbers)
+        randomized_cols <- randomized_cols - 1
+        RandIndicesMat[i,] <- randomized_cols
+      }
+
     }
 
+    return(RandIndicesMat)
+
   }
-
-  return(RandIndicesMat)
-
-}
 
 
 # Convert uids to protein symbols in paths
@@ -225,8 +225,9 @@ check_input <- function(nCases, nControls, method, threshold_percent, K, pathLen
     stop("pathLength must be an integer greater than 0 and less than 6!")
   }
 
-  if(!is.numeric(iterations) | length(iterations) != 1 | floor(iterations) != iterations | iterations < 1){
-    stop("iterations must be an integer greater than 0!")
+  # disabling permutations (==0) is useful for testing -- dmitri
+  if(!is.numeric(iterations) | length(iterations) != 1 | floor(iterations) != iterations | iterations < 0){
+    stop("iterations must be an integer greater than or equal to 0!")
   }
 
   if((nCases + nControls) > 65536) stop("Package cannot process data set with more than 65536 columns!")
