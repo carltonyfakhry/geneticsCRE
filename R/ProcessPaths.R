@@ -149,8 +149,11 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
 
   # Precompute the permuted columns to be used in producing randomized paths for computing
   # the p-values of the paths
-  RandIndicesMat <- geneticsCRE:::getRandIndicesMat(ncol(data), iterations, strataF, nCases, nControls, stratagroups, stratanumbers)
-  CaseORControl <- geneticsCRE:::getCaseORControl(RandIndicesMat, nCases, nControls)
+  CaseORControl <- matrix(0, nrow = 0, ncol = 0)
+  if(iterations > 0) {
+    RandIndicesMat <- geneticsCRE:::getRandIndicesMat(ncol(data), iterations, strataF, nCases, nControls, stratagroups, stratanumbers)
+    CaseORControl <- geneticsCRE:::getCaseORControl(RandIndicesMat, nCases, nControls)
+  }
 
   UserKpaths <- c()
   UserKsignpaths <- c()

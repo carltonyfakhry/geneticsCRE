@@ -38,11 +38,6 @@ constexpr int gs_align_size = gs_vec_width / 8;
 
 #include "gcre_types.h"
 
-// TODO move to types
-// types that can hold max allowed values for various entities
-using st_pathset_size = uint32_t;
-using st_total_paths = uint64_t;
-
 // 'size' is the input element count, 'width' is bits needed for each element
 // returns count that fits evenly into current vector size
 inline int pad_vector_size(int size, int width) {
@@ -110,8 +105,8 @@ public:
     return sign == 1;
   }
 
-  st_total_paths count_total_paths() const {
-    st_total_paths total = 0;
+  st_path_count count_total_paths() const {
+    st_path_count total = 0;
     for(const auto& uid : uids)
       total += uid.count;
     return total;
