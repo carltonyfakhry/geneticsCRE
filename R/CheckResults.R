@@ -18,6 +18,8 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
   patients <- dataset$patients
   rm(dataset)
 
+  passed <- TRUE
+
   # Handle paths of length 2 and greater
   for(path_len in 1:pathLength){
 
@@ -53,28 +55,31 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
 
       inds_pos1 <- which(subpath_pos1 != 0)
       inds_neg1 <- which(subpath_neg1 != 0)
-
-      subpath_pos2[intersect(inds_pos1, inds_pos2)] <- 0
-      subpath_neg2[intersect(inds_neg1, inds_neg2)] <- 0
-      inds_pos2 <- setdiff(inds_pos2, inds_pos1)
-      inds_neg2 <- setdiff(inds_neg2, inds_neg1)
+      intersect_inds <- intersect(inds_pos1, inds_neg1)
+      inds_pos1 <- setdiff(inds_pos1, intersect_inds)
+      inds_neg1 <- setdiff(inds_neg1, intersect_inds)
 
       # compute the score of the path
-      cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[nCases:(nCases+nControls)])
-      controls1 <- sum(subpath_pos1[nCases:(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
-      cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[nCases:(nCases+nControls)])
-      controls2 <- sum(subpath_pos2[nCases:(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
-      score <- ifelse(flipped & method == 1, ValueTable[(controls1+controls2+1),(cases1+cases2+1)], ValueTable[(cases1+cases2+1),(controls1+controls2+1)])
+      cases_pos <- length(which(inds_pos1 <= nCases))
+      controls_pos <- length(inds_pos1) - cases_pos
+      cases_neg <- length(which(inds_neg1 > nCases))
+      controls_neg <- length(inds_neg1) - cases_neg
+      cases <- cases_pos + cases_neg
+      controls <- controls_pos + controls_neg
+      score <- ifelse(flipped & method == 1, ValueTable[(controls+1),(cases+1)], ValueTable[(cases+1),(controls+1)])
 
       # Check for score equality
       if(score != bestpaths$Scores[i]){
-        stop(paste("The following path:", bestpaths[i,1], "has the wrong score!", sep = " "))
+        passed <- FALSE
+        print(sprintf("bad score for: '%s'", bestpaths[i,1]))
+        print(sprintf("cases: %d, ctrls: %d, check score: %f", cases1, controls1, score))
+        print(bestpaths[i,])
       }
 
     }
 
   }
 
-  return(TRUE)
+  return(passed)
 
 }

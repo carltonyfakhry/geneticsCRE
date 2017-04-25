@@ -1,6 +1,6 @@
-#' This function corrects P-values of the top K paths of each length.
+#' This function computes the decorated p-values for each path.
 #'
-#' @description This function corrects P-values of the top K paths of each length.
+#' @description This function computes the decorated p-values for each path.
 #'
 #' @usage getDecoratedPvalues(dataset, BestPaths, pathLength, nCases,
 #'                                     nControls, method, n_permutations = 100, strataF = NA)
@@ -81,8 +81,8 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
   print("Computing Decorated Pvalues...")
 
   DecoratedBestPaths <- data.frame(SignedPaths = character(0), Paths = character(0), Subpaths1 = character(0),
-                           Subpaths2 = character(0), Direction = integer(0), Lengths = integer(0), Scores = numeric(0),
-                           Pvalues = numeric(0), DecoratedPvalues = numeric(0))
+                                   Subpaths2 = character(0), Direction = integer(0), Lengths = integer(0), Scores = numeric(0),
+                                   Pvalues = numeric(0), DecoratedPvalues = numeric(0))
   total_paths <- 1
 
   # Handle paths of length 1
@@ -136,7 +136,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
         subpath_pos2 <- path_data_pos[j+1,]
         subpath_neg2 <- path_data_neg[j+1,]
         decorated_pvalue <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
-                                              path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
+                                                                 path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
         DecoratedBestPaths[total_paths,9] <- decorated_pvalue
         DecoratedBestPaths[total_paths,5] <- "Forward"
         DecoratedBestPaths[total_paths,3] <- paste(genes[1:j], collapse = " -> ")
@@ -155,7 +155,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
         subpath_pos2 <- path_data_pos[j-1,]
         subpath_neg2 <- path_data_neg[j-1,]
         decorated_pvalue <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
-                                              path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
+                                                                 path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
         DecoratedBestPaths[total_paths,9] <- decorated_pvalue
         DecoratedBestPaths[total_paths,5] <- "Backward"
         DecoratedBestPaths[total_paths,3] <- paste(genes[path_len:j], collapse = " -> ")
@@ -177,7 +177,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
 
 # This function computes the corrected p-value of two given sub-paths
 computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2, path_len,
-                                    nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped){
+                                   nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped){
 
   inds_pos1 <- which(subpath_pos1 != 0)
   inds_neg1 <- which(subpath_neg1 != 0)
@@ -190,10 +190,10 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
   inds_neg2 <- setdiff(inds_neg2, inds_neg1)
 
   # compute the score of the path
-  cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[nCases:(nCases+nControls)])
-  controls1 <- sum(subpath_pos1[nCases:(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
-  cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[nCases:(nCases+nControls)])
-  controls2 <- sum(subpath_pos2[nCases:(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
+  cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[(nCases+1):(nCases+nControls)])
+  controls1 <- sum(subpath_pos1[(nCases+1):(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
+  cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[(nCases+1):(nCases+nControls)])
+  controls2 <- sum(subpath_pos2[(nCases+1):(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
   score <- ifelse(flipped & method == 1, ValueTable[(controls1+controls2+1),(cases1+cases2+1)], ValueTable[(cases1+cases2+1),(controls1+controls2+1)])
   scores <- c()
 
