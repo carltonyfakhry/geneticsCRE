@@ -160,6 +160,7 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
   UserSymbPaths <- c()
   UserSymbSignPaths <- c()
   UserScores <- c()
+  UserDebug <- c()
   UserLengths <- c()
   UserPvalues <- c()
 
@@ -249,14 +250,19 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
       lst <- lsts$lst5
       lst_paths <- geneticsCRE:::getPaths(lst, path_length, Rels3, Rels3)
     }
+
     UserScores <- c(UserScores, lst$scores)
+    UserDebug <- c(UserDebug, lst$debug)
     UserKpaths <- c(UserKpaths, lst_paths$path)
+
     if(path_length == 1){
       UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents2, lst_paths$path))
     }else{
       UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents, lst_paths$path))
     }
+    
     UserKsignpaths <- c(UserKsignpaths, lst$signpath)
+    
     if(path_length == 1){
       UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents2, lst_paths$signpath))
     }else{
@@ -270,9 +276,9 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
 
   }
 
-  BestPaths <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, stringsAsFactors = F)
+  BestPaths <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserDebug, stringsAsFactors = F)
   BestPaths <- BestPaths[order(BestPaths$UserPvalues),]
-  names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues")
+  names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "debug")
   return(BestPaths)
 
 }

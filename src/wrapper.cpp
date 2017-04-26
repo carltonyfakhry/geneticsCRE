@@ -1,3 +1,4 @@
+#include <sstream>
 #include <unordered_map>
 #include <array>
 
@@ -15,7 +16,7 @@ using namespace std;
 */
 // [[Rcpp::export]]
 Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid, Rcpp::IntegerVector sign,
-                         Rcpp::List uids_CountLoc3){
+ Rcpp::List uids_CountLoc3){
 
   int total_paths = 0;
   for(int i = 0; i < trguid.size(); i++){
@@ -43,7 +44,7 @@ Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid,
     }
   }
   return Rcpp::DataFrame::create(Rcpp::_["srcuid"]= newsrcuid, Rcpp::_["trguid"]= newtrguid,
-                           Rcpp::_["sign"] = newsign, Rcpp::_["trguid2"] = trguid2, Rcpp::_["sign2"] = sign2);
+   Rcpp::_["sign"] = newsign, Rcpp::_["trguid2"] = trguid2, Rcpp::_["sign2"] = sign2);
 }
 
 /**
@@ -144,17 +145,21 @@ static Rcpp::List make_score_list(const joined_res& res) {
   for(int k = 0; k < res.permuted_scores.size(); k++)
     permuted_scores[k] = res.permuted_scores[k];
 
-  Rcpp::NumericVector scores(res.scores.size());
   Rcpp::IntegerMatrix ids(res.scores.size(), 2);
+  Rcpp::NumericVector scores(res.scores.size());
+  Rcpp::StringVector debug_info(res.scores.size());
   for(int k = 0; k < res.scores.size(); k++){
     const auto& score = res.scores[k];
     scores[k] = score.score;
     // add 1 because it will be used as an index in R
     ids(k,0) = score.src + 1;
     ids(k,1) = score.trg + 1;
+    std::ostringstream info;
+    info << "[debug] " << score.src << ":" << score.trg << " " << score.cases << "/" << score.ctrls;
+    debug_info(k) = info.str().c_str();
   }
 
-  return Rcpp::List::create(Rcpp::Named("scores") = scores, Rcpp::Named("ids") = ids, Rcpp::Named("TestScores") = permuted_scores);
+  return Rcpp::List::create(Rcpp::Named("scores") = scores, Rcpp::Named("ids") = ids, Rcpp::Named("TestScores") = permuted_scores, Rcpp::Named("debug") = debug_info);
 }
 
 // [[Rcpp::export]]

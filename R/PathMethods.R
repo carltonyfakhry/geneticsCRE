@@ -65,7 +65,7 @@ getPaths <- function(lst, path_length, Rels1, Rels2){
     trgs3 <- Rels2$trguid[inds3]
     path <- paste(srcs, trgs, trgs2, trgs3, sep = " -> ")
 
-    dirs1 <- ifelse(inds2 > nrow(Rels1), "(-)", "(+)")
+    dirs1 <- ifelse(inds2 > nrow(Rels2), "(-)", "(+)")
 
     dirs2 <- rep("(+)", length(inds1))
     sign1 <- Rels1$sign[inds1]
@@ -95,7 +95,7 @@ getPaths <- function(lst, path_length, Rels1, Rels2){
     trgs4 <- Rels2$trguid2[inds3]
     path <- paste(srcs, trgs, trgs2, trgs3, trgs4, sep = " -> ")
 
-    dirs1 <- ifelse(inds2 > nrow(Rels1), "(-)", "(+)")
+    dirs1 <- ifelse(inds2 > nrow(Rels2), "(-)", "(+)")
 
     dirs2 <- rep("(+)", length(inds1))
     sign1 <- Rels1$sign[inds1]
