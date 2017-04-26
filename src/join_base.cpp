@@ -118,23 +118,30 @@ iterations(pad_vector_size(iters, 32)) {
   printf("[init exec] method: '%d' | data: %d x %d (width: %d ul)\n", method, num_cases, num_ctrls, width_ul);
 }
 
-// create a copy of the vt for simplicity
-void JoinExec::setValueTable(vec2d_d table){
+// TODO floats for lookup
+void JoinExec::setValueTable(vec2d_d& table){
 
-  printf("setting value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
+  printf("received value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
 
   // indices can be flipped and counts could include all 0 to all cases/controls (so max index == size)
-  int max_idx = max(num_cases, num_ctrls);
-  check_index(max_idx, table.size());
-  for(const auto& row : table)
-    check_index(max_idx, row.size());
+  size_t table_size = num_cases + num_ctrls + 1;
 
-  value_table = table;
-  // precompute max including flipped indices
-  value_table_max = vec2d_d(value_table.size(), vec_d(value_table.front().size()));
+  if(table.size() < table_size || table.size() == 0 || table.front().size() < table_size)
+    printf("  ** WARN: value table smaller than %lu x %lu, will be padded\n", table_size, table_size);
+
+  value_table = vec2d_d(table_size, vec_d(table_size, -1.0));
+
+  for(int r = 0; r < min(table_size, table.size()); r++) {
+    for(int c = 0; c < min(table_size, table[r].size()); c++) {
+      value_table[r][c] = table[r][c];
+    }
+  }
+
+  // precompute max, including flipped indices
+  value_table_max = value_table;
   for(int r = 0; r < value_table.size(); r++) {
     for(int c = 0; c < value_table[r].size(); c++) {
-      value_table_max[r][c] = max(value_table[r][c],value_table[c][r]);
+      value_table_max[r][c] = max(value_table[r][c], value_table[c][r]);
     }
   }
 

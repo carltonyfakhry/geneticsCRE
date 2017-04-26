@@ -240,7 +240,7 @@ public:
     printf("\n");
   }
 
-  void setValueTable(vec2d_d table);
+  void setValueTable(vec2d_d& table);
 
   void setPermutedCases(const vec2d_i& perm_cases);
 
