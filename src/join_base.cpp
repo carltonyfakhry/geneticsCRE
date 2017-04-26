@@ -119,7 +119,7 @@ iterations(pad_vector_size(iters, 32)) {
 }
 
 // TODO floats for lookup
-void JoinExec::setValueTable(vec2d_d& table){
+void JoinExec::setValueTable(vec2d_d&& table){
 
   printf("received value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
 
