@@ -147,10 +147,35 @@ getValuesTable <- function(nCases, nControls){
 
   ## Now compute the p-values
   for (i in 0:n) {
-    i_max = max(0, (i - nControls))
-    i_min = min(i, nCases)
-    i_vector =  i_max:i_min
-    valuesTable[cbind(i_vector + 1, i - i_vector + 1)] = -log(rev(cumsum(probTable[(i_min:i_max) + 1, i + 1])))
+    # i_max = max(0, (i - nControls))
+    # i_min = min(i, nCases)
+    # i_vector =  i_max:i_min
+    # valuesTable[cbind(i_vector + 1, i - i_vector + 1)] = -log(rev(cumsum(probTable[(i_min:i_max) + 1, i + 1])))
+    i_min = max(0, (i - nControls))
+    i_max = min(i, nCases)
+    i_vector =  i_min:i_max
+    if(length(i_vector) %% 2 == 0){ # in case there is an even number of elements in the support
+      left_side_index = i_vector[length(i_vector)/2]
+      right_side_index = left_side_index + 1
+      left_side_pvalues = cumsum(probTable[(i_min:left_side_index) + 1, i + 1])
+      right_side_pvalues = cumsum(probTable[(i_max:right_side_index) + 1, i + 1])
+      two_sided_pvalues = left_side_pvalues + right_side_pvalues
+      two_sided_pvalues = c(two_sided_pvalues, rev(two_sided_pvalues))
+    }else{ # in case there is an odd number of elements in the support
+      center = floor(length(i_vector)/2) + 1
+      if(center > 1){
+        left_side_index = i_vector[center - 1]
+        right_side_index = i_vector[center + 1]
+        left_side_pvalues = cumsum(probTable[(i_min:left_side_index) + 1, i + 1])
+        right_side_pvalues = cumsum(probTable[(i_max:right_side_index) + 1, i + 1])
+        two_sided_pvalues = left_side_pvalues + right_side_pvalues
+        two_sided_pvalues = c(two_sided_pvalues, 1, rev(two_sided_pvalues))
+      }else{
+        two_sided_pvalues <- c(1)
+      }
+    }
+    # valuesTable[cbind(i_vector + 1, i - i_vector + 1)] = -log(rev(cumsum(probTable[(i_min:i_max) + 1, i + 1])))
+    valuesTable[cbind(i_vector + 1, i - i_vector + 1)] = -log(two_sided_pvalues)
   }
   valuesTable[is.infinite(valuesTable)] = max(valuesTable[is.finite(valuesTable)]) + 1;
   return(valuesTable)
