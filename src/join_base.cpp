@@ -74,10 +74,7 @@ public:
 
   JoinMethod1(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores) : JoinMethod(exec, flip_pivot_len, p_perm_scores) {}
 
-  // memory block to pass to score method; size can be different per implementation
-  size_t workspace_size_b();
-
-  const uint64_t* score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, const size_t work_size, void* work);
+  void score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths);
 
 };
 
@@ -119,7 +116,7 @@ iterations(pad_vector_size(iters, 32)) {
 }
 
 // TODO floats for lookup
-void JoinExec::setValueTable(vec2d_d&& table){
+void JoinExec::setValueTable(const vec2d_d& table){
 
   printf("received value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
 
@@ -267,18 +264,15 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
 
     const int iters = this->iterations;
     const int width_ul = this->width_ul;
-
     const bool keep_paths = paths_res.size != 0;
-
-    float perm_scores_block[iters] ALIGNED;
 
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
+    float perm_scores_block[iters] ALIGNED;
     JoinMethod1 method(this, paths1.size, perm_scores_block);
 
-    size_t work_size = method.workspace_size_b();
-    uint8_t workspace[work_size] ALIGNED;
+    uint64_t path_res[width_ul] ALIGNED;
 
     const st_uids_size prog_size = uids.size();
     st_uids_size idx = -1;
@@ -295,9 +289,11 @@ joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, 
         const uint64_t* path0 = paths0[idx];
 
         for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
-          auto joined_path = method.score_permute_cpu(idx, loc, path0, paths1[loc], work_size, workspace);
+          if(keep_paths)
+            memset(path_res, 0, width_ul * 8);
+          method.score_permute_cpu(idx, loc, path0, paths1[loc], path_res, keep_paths);
           if(keep_paths) {
-            paths_res.set(path_idx, joined_path);
+            paths_res.set(path_idx, path_res);
             path_idx += 1;
           }
         }
