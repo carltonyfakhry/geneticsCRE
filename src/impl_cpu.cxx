@@ -1,13 +1,4 @@
 
-size_t JoinMethod2::workspace_size_b() {
-  size_t size = 0;
-  // joined path
-  size += exec->width_ul * 2 * sizeof(uint64_t);
-  // per-iteration pos/neg case-counts
-  size += exec->iterations * 2 * sizeof(uint32_t);
-  return size;
-}
-
 void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
 
   // avoid de-refs like the plague
@@ -53,7 +44,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
 
 }
 
-const uint64_t* JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1, const size_t work_size, void* work) {
+void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1, uint64_t* path_res, bool keep_paths) {
 
   // avoid de-refs like the plague
   const int iters = exec->iterations;
@@ -61,15 +52,12 @@ const uint64_t* JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t*
   const auto case_mask = exec->case_mask;
   const auto perm_case_mask = exec->perm_case_mask;
 
-  // clear workspace
-  memset(work, 0, work_size);
-
-  auto joined_full = (uint64_t*) work;
-  auto joined_pos = joined_full;
-  auto joined_neg = joined_full + width_ul;
-  auto perm_cases = (uint32_t*) (joined_full + width_ul * 2);
-  auto perm_case_pos = perm_cases;
-  auto perm_ctrl_pos = perm_cases + iters;
+  auto joined_pos = path_res;
+  auto joined_neg = path_res + width_ul;
+  uint32_t perm_case_pos[iters] ALIGNED;
+  uint32_t perm_ctrl_pos[iters] ALIGNED;
+  // memset(perm_case_pos, 0, iters * 4);
+  // memset(perm_ctrl_pos, 0, iters * 4);
 
   int case_pos = 0;
   int case_neg = 0;
@@ -84,10 +72,10 @@ const uint64_t* JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t*
   // memset(joined_pos, 0, width_ul * sizeof(uint64_t));
   // memset(joined_neg, 0, width_ul * sizeof(uint64_t));
 
-  // for(int r = 0; r < iters; r++){
-  //   perm_case_pos[r] = 0;
-  //   perm_ctrl_pos[r] = 0;
-  // }
+  for(int r = 0; r < iters; r++){
+    perm_case_pos[r] = 0;
+    perm_ctrl_pos[r] = 0;
+  }
 
   for(int k = 0; k < width_ul; k++) {
 
@@ -122,8 +110,10 @@ const uint64_t* JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t*
         }
       }
 
-      joined_pos[k] = bit_pos;
-      joined_neg[k] = bit_neg;
+      if(keep_paths) {
+        joined_pos[k] = bit_pos;
+        joined_neg[k] = bit_neg;
+      }
 
     }
 
@@ -143,6 +133,4 @@ const uint64_t* JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t*
       perm_scores[r] = p_score;
   }
 
-  // pointer to work segment we got from the caller
-  return joined_full;
 }

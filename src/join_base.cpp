@@ -84,10 +84,7 @@ public:
 
   JoinMethod2(const JoinExec* exec, const int flip_pivot_len, float* p_perm_scores) : JoinMethod(exec, flip_pivot_len, p_perm_scores) {}
 
-  // memory block to pass to score method; size can be different per implementation
-  size_t workspace_size_b();
-
-  const uint64_t* score_permute_cpu(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg, const size_t work_size, void* work);
+  void score_permute_cpu(int idx, int loc, const uint64_t* path0_pos, const uint64_t* path0_neg, const uint64_t* path1_pos, const uint64_t* path1_neg, uint64_t* path_res, bool keep_paths);
 
 };
 
@@ -324,15 +321,13 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
     const int width_ul = this->width_ul;
     const bool keep_paths = paths_res.size != 0;
 
-    float perm_scores_block[iters] ALIGNED;
-
     // this mess actually makes a significant performance difference
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
+    float perm_scores_block[iters] ALIGNED;
     JoinMethod2 method(this, paths1.size, perm_scores_block);
 
-    size_t work_size = method.workspace_size_b();
-    uint8_t workspace[work_size] ALIGNED;
+    uint64_t path_res[width_ul * 2] ALIGNED;
 
     const st_uids_size prog_size = uids.size();
 
@@ -355,9 +350,11 @@ joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, 
           const auto do_flip = uids.need_flip(idx, loc);
           const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
           const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
-          auto joined_path = method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1, work_size, workspace);
+          if(keep_paths)
+            memset(path_res, 0, width_ul * 16);
+          method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1, path_res, keep_paths);
           if(keep_paths) {
-            paths_res.set(path_idx, joined_path);
+            paths_res.set(path_idx, path_res);
             path_idx += 1;
           }
         }
