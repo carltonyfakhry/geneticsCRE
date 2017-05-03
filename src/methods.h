@@ -118,9 +118,6 @@ public:
 
   }
 
-
-
-
 };
 
 class JoinMethod2 : public JoinMethod_Base {

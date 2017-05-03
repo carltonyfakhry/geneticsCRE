@@ -93,9 +93,11 @@ public:
 
 };
 
+using TJoinMethod = unique_ptr<JoinMethod>;
 
 class JoinExec {
 
+  // TODO
   friend class JoinMethod;
   friend class JoinMethod_Base;
   friend class JoinMethod1;
@@ -147,7 +149,7 @@ public:
 
   void setPermutedCases(const vec2d_i& perm_cases);
 
-  // unique_ptr<JoinMethod_Base> createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const;
+  TJoinMethod createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const;
 
   unique_ptr<PathSet> createPathSet(st_pathset_size size) const;
   
@@ -159,19 +161,6 @@ protected:
   mutable float* perm_scores;
 
   joined_res format_result() const;
-  // joined_res join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
-  // joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
-
-  static int vector_width(int num_cases, int num_ctrls) {
-    return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
-  }
-
-  // width larger than current will not be set
-  static int vector_width_cast(int num_cases, int num_ctrls, int width) {
-    if(width > gs_vec_width)
-      return 0;
-    return vector_width(num_cases, num_ctrls) / width;
-  }
 
   vec2d_d value_table;
   vec2d_d value_table_max;
@@ -180,27 +169,7 @@ protected:
 
   // TODO constness isn't really true here
   template<typename Worker>
-  joined_res execute(const Worker& worker, bool show_progress) const {
-
-    if(show_progress)
-      printf("\nprogress:");
-
-    // use '0' to identify main thread
-    if(max(0, nthreads) == 0) {
-      worker(0);
-    } else {
-      vector<thread> pool(nthreads);
-      for(int tid = 0; tid < pool.size(); tid++)
-        pool[tid] = thread(worker, tid + 1);
-      for(auto& th : pool)
-        th.join();
-    }
-
-    if(show_progress)
-      printf(" - done!\n");
-
-    return format_result();
-  }
+  joined_res execute(const Worker& worker, bool show_progress) const;
 
 };
 

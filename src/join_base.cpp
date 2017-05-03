@@ -11,6 +11,16 @@ static inline int pad_vector_size(int size, int width) {
   return vlen;
 }
 
+static int vector_width(int num_cases, int num_ctrls) {
+  return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);
+}
+
+static int vector_width_cast(int num_cases, int num_ctrls, int width) {
+  if(width > gs_vec_width)
+    return 0;
+  return vector_width(num_cases, num_ctrls) / width;
+}
+
 constexpr int prog_min_size = 4000;
 
 static inline void prog_print(mutex& g_mutex, const int prog_size, st_uids_size idx) {
@@ -21,9 +31,7 @@ static inline void prog_print(mutex& g_mutex, const int prog_size, st_uids_size 
   }
 }
 
-
 // TODO uid and loc index integer sizes
-
 
 JoinExec::JoinExec(string method_name, int num_cases, int num_ctrls, int iters) :
 
@@ -123,14 +131,31 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
 
 }
 
-// unique_ptr<JoinMethod_Base> JoinExec::createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const {
-//   if(method == Method::method1)
-//     return unique_ptr<JoinMethod_Base>(new JoinMethod1(this, uids, flip_pivot_len, p_perm_scores));
-//   if(method == Method::method2)
-//     return unique_ptr<JoinMethod_Base>(new JoinMethod2(this, uids, flip_pivot_len, p_perm_scores));
-//   throw std::logic_error("bad method");
-// }
+unique_ptr<JoinMethod> JoinExec::createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const {
+  if(method == Method::method1)
+    return unique_ptr<JoinMethod>(new JoinMethod1(this, uids, flip_pivot_len, p_perm_scores));
+  if(method == Method::method2)
+    return unique_ptr<JoinMethod>(new JoinMethod2(this, uids, flip_pivot_len, p_perm_scores));
+  throw std::logic_error("bad method");
+}
 
+joined_res JoinExec::format_result() const {
+
+  while(scores.size() > top_k)
+    scores.pop();
+
+  joined_res res;
+  res.permuted_scores.resize(iters_requested, 0);
+  for(int k = 0; k < iters_requested; k++)
+    res.permuted_scores[k] = perm_scores[k];
+  res.scores.clear();
+  while(!scores.empty()){
+    res.scores.push_back(scores.top());
+    scores.pop();
+  }
+  return res;
+
+}
 
 // TODO width based on method needs
 unique_ptr<PathSet> JoinExec::createPathSet(st_pathset_size size) const {
@@ -139,7 +164,30 @@ unique_ptr<PathSet> JoinExec::createPathSet(st_pathset_size size) const {
   return unique_ptr<PathSet>(new PathSet(size, width_ul, width_ul * (int) method));
 }
 
-// TODO overload the method based on JoinMethod implementation
+template<typename Worker>
+joined_res JoinExec::execute(const Worker& worker, bool show_progress) const {
+
+  if(show_progress)
+    printf("\nprogress:");
+
+  // use '0' to identify main thread
+  if(max(0, nthreads) == 0) {
+    worker(0);
+  } else {
+    vector<thread> pool(nthreads);
+    for(int tid = 0; tid < pool.size(); tid++)
+      pool[tid] = thread(worker, tid + 1);
+    for(auto& th : pool)
+      th.join();
+  }
+
+  if(show_progress)
+    printf(" - done!\n");
+
+  return format_result();
+}
+
+
 // JoinExec is very super not thread-safe
 joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
@@ -174,15 +222,7 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
     float perm_scores_block[iters] ALIGNED;
-
-    // TODO factory method
-    unique_ptr<JoinMethod> method;
-    if(this->method == Method::method1)
-      method = unique_ptr<JoinMethod>(new JoinMethod1(this, uids, paths1.size, perm_scores_block));
-    else if(this->method == Method::method2)
-      method = unique_ptr<JoinMethod>(new JoinMethod2(this, uids, paths1.size, perm_scores_block));
-    else
-      throw std::logic_error("bad method");
+    unique_ptr<JoinMethod> method = createMethod(uids, paths1.size, perm_scores_block);
 
     uint64_t path_res[paths_res.vlen] ALIGNED;
 
@@ -221,23 +261,3 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
 
   return execute(worker, uids.size() >= prog_min_size);
 }
-
-joined_res JoinExec::format_result() const {
-
-  while(scores.size() > top_k)
-    scores.pop();
-
-  joined_res res;
-  res.permuted_scores.resize(iters_requested, 0);
-  for(int k = 0; k < iters_requested; k++)
-    res.permuted_scores[k] = perm_scores[k];
-  res.scores.clear();
-  while(!scores.empty()){
-    res.scores.push_back(scores.top());
-    scores.pop();
-  }
-  return res;
-
-}
-
-#include "impl_cpu.cxx"

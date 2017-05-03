@@ -7,8 +7,10 @@
 #include <limits>
 #include <vector>
 
-const uint64_t bit_zero_ul = 0;
-const uint64_t bit_one_ul = 1;
+// types that can hold max allowed values for various entities
+using st_path_count   = uint64_t;
+using st_uids_size    = uint32_t;
+using st_pathset_size = uint32_t;
 
 // TODO apparently aliases are now the thing?
 using vec_i   = std::vector<int>;
@@ -21,10 +23,8 @@ using vec2d_i8  = std::vector<std::vector<int8_t>>;
 using vec2d_u16 = std::vector<std::vector<uint16_t>>;
 using vec2d_u64 = std::vector<std::vector<uint64_t>>;
 
-// types that can hold max allowed values for various entities
-using st_path_count   = uint64_t;
-using st_uids_size    = uint32_t;
-using st_pathset_size = uint32_t;
+const uint64_t bit_one_ul = 1;
+const uint64_t bit_zero_ul = 0;
 
 enum class Method { method1 = 1, method2 = 2 };
 
