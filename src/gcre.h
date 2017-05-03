@@ -89,7 +89,7 @@ class JoinMethod {
 public:
 
   virtual void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) = 0;
-  // virtual void drain_scores(const JoinExec* exec) = 0;
+  virtual void merge_scores() = 0;
 
 };
 

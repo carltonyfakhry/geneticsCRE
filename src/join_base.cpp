@@ -1,7 +1,6 @@
 
 #include "gcre.h"
-
-using namespace std;
+#include "methods.h"
 
 // 'size' is the input element count, 'width' is bits needed for each element
 // returns count that fits evenly into current vector size
@@ -25,92 +24,6 @@ static inline void prog_print(mutex& g_mutex, const int prog_size, st_uids_size 
 
 // TODO uid and loc index integer sizes
 
-class JoinMethod_Base {
-
-public:
-
-  JoinMethod_Base(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) :
-
-  exec(exec),
-  uids(uids),
-  flip_pivot_len(flip_pivot_len),
-  value_table(exec->value_table),
-  value_table_max(exec->value_table_max) {
-
-    scores.push(Score());
-
-    perm_scores = p_perm_scores;
-    for(int k = 0; k < exec->iterations; k++)
-      perm_scores[k] = 0;
-
-  }
-
-  virtual void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) = 0;
-
-  // run at end of worker thread to collect results
-  void drain_scores(const JoinExec* exec) {
-
-    while(!scores.empty()) {
-      auto score = scores.top();
-      if(score.score > exec->scores.top().score)
-        exec->scores.push(score);
-      scores.pop();
-    }
-
-    for(int r = 0; r < exec->iterations; r++) {
-      if(perm_scores[r] > exec->perm_scores[r])
-        exec->perm_scores[r] = perm_scores[r];
-    }
-
-  }
-
-protected:
-
-  const JoinExec* exec;
-  const UidRelSet& uids;
-  const int flip_pivot_len;
-
-  const vec2d_d& value_table;
-  const vec2d_d& value_table_max;
-
-  priority_queue<Score> scores;
-  float* perm_scores;
-
-  void keep_score(int idx, int loc, int cases, int ctrls) {
-
-    double score = value_table[cases][ctrls];
-    if(score > scores.top().score)
-      scores.push(Score(score, idx, loc, cases, ctrls));
-    
-    double flips = value_table[ctrls][cases];
-    if(flips > scores.top().score)
-      scores.push(Score(flips, idx, loc + flip_pivot_len, cases, ctrls));
-    while(scores.size() > exec->top_k)
-      scores.pop();
-
-  }
-
-};
-
-class JoinMethod1 : public JoinMethod_Base {
-
-public:
-
-  JoinMethod1(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) : JoinMethod_Base(exec, uids, flip_pivot_len, p_perm_scores) {}
-
-  virtual void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths);
-
-};
-
-class JoinMethod2 : public JoinMethod_Base {
-
-public:
-
-  JoinMethod2(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) : JoinMethod_Base(exec, uids, flip_pivot_len, p_perm_scores) {}
-
-  virtual void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths);
-
-};
 
 JoinExec::JoinExec(string method_name, int num_cases, int num_ctrls, int iters) :
 
@@ -263,11 +176,11 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     float perm_scores_block[iters] ALIGNED;
 
     // TODO factory method
-    unique_ptr<JoinMethod_Base> method;
+    unique_ptr<JoinMethod> method;
     if(this->method == Method::method1)
-      method = unique_ptr<JoinMethod_Base>(new JoinMethod1(this, uids, paths1.size, perm_scores_block));
+      method = unique_ptr<JoinMethod>(new JoinMethod1(this, uids, paths1.size, perm_scores_block));
     else if(this->method == Method::method2)
-      method = unique_ptr<JoinMethod_Base>(new JoinMethod2(this, uids, paths1.size, perm_scores_block));
+      method = unique_ptr<JoinMethod>(new JoinMethod2(this, uids, paths1.size, perm_scores_block));
     else
       throw std::logic_error("bad method");
 
@@ -291,7 +204,6 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
           if(keep_paths)
             memset(path_res, 0, paths_res.vlen * 8);
           method->score_permute(idx, loc, path0, paths1[loc], path_res, keep_paths);
-          // m2.score_permute(idx, loc, path0, paths1[loc], path_res, keep_paths);
           if(keep_paths) {
             paths_res.set(path_idx, path_res);
             path_idx += 1;
@@ -304,7 +216,7 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
 
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
-    method->drain_scores(this);
+    method->merge_scores();
   };
 
   return execute(worker, uids.size() >= prog_min_size);
