@@ -11,19 +11,19 @@ const uint64_t bit_zero_ul = 0;
 const uint64_t bit_one_ul = 1;
 
 // TODO apparently aliases are now the thing?
-typedef std::vector<int> vec_i;
-typedef std::vector<double> vec_d;
-typedef std::vector<uint64_t> vec_u64;
+using vec_i   = std::vector<int>;
+using vec_d   = std::vector<double>;
+using vec_u64 = std::vector<uint64_t>;
 
-typedef std::vector<std::vector<double>> vec2d_d;
-typedef std::vector<std::vector<int>> vec2d_i;
-typedef std::vector<std::vector<int8_t>> vec2d_i8;
-typedef std::vector<std::vector<uint16_t>> vec2d_u16;
-typedef std::vector<std::vector<uint64_t>> vec2d_u64;
+using vec2d_d   = std::vector<std::vector<double>>;
+using vec2d_i   = std::vector<std::vector<int>>;
+using vec2d_i8  = std::vector<std::vector<int8_t>>;
+using vec2d_u16 = std::vector<std::vector<uint16_t>>;
+using vec2d_u64 = std::vector<std::vector<uint64_t>>;
 
 // types that can hold max allowed values for various entities
-using st_path_count = uint64_t;
-using st_uids_size = uint32_t;
+using st_path_count   = uint64_t;
+using st_uids_size    = uint32_t;
 using st_pathset_size = uint32_t;
 
 enum class Method { method1 = 1, method2 = 2 };
@@ -53,5 +53,25 @@ struct uid_ref {
   st_pathset_size location;
   st_path_count path_idx;
 };
+
+inline void check_true(bool condition) {
+  if(!condition)
+    throw std::logic_error("assertion");
+}
+
+inline void check_equal(size_t one, size_t two) {
+  if(one != two)
+    throw std::logic_error("assertion");
+}
+
+inline void check_index(long value, size_t size) {
+  if(value < 0 || value >= size)
+    throw std::out_of_range("assertion");
+}
+
+inline void check_range(long value, long min, long max) {
+  if(value < min || value > max)
+    throw std::out_of_range("assertion");
+}
 
 #endif

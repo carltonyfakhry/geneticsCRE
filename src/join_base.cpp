@@ -3,6 +3,15 @@
 
 using namespace std;
 
+// 'size' is the input element count, 'width' is bits needed for each element
+// returns count that fits evenly into current vector size
+static inline int pad_vector_size(int size, int width) {
+  int bits = size * width;
+  int nvec = (int) ceil(bits / (double) gs_vec_width);
+  int vlen = nvec * gs_vec_width / width;
+  return vlen;
+}
+
 constexpr int prog_min_size = 4000;
 
 static inline void prog_print(mutex& g_mutex, const int prog_size, st_uids_size idx) {
@@ -218,8 +227,7 @@ unique_ptr<PathSet> JoinExec::createPathSet(st_pathset_size size) const {
 }
 
 // TODO overload the method based on JoinMethod implementation
-// not entirely sure what dynamic dispatch will to performance-wise, so doing everything statically for now
-// JoinExec itself is very super not thread-safe
+// JoinExec is very super not thread-safe
 joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
 
   // why no .clear() C++?
@@ -254,20 +262,14 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     // or it may be a thread access thing... either way, this works
     float perm_scores_block[iters] ALIGNED;
 
-    unique_ptr<JoinMethod_Base> method;
-    //  // = unique_ptr<JoinMethod_Base>(new JoinMethod1(this, uids, paths1.size, perm_scores_block));
-
     // TODO factory method
+    unique_ptr<JoinMethod_Base> method;
     if(this->method == Method::method1)
       method = unique_ptr<JoinMethod_Base>(new JoinMethod1(this, uids, paths1.size, perm_scores_block));
     else if(this->method == Method::method2)
       method = unique_ptr<JoinMethod_Base>(new JoinMethod2(this, uids, paths1.size, perm_scores_block));
     else
       throw std::logic_error("bad method");
-
-    // auto method = createMethod(uids, paths1.size, perm_scores_block);
-
-    // JoinMethod2 m2(this, uids, paths1.size, perm_scores_block);
 
     uint64_t path_res[paths_res.vlen] ALIGNED;
 
@@ -303,7 +305,6 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     // synchronize final section to merge results
     lock_guard<mutex> lock(g_mutex);
     method->drain_scores(this);
-    // m2.drain_scores(this);
   };
 
   return execute(worker, uids.size() >= prog_min_size);
@@ -326,131 +327,5 @@ joined_res JoinExec::format_result() const {
   return res;
 
 }
-
-
-// joined_res JoinExec::join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
-
-//   atomic<st_uids_size> uid_idx(0);
-//   mutex g_mutex;
-
-//   // C++14 capture init syntax would be nice,
-//   // const auto exec = this;
-//   auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res](int tid) {
-
-//     const int iters = this->iterations;
-//     const int width_ul = this->width_ul;
-//     const bool keep_paths = paths_res.size != 0;
-
-//     // this mess actually makes a significant performance difference
-//     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
-//     // or it may be a thread access thing... either way, this works
-//     float perm_scores_block[iters] ALIGNED;
-//     JoinMethod1 method(this, uids, paths1.size, perm_scores_block);
-
-//     uint64_t path_res[width_ul] ALIGNED;
-
-//     const st_uids_size prog_size = uids.size();
-//     st_uids_size idx = -1;
-//     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
-
-//       const auto& uid = uids[idx];
-
-//       prog_print(g_mutex, prog_size, idx);
-
-//       if(uid.count > 0) {
-
-//         // start of result path block for this uid
-//         st_path_count path_idx = uid.path_idx;
-//         const uint64_t* path0 = paths0[idx];
-
-//         for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
-//           if(keep_paths)
-//             memset(path_res, 0, width_ul * 8);
-//           method.score_permute(idx, loc, path0, paths1[loc], path_res, keep_paths);
-//           if(keep_paths) {
-//             paths_res.set(path_idx, path_res);
-//             path_idx += 1;
-//           }
-//         }
-
-//       }
-
-//     }
-
-//     // synchronize final section to merge results
-//     lock_guard<mutex> lock(g_mutex);
-//     method.drain_scores(this);
-//   };
-
-//   return execute(worker, uids.size() >= prog_min_size);
-// }
-
-// // TODO check where path set sizes exceed max int
-// joined_res JoinExec::join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const {
-
-//   atomic<st_uids_size> uid_idx(0);
-//   mutex g_mutex;
-
-//   // C++14 capture init syntax would be nice,
-//   // const auto exec = this;
-//   auto worker = [this, &uid_idx, &uids, &g_mutex, &paths0, &paths1, &paths_res](int tid) {
-
-//     const int iters = this->iterations;
-//     const int width_ul = this->width_ul;
-//     const bool keep_paths = paths_res.size != 0;
-
-//     // this mess actually makes a significant performance difference
-//     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
-//     // or it may be a thread access thing... either way, this works
-//     float perm_scores_block[iters] ALIGNED;
-//     JoinMethod2 method(this, uids, paths1.size, perm_scores_block);
-
-//     uint64_t path_res[width_ul * 2] ALIGNED;
-
-//     const st_uids_size prog_size = uids.size();
-
-//     st_uids_size idx = -1;
-//     while((idx = uid_idx.fetch_add(1)) < uids.size()) {
-
-//       const auto& uid = uids[idx];
-
-//       prog_print(g_mutex, prog_size, idx);
-
-//       if(uid.count > 0) {
-
-//         // start of result path block for this uid
-//         st_path_count path_idx = uid.path_idx;
-
-//         const uint64_t* path0 = paths0[idx];
-//         // const uint64_t* path_pos0 = paths0[idx];
-//         // const uint64_t* path_neg0 = path_pos0 + width_ul;
-
-//         for(int loc_idx = 0, loc = uid.location; loc < uid.location + uid.count; loc_idx++, loc++) {
-//           // const auto do_flip = uids.need_flip(idx, loc);
-//           // const uint64_t* path_pos1 = (do_flip ? paths1[loc] : paths1[loc] + width_ul);
-//           // const uint64_t* path_neg1 = (do_flip ? paths1[loc] + width_ul : paths1[loc]);
-//           if(keep_paths)
-//             memset(path_res, 0, width_ul * 16);
-//           // method.score_permute_cpu(idx, loc, path_pos0, path_neg0, path_pos1, path_neg1, path_res, keep_paths);
-//           method.score_permute(idx, loc, path0, paths1[loc], path_res, keep_paths);
-//           if(keep_paths) {
-//             paths_res.set(path_idx, path_res);
-//             path_idx += 1;
-//           }
-//         }
-
-//       }
-
-//     }
-
-//     // synchronize final section to merge results
-//     lock_guard<mutex> lock(g_mutex);
-//     method.drain_scores(this);
-//   };
-
-//   return execute(worker, uids.size() >= prog_min_size);
-// }
-
-// .cxx extensions so that these don't get picked up by Rcpps' makefile (also that they shouldn't be compiled independently)
 
 #include "impl_cpu.cxx"
