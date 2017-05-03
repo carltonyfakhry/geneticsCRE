@@ -192,9 +192,20 @@ protected:
 
 };
 
+class JoinMethod {
+
+public:
+
+  virtual void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) = 0;
+  // virtual void drain_scores(const JoinExec* exec) = 0;
+
+};
+
+
 class JoinExec {
 
   friend class JoinMethod;
+  friend class JoinMethod_Base;
   friend class JoinMethod1;
   friend class JoinMethod2;
 
@@ -244,6 +255,8 @@ public:
 
   void setPermutedCases(const vec2d_i& perm_cases);
 
+  // unique_ptr<JoinMethod_Base> createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const;
+
   unique_ptr<PathSet> createPathSet(st_pathset_size size) const;
   
   joined_res join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
@@ -254,8 +267,8 @@ protected:
   mutable float* perm_scores;
 
   joined_res format_result() const;
-  joined_res join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
-  joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  // joined_res join_method1(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
+  // joined_res join_method2(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
   static int vector_width(int num_cases, int num_ctrls) {
     return gs_vec_width * (int) ceil((num_cases + num_ctrls) / (double) gs_vec_width);

@@ -1,5 +1,5 @@
 
-void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
+void JoinMethod1::score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
 
   // avoid de-refs like the plague
   const int iters = exec->iterations;
@@ -44,7 +44,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
 
 }
 
-void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
+void JoinMethod2::score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
 
   // avoid de-refs like the plague
   const int iters = exec->iterations;
@@ -63,9 +63,9 @@ void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
   auto joined_neg = path_res + width_ul;
 
   uint32_t perm_count_pos[iters * 2] ALIGNED;
+  memset(perm_count_pos, 0, iters * 8);
   auto perm_case_pos = perm_count_pos;
   auto perm_ctrl_pos = perm_count_pos + iters;
-  memset(perm_count_pos, 0, iters * 8);
 
   uint32_t case_pos = 0;
   uint32_t case_neg = 0;
