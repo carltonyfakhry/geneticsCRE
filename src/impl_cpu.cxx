@@ -44,7 +44,7 @@ void JoinMethod1::score_permute_cpu(int idx, int loc, const uint64_t* path0, con
 
 }
 
-void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0, const uint64_t* path_neg0, const uint64_t* path_pos1, const uint64_t* path_neg1, uint64_t* path_res, bool keep_paths) {
+void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
 
   // avoid de-refs like the plague
   const int iters = exec->iterations;
@@ -52,30 +52,29 @@ void JoinMethod2::score_permute_cpu(int idx, int loc, const uint64_t* path_pos0,
   const auto case_mask = exec->case_mask;
   const auto perm_case_mask = exec->perm_case_mask;
 
+  const auto path_pos0 = path0;
+  const auto path_neg0 = path0 + width_ul;
+
+  const auto do_flip = uids.need_flip(idx, loc);
+  const auto path_pos1 = (do_flip ? path1 : path1 + width_ul);
+  const auto path_neg1 = (do_flip ? path1 + width_ul : path1);
+
   auto joined_pos = path_res;
   auto joined_neg = path_res + width_ul;
-  uint32_t perm_case_pos[iters] ALIGNED;
-  uint32_t perm_ctrl_pos[iters] ALIGNED;
-  // memset(perm_case_pos, 0, iters * 4);
-  // memset(perm_ctrl_pos, 0, iters * 4);
 
-  int case_pos = 0;
-  int case_neg = 0;
-  int ctrl_pos = 0;
-  int ctrl_neg = 0;
-  int total_pos = 0;
-  int total_neg = 0;
+  uint32_t perm_count_pos[iters * 2] ALIGNED;
+  auto perm_case_pos = perm_count_pos;
+  auto perm_ctrl_pos = perm_count_pos + iters;
+  memset(perm_count_pos, 0, iters * 8);
+
+  uint32_t case_pos = 0;
+  uint32_t case_neg = 0;
+  uint32_t ctrl_pos = 0;
+  uint32_t ctrl_neg = 0;
+  uint32_t total_pos = 0;
+  uint32_t total_neg = 0;
 
   uint64_t bit_pos, bit_neg, bit_con, true_pos, true_neg, mask;
-
-  // zero out join path holder
-  // memset(joined_pos, 0, width_ul * sizeof(uint64_t));
-  // memset(joined_neg, 0, width_ul * sizeof(uint64_t));
-
-  for(int r = 0; r < iters; r++){
-    perm_case_pos[r] = 0;
-    perm_ctrl_pos[r] = 0;
-  }
 
   for(int k = 0; k < width_ul; k++) {
 
