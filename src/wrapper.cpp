@@ -147,6 +147,8 @@ static Rcpp::List make_score_list(const joined_res& res) {
 
   Rcpp::IntegerMatrix ids(res.scores.size(), 2);
   Rcpp::NumericVector scores(res.scores.size());
+  Rcpp::NumericVector count_cases(res.scores.size());
+  Rcpp::NumericVector count_ctrls(res.scores.size());
   Rcpp::StringVector debug_info(res.scores.size());
   for(int k = 0; k < res.scores.size(); k++){
     const auto& score = res.scores[k];
@@ -154,12 +156,20 @@ static Rcpp::List make_score_list(const joined_res& res) {
     // add 1 because it will be used as an index in R
     ids(k,0) = score.src + 1;
     ids(k,1) = score.trg + 1;
+    count_cases[k] = score.cases;
+    count_ctrls[k] = score.ctrls;
     std::ostringstream info;
     info << "[debug] " << score.src << ":" << score.trg << " " << score.cases << "/" << score.ctrls;
     debug_info(k) = info.str().c_str();
   }
 
-  return Rcpp::List::create(Rcpp::Named("scores") = scores, Rcpp::Named("ids") = ids, Rcpp::Named("TestScores") = permuted_scores, Rcpp::Named("debug") = debug_info);
+  return Rcpp::List::create(
+    Rcpp::Named("scores") = scores,
+    Rcpp::Named("ids") = ids,
+    Rcpp::Named("TestScores") = permuted_scores,
+    Rcpp::Named("cases") = count_cases,
+    Rcpp::Named("controls") = count_ctrls,
+    Rcpp::Named("debug") = debug_info);
 }
 
 // [[Rcpp::export]]

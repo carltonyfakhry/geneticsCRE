@@ -160,6 +160,8 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
   UserSymbPaths <- c()
   UserSymbSignPaths <- c()
   UserScores <- c()
+  UserCases <- c()
+  UserControls <- c()
   UserDebug <- c()
   UserLengths <- c()
   UserPvalues <- c()
@@ -252,6 +254,8 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
     }
 
     UserScores <- c(UserScores, lst$scores)
+    UserCases <- c(UserCases, lst$cases)
+    UserControls <- c(UserControls, lst$controls)
     UserDebug <- c(UserDebug, lst$debug)
     UserKpaths <- c(UserKpaths, lst_paths$path)
 
@@ -276,9 +280,9 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
 
   }
 
-  BestPaths <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserDebug, stringsAsFactors = F)
+  BestPaths <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserCases, UserControls, UserDebug, stringsAsFactors = F)
   BestPaths <- BestPaths[order(BestPaths$UserPvalues),]
-  names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "debug")
+  names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "Cases", "Controls", "debug")
   return(BestPaths)
 
 }
