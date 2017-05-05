@@ -133,7 +133,6 @@ getListEmptyPaths <- function(len_counts){
 
 }
 
-# TODO extend to support "flipped" scores
 # This function computes the values table
 getValuesTable <- function(nCases, nControls){
 
@@ -147,10 +146,12 @@ getValuesTable <- function(nCases, nControls){
 
   ## Now compute the p-values
   for (i in 0:n) {
-    i_max = max(0, (i - nControls))
-    i_min = min(i, nCases)
-    i_vector =  i_max:i_min
-    valuesTable[cbind(i_vector + 1, i - i_vector + 1)] = -log(rev(cumsum(probTable[(i_min:i_max) + 1, i + 1])))
+    i_min = max(0, (i - nControls))
+    i_max = min(i, nCases)
+    i_vector =  i_min:i_max
+    prob_dist = probTable[(i_min:i_max + 1), i+1]
+    two_sided_pvalues = sapply(prob_dist, function(x){sum(prob_dist[prob_dist <= x])})
+    valuesTable[cbind(i_vector + 1, i - i_vector + 1)] = -log(two_sided_pvalues)
   }
   valuesTable[is.infinite(valuesTable)] = max(valuesTable[is.finite(valuesTable)]) + 1;
   return(valuesTable)
