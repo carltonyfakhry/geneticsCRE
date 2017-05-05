@@ -151,7 +151,7 @@ public:
 
   TJoinMethod createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const;
 
-  unique_ptr<PathSet> createPathSet(st_pathset_size size) const;
+  TPathSet createPathSet(st_pathset_size size) const;
   
   joined_res join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 

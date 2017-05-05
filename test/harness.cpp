@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
 
   auto zero_set = exec.createPathSet(0);
 
-  unique_ptr<PathSet> paths1 = nullptr, paths2 = nullptr, paths3 = nullptr;
+  TPathSet paths1 = nullptr, paths2 = nullptr, paths3 = nullptr;
 
   Timer::print_header();
 

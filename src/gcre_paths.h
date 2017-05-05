@@ -3,6 +3,10 @@
 
 using namespace std;
 
+// TODO consolidate class forward declares
+class PathSet;
+using TPathSet = unique_ptr<PathSet>;
+
 class PathSet {
 
 public:
@@ -62,8 +66,8 @@ public:
 
   // create new path set from provided indices
   // this is only done for the initial path sets, and the index values come from R, so int instead of st_pathset_size
-  unique_ptr<PathSet> select(const vector<int>& indices) const {
-    unique_ptr<PathSet> pset(new PathSet(indices.size(), width_ul, vlen));
+  TPathSet select(const vector<int>& indices) const {
+    TPathSet pset(new PathSet(indices.size(), width_ul, vlen));
     for(int k = 0; k < pset->size; k++) {
       check_index(indices[k], size);
       memcpy(pset->block.get() + vlen * k, block.get() + vlen * indices[k], vlen * sizeof(uint64_t));

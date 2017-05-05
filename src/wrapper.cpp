@@ -205,7 +205,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
 
   auto zero_set = exec.createPathSet(0);
 
-  unique_ptr<PathSet> paths1 = nullptr, paths2 = nullptr, paths3 = nullptr;
+  TPathSet paths1 = nullptr, paths2 = nullptr, paths3 = nullptr;
 
   auto results = Rcpp::List::create(Rcpp::Named("lst1"), Rcpp::Named("lst2"), Rcpp::Named("lst3"), Rcpp::Named("lst4"), Rcpp::Named("lst5"));
 

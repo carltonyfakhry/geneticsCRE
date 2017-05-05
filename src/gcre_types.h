@@ -18,10 +18,11 @@ using vec_d   = std::vector<double>;
 using vec_u64 = std::vector<uint64_t>;
 
 using vec2d_d   = std::vector<std::vector<double>>;
+using vec2d_f   = std::vector<std::vector<float>>;
 using vec2d_i   = std::vector<std::vector<int>>;
-using vec2d_i8  = std::vector<std::vector<int8_t>>;
-using vec2d_u16 = std::vector<std::vector<uint16_t>>;
 using vec2d_u64 = std::vector<std::vector<uint64_t>>;
+using vec2d_u16 = std::vector<std::vector<uint16_t>>;
+using vec2d_i8  = std::vector<std::vector<int8_t>>;
 
 const uint64_t bit_one_ul = 1;
 const uint64_t bit_zero_ul = 0;

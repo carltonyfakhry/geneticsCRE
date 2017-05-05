@@ -124,11 +124,11 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
 }
 
 // create instance of join implementation based on specified method type
-unique_ptr<JoinMethod> JoinExec::createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const {
+TJoinMethod JoinExec::createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const {
   if(method == Method::method1)
-    return unique_ptr<JoinMethod>(new JoinMethod1(this, uids, p_perm_scores));
+    return TJoinMethod(new JoinMethod1(this, uids, p_perm_scores));
   if(method == Method::method2)
-    return unique_ptr<JoinMethod>(new JoinMethod2(this, uids, flip_pivot_len, p_perm_scores));
+    return TJoinMethod(new JoinMethod2(this, uids, flip_pivot_len, p_perm_scores));
   throw std::logic_error("bad method");
 }
 
@@ -151,10 +151,10 @@ joined_res JoinExec::format_result() const {
 }
 
 // TODO width based on method needs
-unique_ptr<PathSet> JoinExec::createPathSet(st_pathset_size size) const {
+TPathSet JoinExec::createPathSet(st_pathset_size size) const {
   // std::make_unique is C++14
   // also the vlen size parameter is a ridiculous hack
-  return unique_ptr<PathSet>(new PathSet(size, width_ul, width_ul * (int) method));
+  return TPathSet(new PathSet(size, width_ul, width_ul * (int) method));
 }
 
 template<typename Worker>
@@ -215,7 +215,7 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
     float perm_scores_block[iters] ALIGNED;
-    unique_ptr<JoinMethod> method = createMethod(uids, paths1.size, perm_scores_block);
+    TJoinMethod method = createMethod(uids, paths1.size, perm_scores_block);
 
     uint64_t path_res[paths_res.vlen] ALIGNED;
 
