@@ -76,14 +76,6 @@ void JoinExec::setValueTable(const vec2d_d& table){
     }
   }
 
-  // precompute max, including flipped indices
-  value_table_max = value_table;
-  for(int r = 0; r < value_table.size(); r++) {
-    for(int c = 0; c < value_table[r].size(); c++) {
-      value_table_max[r][c] = max(value_table[r][c], value_table[c][r]);
-    }
-  }
-
 }
 
 // data comes in as perm x patient: 0=flipped, 1=unflipped
@@ -131,9 +123,10 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
 
 }
 
+// create instance of join implementation based on specified method type
 unique_ptr<JoinMethod> JoinExec::createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const {
   if(method == Method::method1)
-    return unique_ptr<JoinMethod>(new JoinMethod1(this, uids, flip_pivot_len, p_perm_scores));
+    return unique_ptr<JoinMethod>(new JoinMethod1(this, uids, p_perm_scores));
   if(method == Method::method2)
     return unique_ptr<JoinMethod>(new JoinMethod2(this, uids, flip_pivot_len, p_perm_scores));
   throw std::logic_error("bad method");

@@ -5,13 +5,11 @@ class JoinMethod_Base : public JoinMethod {
 
 public:
 
-  JoinMethod_Base(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) :
+  JoinMethod_Base(const JoinExec* exec, const UidRelSet& uids, float* p_perm_scores) :
 
   exec(exec),
   uids(uids),
-  flip_pivot_len(flip_pivot_len),
-  value_table(exec->value_table),
-  value_table_max(exec->value_table_max) {
+  value_table(exec->value_table) {
 
     scores.push(Score());
 
@@ -44,27 +42,10 @@ protected:
 
   const JoinExec* exec;
   const UidRelSet& uids;
-  const int flip_pivot_len;
-
   const vec2d_d& value_table;
-  const vec2d_d& value_table_max;
 
   priority_queue<Score> scores;
   float* perm_scores;
-
-  void keep_score(int idx, int loc, int cases, int ctrls) {
-
-    double score = value_table[cases][ctrls];
-    if(score > scores.top().score)
-      scores.push(Score(score, idx, loc, cases, ctrls));
-    
-    double flips = value_table[ctrls][cases];
-    if(flips > scores.top().score)
-      scores.push(Score(flips, idx, loc + flip_pivot_len, cases, ctrls));
-    while(scores.size() > exec->top_k)
-      scores.pop();
-
-  }
 
 };
 
@@ -72,10 +53,11 @@ class JoinMethod1 : public JoinMethod_Base {
 
 public:
 
-  JoinMethod1(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) : JoinMethod_Base(exec, uids, flip_pivot_len, p_perm_scores) {}
+  JoinMethod1(const JoinExec* exec, const UidRelSet& uids, float* p_perm_scores) : JoinMethod_Base(exec, uids, p_perm_scores) {}
 
   void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
 
+    const int top_k = exec->top_k;
     const int iters = exec->iterations;
     const int width_ul = exec->width_ul;
     const auto case_mask = exec->case_mask;
@@ -105,13 +87,17 @@ public:
 
     }
 
-    keep_score(idx, loc, cases, ctrls);
+    double score = value_table[cases][ctrls];
+    if(score > scores.top().score)
+      scores.push(Score(score, idx, loc, cases, ctrls));
+    while(scores.size() > top_k)
+      scores.pop();
 
     int total = cases + ctrls;
     auto perm_scores = this->perm_scores;
     for(int r = 0; r < iters; r++){
       auto p_cases = perm_cases[r];
-      auto p_score = value_table_max[p_cases][total - p_cases];
+      auto p_score = value_table[p_cases][total - p_cases];
       if(p_score > perm_scores[r])
         perm_scores[r] = p_score;
     }
@@ -120,11 +106,25 @@ public:
 
 };
 
+// precompute max, including flipped indices
+static vec2d_d compute_value_table_max(const vec2d_d& value_table) {
+  auto value_table_max = value_table;
+  for(int r = 0; r < value_table.size(); r++) {
+    for(int c = 0; c < value_table[r].size(); c++) {
+      value_table_max[r][c] = max(value_table[r][c], value_table[c][r]);
+    }
+  }
+  return value_table_max;
+}
+
 class JoinMethod2 : public JoinMethod_Base {
 
 public:
 
-  JoinMethod2(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) : JoinMethod_Base(exec, uids, flip_pivot_len, p_perm_scores) {}
+  JoinMethod2(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) :
+  JoinMethod_Base(exec, uids, p_perm_scores),
+  flip_pivot_len(flip_pivot_len),
+  value_table_max(compute_value_table_max(exec->value_table)) {}
 
   void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
 
@@ -212,6 +212,25 @@ public:
       if(p_score > perm_scores[r])
         perm_scores[r] = p_score;
     }
+
+  }
+
+protected:
+
+  const int flip_pivot_len;
+  const vec2d_d value_table_max;
+
+  void keep_score(int idx, int loc, int cases, int ctrls) {
+
+    double score = value_table[cases][ctrls];
+    if(score > scores.top().score)
+      scores.push(Score(score, idx, loc, cases, ctrls));
+    
+    double flips = value_table[ctrls][cases];
+    if(flips > scores.top().score)
+      scores.push(Score(flips, idx, loc + flip_pivot_len, cases, ctrls));
+    while(scores.size() > exec->top_k)
+      scores.pop();
 
   }
 

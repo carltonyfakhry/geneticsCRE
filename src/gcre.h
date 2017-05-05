@@ -163,7 +163,6 @@ protected:
   joined_res format_result() const;
 
   vec2d_d value_table;
-  vec2d_d value_table_max;
   uint64_t* case_mask = nullptr;
   uint64_t* perm_case_mask = nullptr;
 
