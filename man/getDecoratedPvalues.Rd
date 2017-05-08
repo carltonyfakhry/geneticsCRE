@@ -42,12 +42,18 @@ This function returns a list with the following items:
         \item{SignedPaths}{The top K signed paths for each length.}
         \item{Paths}{The top K paths for each length.}
         \item{Subpaths1}{The first subpath.}
+        \item{Subpaths1_cases}{The number of cases for Subpaths1.}
+        \item{Subpaths1_controls}{The number of controls for Subpaths1.}
         \item{Subpaths2}{The second subpath.}
+        \item{Subpaths2_cases}{The number of cases for Subpaths2.}
+        \item{Subpaths2_controls}{The number of controls for Subpaths2.}
         \item{Direction}{Direction of splitting along the path.}
         \item{Lengths}{The lengths of each path.}
         \item{Scores}{The scores of each path.}
         \item{Pvalues}{The p-values of each path.}
         \item{DecoratedPvalues}{The decorated p-values for the second subpath.}
+        \item{Total_Cases}{The total number of cases for each path.}
+        \item{Total_Controls}{The total number of controls for each path.}
 }
 \description{
 This function computes the decorated p-values for each path.

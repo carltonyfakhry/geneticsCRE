@@ -48,6 +48,8 @@
 #'         \item{Lengths}{The lengths of each path.}
 #'         \item{Scores}{The scores of each path.}
 #'         \item{Pvalues}{The p-values of each path.}
+#'         \item{Cases}{The number of cases for each path.}
+#'         \item{Controls}{The number of controls for each path.}
 #'
 #' @author Carl Tony Fakhry
 #'
@@ -264,9 +266,9 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
     }else{
       UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents, lst_paths$path))
     }
-    
+
     UserKsignpaths <- c(UserKsignpaths, lst$signpath)
-    
+
     if(path_length == 1){
       UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents2, lst_paths$signpath))
     }else{

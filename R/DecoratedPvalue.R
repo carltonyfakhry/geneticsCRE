@@ -31,12 +31,18 @@
 #'         \item{SignedPaths}{The top K signed paths for each length.}
 #'         \item{Paths}{The top K paths for each length.}
 #'         \item{Subpaths1}{The first subpath.}
+#'         \item{Subpaths1_cases}{The number of cases for Subpaths1.}
+#'         \item{Subpaths1_controls}{The number of controls for Subpaths1.}
 #'         \item{Subpaths2}{The second subpath.}
+#'         \item{Subpaths2_cases}{The number of cases for Subpaths2.}
+#'         \item{Subpaths2_controls}{The number of controls for Subpaths2.}
 #'         \item{Direction}{Direction of splitting along the path.}
 #'         \item{Lengths}{The lengths of each path.}
 #'         \item{Scores}{The scores of each path.}
 #'         \item{Pvalues}{The p-values of each path.}
 #'         \item{DecoratedPvalues}{The decorated p-values for the second subpath.}
+#'         \item{Total_Cases}{The total number of cases for each path.}
+#'         \item{Total_Controls}{The total number of controls for each path.}
 #'
 #' @author Carl Tony Fakhry
 #'
@@ -81,19 +87,26 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
   print("Computing Decorated Pvalues...")
 
   DecoratedBestPaths <- data.frame(SignedPaths = character(0), Paths = character(0), Subpaths1 = character(0),
-                                   Subpaths2 = character(0), Direction = integer(0), Lengths = integer(0), Scores = numeric(0),
-                                   Pvalues = numeric(0), DecoratedPvalues = numeric(0))
+                                   Subpaths1_cases = integer(0), Subpaths_controls = integer(0),
+                                   Subpaths2 = character(0), Subpaths1_cases = integer(0), Subpaths_controls = integer(0),
+                                   Direction = integer(0), Lengths = integer(0), Scores = numeric(0),
+                                   Pvalues = numeric(0), DecoratedPvalues = numeric(0),
+                                   Total_Cases = integer(0), Total_Controls = integer(0))
   total_paths <- 1
 
   # Handle paths of length 1
   bestpaths <- BestPaths[BestPaths$Lengths == 1,]
   for(i in 1:nrow(bestpaths)){
     DecoratedBestPaths <- rbind(DecoratedBestPaths, rep(0,ncol(DecoratedBestPaths)))
-    DecoratedBestPaths[total_paths,c(1,2,6,7,8)] = bestpaths[i,]
-    DecoratedBestPaths[total_paths,9] <- bestpaths$Pvalues[i]
-    DecoratedBestPaths[total_paths,5] <- ""
+    DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,]
+    DecoratedBestPaths[total_paths,13] <- bestpaths$Pvalues[i]
+    DecoratedBestPaths[total_paths,9] <- ""  # Direction
+    DecoratedBestPaths[total_paths,8] <- 0
+    DecoratedBestPaths[total_paths,7] <- 0
+    DecoratedBestPaths[total_paths,6] <- ""
+    DecoratedBestPaths[total_paths,5] <- bestpaths$Controls[i]
+    DecoratedBestPaths[total_paths,4] <- bestpaths$Cases[i]
     DecoratedBestPaths[total_paths,3] <- bestpaths$Paths[i]
-    DecoratedBestPaths[total_paths,4] <- ""
     total_paths <- total_paths + 1
   }
 
@@ -128,38 +141,47 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
       # Compute the p-values for the different splitted paths
       for(j in 1:(path_len-1)){
         DecoratedBestPaths <- rbind(DecoratedBestPaths, rep(0,ncol(DecoratedBestPaths)))
-        DecoratedBestPaths[total_paths,c(1,2,6,7,8)] = bestpaths[i,]
+
+        DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,]
         subpath_pos1 <- colSums(path_data_pos[1:j,,drop=FALSE])
         subpath_pos1[subpath_pos1 != 0] <- 1
         subpath_neg1 <- colSums(path_data_neg[1:j,,drop=FALSE])
         subpath_neg1[subpath_neg1 != 0] <- 1
         subpath_pos2 <- path_data_pos[j+1,]
         subpath_neg2 <- path_data_neg[j+1,]
-        decorated_pvalue <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
+        lst <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
                                                                  path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
-        DecoratedBestPaths[total_paths,9] <- decorated_pvalue
-        DecoratedBestPaths[total_paths,5] <- "Forward"
+        DecoratedBestPaths[total_paths,13] <- lst$decorated_pvalue
+        DecoratedBestPaths[total_paths,9] <- "Forward"  # Direction
+        DecoratedBestPaths[total_paths,8] <- lst$controls2
+        DecoratedBestPaths[total_paths,7] <- lst$cases2
+        DecoratedBestPaths[total_paths,6] <- paste(genes[j+1])
+        DecoratedBestPaths[total_paths,5] <- lst$controls1
+        DecoratedBestPaths[total_paths,4] <- lst$cases1
         DecoratedBestPaths[total_paths,3] <- paste(genes[1:j], collapse = " -> ")
-        DecoratedBestPaths[total_paths,4] <- paste(genes[j+1])
         total_paths <- total_paths + 1
       }
 
       # Compute the p-values for the different splitted paths going in the opposite directions
       for(j in path_len:2){
         DecoratedBestPaths <- rbind(DecoratedBestPaths, rep(0,ncol(DecoratedBestPaths)))
-        DecoratedBestPaths[total_paths,c(1,2,6,7,8)] = bestpaths[i,]
+        DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,]
         subpath_pos1 <- colSums(path_data_pos[path_len:j,,drop=FALSE])
         subpath_pos1[subpath_pos1 != 0] <- 1
         subpath_neg1 <- colSums(path_data_neg[path_len:j,,drop=FALSE])
         subpath_neg1[subpath_neg1 != 0] <- 1
         subpath_pos2 <- path_data_pos[j-1,]
         subpath_neg2 <- path_data_neg[j-1,]
-        decorated_pvalue <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
+        lst <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
                                                                  path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
-        DecoratedBestPaths[total_paths,9] <- decorated_pvalue
-        DecoratedBestPaths[total_paths,5] <- "Backward"
+        DecoratedBestPaths[total_paths,13] <- lst$decorated_pvalue
+        DecoratedBestPaths[total_paths,9] <- "Forward"  # Direction
+        DecoratedBestPaths[total_paths,8] <- lst$controls2
+        DecoratedBestPaths[total_paths,7] <- lst$cases2
+        DecoratedBestPaths[total_paths,6] <- paste(genes[j-1])
+        DecoratedBestPaths[total_paths,5] <- lst$controls1
+        DecoratedBestPaths[total_paths,4] <- lst$cases1
         DecoratedBestPaths[total_paths,3] <- paste(genes[path_len:j], collapse = " -> ")
-        DecoratedBestPaths[total_paths,4] <- paste(genes[j-1])
         total_paths <- total_paths + 1
       }
 
@@ -167,8 +189,9 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
 
   }
 
-  names(DecoratedBestPaths) = c("SignedPaths", "Paths", "Subpaths1", "Subpaths2", "Direction", "Lengths", "Scores",
-                                "Pvalues", "DecoratedPvalues")
+  names(DecoratedBestPaths) = c("SignedPaths", "Paths", "Subpaths1", "Subpaths1_Cases", "Subpaths1_Controls", "Subpaths2",
+                                "Subpaths2_Cases", "Subpaths2_Controls", "Direction", "Lengths", "Scores",
+                                "Pvalues", "DecoratedPvalues", "Total_Cases", "Total_Controls")
   return(DecoratedBestPaths)
 
 }
@@ -202,10 +225,14 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
 
   ncol_data <- nCases + nControls
   stratagroup_numbers <- list()
+  strata_inds_pos <- list()
+  strata_inds_neg <- list()
   if(length(strataF) == 1 & !is.na(strataF)){
     inds_1 <- unique(c(inds_pos1, inds_neg1))
     for(i in stratagroups){
       stratagroup_numbers[[toString(i)]] <- setdiff(which(stratanumbers == i), inds_1)
+      strata_inds_pos[[toString(i)]] <- inds_pos2[which(inds_pos2 %in% stratagroup_numbers[[toString(i)]])]
+      strata_inds_neg[[toString(i)]] <- inds_neg2[which(inds_neg2 %in% stratagroup_numbers[[toString(i)]])]
     }
   }
 
@@ -215,10 +242,20 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
     sample_inds_pos <- NA
     sample_inds_neg <- NA
     stratagroup_numbers2 <- stratagroup_numbers
+    strata_inds_pos2 <- strata_inds_pos
+    strata_inds_neg2 <- strata_inds_neg
     if(length(strataF) == 1 & !is.na(strataF)){
-      sample_inds_pos <- unlist(lapply(stratagroup_numbers2, function(x){sample(x, length(inds_pos2), replace = F)}, inds_pos2))
-      stratagroup_numbers2 <- lapply(stratagroup_numbers2, function(x){setdiff(x,inds_pos2)})
-      sample_inds_neg <- unlist(lapply(stratagroup_numbers2, function(x){sample(x, length(inds_neg2), replace = F)}, inds_neg2))
+      sample_inds_pos <- c()
+      sample_inds_neg <- c()
+      for(i in stratagroups){
+        stratagroup <- stratagroup_numbers2[[toString(i)]]
+        strata_group_pos <- strata_inds_pos2[[toString(i)]]
+        sample_group <- sample(stratagroup, length(strata_group_pos), replace = F)
+        sample_inds_pos <- c(sample_inds_pos, sample_group)
+        stratagroup <- setdiff(stratagroup, sample_group)
+        strata_group_neg <- strata_inds_neg2[[toString(i)]]
+        sample_inds_neg <- c(sample_inds_neg, sample(stratagroup, length(strata_group_neg), replace = F))
+      }
     }else{
       sample_inds_pos <- sample(toSample_pos, length(inds_pos2), replace = F)
       sample_inds_neg <- sample(toSample_neg, length(inds_neg2), replace = F)
@@ -234,6 +271,12 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
 
   pvalue <- length(which(scores >= score))/length(scores)
 
-  return(pvalue)
+  lst <- list()
+  lst[["cases1"]] <- cases1
+  lst[["cases2"]] <- cases2
+  lst[["controls1"]] <- controls1
+  lst[["controls2"]] <- controls2
+  lst[["decorated_pvalue"]] <- pvalue
+  return(lst)
 
 }
