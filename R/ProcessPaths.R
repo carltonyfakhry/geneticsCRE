@@ -48,6 +48,8 @@
 #'         \item{Lengths}{The lengths of each path.}
 #'         \item{Scores}{The scores of each path.}
 #'         \item{Pvalues}{The p-values of each path.}
+#'         \item{Cases}{The number of cases for each path.}
+#'         \item{Controls}{The number of controls for each path.}
 #'
 #' @author Carl Tony Fakhry
 #'
@@ -260,9 +262,9 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
     }else{
       UserSymbPaths <- c(UserSymbPaths, geneticsCRE:::Uid2Symbol(Ents, lst_paths$path))
     }
-    
+
     UserKsignpaths <- c(UserKsignpaths, lst$signpath)
-    
+
     if(path_length == 1){
       UserSymbSignPaths <- c(UserSymbSignPaths, geneticsCRE:::SignUid2SignSymbol(Ents2, lst_paths$signpath))
     }else{
@@ -278,7 +280,13 @@ GetBestPaths <- function(dataset, nCases, nControls, method = 'method1', thresho
 
   BestPaths <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserDebug, stringsAsFactors = F)
   BestPaths <- BestPaths[order(BestPaths$UserPvalues),]
-  names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "debug")
+  Case_Control_Info <- sapply(strsplit(BestPaths$UserDebug, split = " "), function(x){return(x[[3]])})
+  Cases <- sapply(strsplit(Case_Control_Info, split = "/"), function(x){return(as.integer(x[[1]]))})
+  Controls <- sapply(strsplit(Case_Control_Info, split = "/"), function(x){return(as.integer(x[[2]]))})
+  BestPaths$UserDebug <- NULL
+  BestPaths$Cases <- Cases
+  BestPaths$Controls <- Controls
+  names(BestPaths) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "Cases", "Controls")
   return(BestPaths)
 
 }

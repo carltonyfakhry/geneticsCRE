@@ -62,6 +62,8 @@ This function returns a list with the following items:
         \item{Lengths}{The lengths of each path.}
         \item{Scores}{The scores of each path.}
         \item{Pvalues}{The p-values of each path.}
+        \item{Cases}{The number of cases for each path.}
+        \item{Controls}{The number of controls for each path.}
 }
 \description{
 This function runs the causal engine for a given phenotype dataset.
