@@ -19,6 +19,8 @@
 #' @param nControls The number of controls (Must be greater than 1).
 #' @param method The method to be invoked. The value 1 calls the unsigned method
 #'               while the value 2 calls the signed method.
+#' @param threshold_percent All genes which occur in less than emph{threshold_percent}
+#'                          of patients are kept for processing.
 #' @param n_permutations The number of permutations to be used in computing the
 #'                   p-values. The default value is 100.
 #' @param strataF Filename for the strata file. \emph{strataF} must be a file
@@ -51,7 +53,7 @@
 #'             Epub 2012 Nov 29'.
 #'
 #'@export
-getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControls, method, n_permutations = 100, strataF = NA){
+getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControls, method, threshold_percent, n_permutations = 100, strataF = NA){
 
   # Precompute values table
   print("Computing Values Table...")
@@ -61,7 +63,6 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
   # than threshold_percent of patients will be removed from the
   # dataset, also genes which do not occur in any patients will be removed
   print("Preprocessing Phenotype dataset...")
-  threshold_percent <- 1
   dataset <- geneticsCRE:::PreprocessTable(dataset, threshold_percent, nCases, nControls)
   genes <- dataset$genes
   data <- dataset$data
@@ -98,7 +99,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
   bestpaths <- BestPaths[BestPaths$Lengths == 1,]
   for(i in 1:nrow(bestpaths)){
     DecoratedBestPaths <- rbind(DecoratedBestPaths, rep(0,ncol(DecoratedBestPaths)))
-    DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,]
+    DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,-ncol(bestpaths)]
     DecoratedBestPaths[total_paths,13] <- bestpaths$Pvalues[i]
     DecoratedBestPaths[total_paths,9] <- ""  # Direction
     DecoratedBestPaths[total_paths,8] <- 0
@@ -142,7 +143,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
       for(j in 1:(path_len-1)){
         DecoratedBestPaths <- rbind(DecoratedBestPaths, rep(0,ncol(DecoratedBestPaths)))
 
-        DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,]
+        DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,-ncol(bestpaths)]
         subpath_pos1 <- colSums(path_data_pos[1:j,,drop=FALSE])
         subpath_pos1[subpath_pos1 != 0] <- 1
         subpath_neg1 <- colSums(path_data_neg[1:j,,drop=FALSE])
@@ -165,7 +166,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
       # Compute the p-values for the different splitted paths going in the opposite directions
       for(j in path_len:2){
         DecoratedBestPaths <- rbind(DecoratedBestPaths, rep(0,ncol(DecoratedBestPaths)))
-        DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,]
+        DecoratedBestPaths[total_paths,c(1,2,10,11,12,14,15)] = bestpaths[i,-ncol(bestpaths)]
         subpath_pos1 <- colSums(path_data_pos[path_len:j,,drop=FALSE])
         subpath_pos1[subpath_pos1 != 0] <- 1
         subpath_neg1 <- colSums(path_data_neg[path_len:j,,drop=FALSE])
@@ -213,11 +214,24 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
   inds_neg2 <- setdiff(inds_neg2, inds_neg1)
 
   # compute the score of the path
-  cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[(nCases+1):(nCases+nControls)])
-  controls1 <- sum(subpath_pos1[(nCases+1):(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
-  cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[(nCases+1):(nCases+nControls)])
-  controls2 <- sum(subpath_pos2[(nCases+1):(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
-  score <- ifelse(flipped & method == 1, ValueTable[(controls1+controls2+1),(cases1+cases2+1)], ValueTable[(cases1+cases2+1),(controls1+controls2+1)])
+  # cases1 <- sum(subpath_pos1[1:nCases]) + sum(subpath_neg1[(nCases+1):(nCases+nControls)])
+  # controls1 <- sum(subpath_pos1[(nCases+1):(nCases+nControls)]) + sum(subpath_neg1[1:nCases])
+  # cases2 <- sum(subpath_pos2[1:nCases]) + sum(subpath_neg2[(nCases+1):(nCases+nControls)])
+  # controls2 <- sum(subpath_pos2[(nCases+1):(nCases+nControls)]) + sum(subpath_neg2[1:nCases])
+  # score <- ifelse(flipped & method == 1, ValueTable[(controls1+controls2+1),(cases1+cases2+1)], ValueTable[(cases1+cases2+1),(controls1+controls2+1)])
+  case_pos1 <- sum(subpath_pos1[1:nCases])
+  case_neg1 <- sum(subpath_neg1[(nCases+1):(nCases+nControls)])
+  control_pos1 <- sum(subpath_pos1[(nCases+1):(nCases+nControls)])
+  control_neg1 <- sum(subpath_neg1[1:nCases])
+  case_pos2 <- sum(subpath_pos2[1:nCases])
+  case_neg2 <- sum(subpath_neg2[(nCases+1):(nCases+nControls)])
+  control_pos2 <-sum(subpath_pos2[(nCases+1):(nCases+nControls)])
+  control_neg2 <- sum(subpath_neg2[1:nCases])
+  if(method == 1){
+    score <- ValueTable[(case_pos1+case_pos2+case_neg1+case_neg2+1),(control_pos1+control_pos2+control_neg1+control_neg2+1)]
+  }else if(method == 2){
+    score <- ValueTable[(case_pos1+case_pos2+1),(control_pos1+control_pos2+1)] + ValueTable[(case_neg1+case_neg2+1),(control_neg1+control_neg2+1)]
+  }
   scores <- c()
 
   toSample_pos <- setdiff(1:length(subpath_pos1), inds_pos1)
@@ -260,11 +274,20 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
       sample_inds_pos <- sample(toSample_pos, length(inds_pos2), replace = F)
       sample_inds_neg <- sample(toSample_neg, length(inds_neg2), replace = F)
     }
-    cases_pos <- length(which(sample_inds_pos <= nCases))
-    cases_neg <- length(which(sample_inds_neg > nCases))
-    perm_cases <- cases_pos + cases_neg
-    perm_controls <- (length(sample_inds_pos) - cases_pos) + (length(sample_inds_neg) - cases_neg)
-    perm_score <- ifelse(flipped & method == 1, ValueTable[(controls1+perm_controls+1),(cases1+perm_cases+1)], ValueTable[(cases1+perm_cases+1),(controls1+perm_controls+1)])
+    # cases_pos <- length(which(sample_inds_pos <= nCases))
+    # cases_neg <- length(which(sample_inds_neg > nCases))
+    # perm_cases <- cases_pos + cases_neg
+    # perm_controls <- (length(sample_inds_pos) - cases_pos) + (length(sample_inds_neg) - cases_neg)
+    # perm_score <- ifelse(flipped & method == 1, ValueTable[(controls1+perm_controls+1),(cases1+perm_cases+1)], ValueTable[(cases1+perm_cases+1),(controls1+perm_controls+1)])
+    perm_case_pos <- length(which(sample_inds_pos <= nCases))
+    perm_case_neg <- length(which(sample_inds_neg > nCases))
+    perm_control_pos <- length(sample_inds_pos) - perm_case_pos
+    perm_control_neg <- length(sample_inds_neg) - perm_case_neg
+    if(method == 1){
+      perm_score <- ValueTable[(case_pos1+perm_case_pos+case_neg1+perm_case_neg+1),(control_pos1+perm_control_pos+control_neg1+perm_control_neg+1)]
+    }else if(method == 2){
+      perm_score <- ValueTable[(case_pos1+perm_case_pos+1),(control_pos1+perm_control_pos+1)] + ValueTable[(case_neg1+perm_case_neg+1),(control_neg1+perm_control_neg+1)]
+    }
     scores <- c(scores, perm_score)
 
   }
@@ -272,10 +295,14 @@ computeDecoratedPvalue <- function(subpath_pos1, subpath_neg1, subpath_pos2, sub
   pvalue <- length(which(scores >= score))/length(scores)
 
   lst <- list()
-  lst[["cases1"]] <- cases1
-  lst[["cases2"]] <- cases2
-  lst[["controls1"]] <- controls1
-  lst[["controls2"]] <- controls2
+  # lst[["cases1"]] <- cases1
+  # lst[["cases2"]] <- cases2
+  # lst[["controls1"]] <- controls1
+  # lst[["controls2"]] <- controls2
+  lst[["cases1"]] <- case_pos1 + case_neg1
+  lst[["cases2"]] <- case_pos2 + case_neg2
+  lst[["controls1"]] <- control_pos1 + control_neg1
+  lst[["controls2"]] <- control_pos2 + control_neg2
   lst[["decorated_pvalue"]] <- pvalue
   return(lst)
 

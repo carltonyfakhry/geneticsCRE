@@ -55,9 +55,9 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
 
       inds_pos1 <- which(subpath_pos1 != 0)
       inds_neg1 <- which(subpath_neg1 != 0)
-      intersect_inds <- intersect(inds_pos1, inds_neg1)
-      inds_pos1 <- setdiff(inds_pos1, intersect_inds)
-      inds_neg1 <- setdiff(inds_neg1, intersect_inds)
+      # intersect_inds <- intersect(inds_pos1, inds_neg1)
+      # inds_pos1 <- setdiff(inds_pos1, intersect_inds)
+      # inds_neg1 <- setdiff(inds_neg1, intersect_inds)
 
       # compute the score of the path
       cases_pos <- length(which(inds_pos1 <= nCases))
@@ -66,13 +66,18 @@ checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, me
       controls_neg <- length(inds_neg1) - cases_neg
       cases <- cases_pos + cases_neg
       controls <- controls_pos + controls_neg
-      score <- ifelse(flipped & method == 1, ValueTable[(controls+1),(cases+1)], ValueTable[(cases+1),(controls+1)])
+      # score <- ifelse(flipped & method == 1, ValueTable[(controls+1),(cases+1)], ValueTable[(cases+1),(controls+1)])
+      if(method == 1){
+        score <- ValueTable[(cases+1),(controls+1)]
+      }else if(method == 2){
+        score <- ValueTable[(cases_pos+1),(controls_pos+1)] + ValueTable[(cases_neg+1),(controls_neg+1)]
+      }
 
       # Check for score equality
       if(score != bestpaths$Scores[i]){
         passed <- FALSE
         print(sprintf("bad score for: '%s'", bestpaths[i,1]))
-        print(sprintf("cases: %d, ctrls: %d, check score: %f", cases1, controls1, score))
+        print(sprintf("cases: %d, ctrls: %d, check score: %f", cases, controls, score))
         print(bestpaths[i,])
       }
 
