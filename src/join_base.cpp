@@ -116,7 +116,7 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
     printf("  ** WARN not enough permuted cases, some will be reused to match iterations - hope this is for testing!\n");
     for(int r = data.size(); r < iters_requested; r++) {
       int c = r % data.size();
-      for(int k = 0; k < width_ul; k++) 
+      for(int k = 0; k < width_ul; k++)
         perm_case_mask[k * iterations + r] = perm_case_mask[k * iterations + c];
     }
   }
@@ -124,11 +124,13 @@ void JoinExec::setPermutedCases(const vec2d_i& data) {
 }
 
 // create instance of join implementation based on specified method type
-TJoinMethod JoinExec::createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const {
+// TJoinMethod JoinExec::createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const {
+TJoinMethod JoinExec::createMethod(const UidRelSet& uids, float* p_perm_scores) const {
   if(method == Method::method1)
     return TJoinMethod(new JoinMethod1(this, uids, p_perm_scores));
   if(method == Method::method2)
-    return TJoinMethod(new JoinMethod2(this, uids, flip_pivot_len, p_perm_scores));
+    return TJoinMethod(new JoinMethod2(this, uids, p_perm_scores));
+    // return TJoinMethod(new JoinMethod2(this, uids, flip_pivot_len, p_perm_scores));
   throw std::logic_error("bad method");
 }
 
@@ -215,7 +217,8 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     // don't know if there is a different way to stack-allocate a dynamic array in an instance field
     // or it may be a thread access thing... either way, this works
     float perm_scores_block[iters] ALIGNED;
-    TJoinMethod method = createMethod(uids, paths1.size, perm_scores_block);
+    // TJoinMethod method = createMethod(uids, paths1.size, perm_scores_block);
+    TJoinMethod method = createMethod(uids, perm_scores_block);
 
     uint64_t path_res[paths_res.vlen] ALIGNED;
 

@@ -1,6 +1,6 @@
 #' This function checks the results returned by GetBestPaths
 #' @export
-checkBestPaths <- function(dataset, BestPaths, pathLength, nCases, nControls, method){
+checkBestPaths <- function(dataset, BestPaths, pathLength, threshold_percent, nCases, nControls, method){
 
   # Precompute values table
   print("Computing Values Table...")

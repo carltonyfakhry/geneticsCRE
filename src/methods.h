@@ -121,9 +121,10 @@ class JoinMethod2 : public JoinMethod_Base {
 
 public:
 
-  JoinMethod2(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) :
+  // JoinMethod2(const JoinExec* exec, const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) :
+  JoinMethod2(const JoinExec* exec, const UidRelSet& uids, float* p_perm_scores) :
   JoinMethod_Base(exec, uids, p_perm_scores),
-  flip_pivot_len(flip_pivot_len),
+  // flip_pivot_len(flip_pivot_len),
   value_table_max(compute_value_table_max(exec->value_table)) {}
 
   void score_permute(int idx, int loc, const uint64_t* path0, const uint64_t* path1, uint64_t* path_res, bool keep_paths) {
@@ -193,6 +194,7 @@ public:
         }
 
         // if(true_neg != 0) {
+        if(bit_neg != 0){
           const uint64_t* p_mask = perm_case_mask + k * iters;
           for(int r = 0; r < iters; r++){
             // perm_ctrl_pos[r] += __builtin_popcountl(true_neg & p_mask[r]);
@@ -231,7 +233,7 @@ public:
 
 protected:
 
-  const int flip_pivot_len;
+  // const int flip_pivot_len;
   const vec2d_d value_table_max;
 
   void keep_score(int idx, int loc, int cases, int ctrls) {

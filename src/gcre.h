@@ -111,7 +111,7 @@ public:
   const int width_ul;
   const int iterations;
   const int iters_requested;
-  
+
   int top_k = 12;
   int nthreads = 0;
 
@@ -149,10 +149,11 @@ public:
 
   void setPermutedCases(const vec2d_i& perm_cases);
 
-  TJoinMethod createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const;
+  // TJoinMethod createMethod(const UidRelSet& uids, const int flip_pivot_len, float* p_perm_scores) const;
+  TJoinMethod createMethod(const UidRelSet& uids, float* p_perm_scores) const;
 
   TPathSet createPathSet(st_pathset_size size) const;
-  
+
   joined_res join(const UidRelSet& uids, const PathSet& paths0, const PathSet& paths1, PathSet& paths_res) const;
 
 protected:
