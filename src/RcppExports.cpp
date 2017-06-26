@@ -81,3 +81,15 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+
+static const R_CallMethodDef CallEntries[] = {
+    {"geneticsCRE_getRels3", (DL_FUNC) &geneticsCRE_getRels3, 4},
+    {"geneticsCRE_getMatchingList", (DL_FUNC) &geneticsCRE_getMatchingList, 3},
+    {"geneticsCRE_ProcessPaths", (DL_FUNC) &geneticsCRE_ProcessPaths, 39},
+    {NULL, NULL, 0}
+};
+
+RcppExport void R_init_geneticsCRE(DllInfo *dll) {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
+}

@@ -4,7 +4,8 @@
 \alias{checkBestPaths}
 \title{This function checks the results returned by GetBestPaths}
 \usage{
-checkBestPaths(dataset, BestPaths, pathLength, nCases, nControls, method)
+checkBestPaths(dataset, BestPaths, pathLength, threshold_percent, nCases,
+  nControls, method)
 }
 \description{
 This function checks the results returned by GetBestPaths

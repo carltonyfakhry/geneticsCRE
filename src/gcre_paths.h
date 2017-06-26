@@ -1,6 +1,9 @@
 #ifndef GCRE_PATHS_H
 #define GCRE_PATHS_H
 
+#include <stdlib.h>
+#include <string.h>
+
 using namespace std;
 
 // TODO consolidate class forward declares

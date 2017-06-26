@@ -28,6 +28,9 @@ value for \emph{pathLength} is 5).}
 \item{method}{The method to be invoked. The value 1 calls the unsigned method
 while the value 2 calls the signed method.}
 
+\item{threshold_percent}{All genes which occur in less than emph{threshold_percent}
+of patients are kept for processing.}
+
 \item{n_permutations}{The number of permutations to be used in computing the
 p-values. The default value is 100.}
 
