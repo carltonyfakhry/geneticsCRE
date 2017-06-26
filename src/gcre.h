@@ -1,6 +1,7 @@
 #ifndef GCRE_H
 #define GCRE_H
 
+#include <cstdlib>
 #include <cstring>
 #include <cstdint>
 #include <cstdio>
