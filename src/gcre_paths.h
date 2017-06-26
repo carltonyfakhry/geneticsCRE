@@ -1,8 +1,8 @@
 #ifndef GCRE_PATHS_H
 #define GCRE_PATHS_H
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
