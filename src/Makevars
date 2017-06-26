@@ -1,2 +1,2 @@
-PKG_CXXFLAGS = -std=gnu++11 -mpopcnt
+PKG_CXXFLAGS = -std=gnu++17 -mpopcnt
 PKG_CXX1XFLAGS = $(PKG_CXXFLAGS)
