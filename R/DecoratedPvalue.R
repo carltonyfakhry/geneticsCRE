@@ -176,7 +176,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
         lst <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
                                                                  path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
         DecoratedBestPaths[total_paths,13] <- lst$decorated_pvalue
-        DecoratedBestPaths[total_paths,9] <- "Forward"  # Direction
+        DecoratedBestPaths[total_paths,9] <- "Backwards"  # Direction
         DecoratedBestPaths[total_paths,8] <- lst$controls2
         DecoratedBestPaths[total_paths,7] <- lst$cases2
         DecoratedBestPaths[total_paths,6] <- paste(genes[j-1])
