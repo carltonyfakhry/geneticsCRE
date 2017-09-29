@@ -81,7 +81,7 @@ static vec2d_d copy_r(const Rcpp::NumericMatrix& matrix) {
     for(int c = 0; c < matrix.ncol(); c += 1)
       table[r][c] = matrix(r,c);
   }
-  printf("copied value matrix: %d x %d\n", matrix.nrow(), matrix.ncol());
+  // printf("copied value matrix: %d x %d\n", matrix.nrow(), matrix.ncol());
   return table;
 }
 
@@ -91,14 +91,14 @@ static vec2d_i copy_r(const Rcpp::IntegerMatrix& matrix) {
     for(int c = 0; c < matrix.ncol(); c += 1)
       table[r][c] = matrix(r,c);
   }
-  printf("copied value matrix: %d x %d\n", matrix.nrow(), matrix.ncol());
+  // printf("copied value matrix: %d x %d\n", matrix.nrow(), matrix.ncol());
   return table;
 }
 
 
 static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src_uids, const Rcpp::IntegerVector& r_trg_uids, const Rcpp::List& r_count_locs, const Rcpp::IntegerVector& r_signs){
 
-  printf("start uid assemble for length: %d (src: %lu, locs: %lu)\n", path_length, r_src_uids.size(), r_count_locs.size());
+  // printf("start uid assemble for length: %d (src: %lu, locs: %lu)\n", path_length, r_src_uids.size(), r_count_locs.size());
 
   auto start = chrono::system_clock::now();
 
@@ -132,7 +132,8 @@ static UidRelSet assemble_uids(int path_length, const Rcpp::IntegerVector& r_src
   }
 
   auto time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start);
-  printf("path_length: %d, uids: %lu, paths: %lu (%'ld ms)\n", path_length, uids.size(), total_paths, time.count());
+  // printf("path_length: %d, uids: %lu, paths: %lu (%'ld ms)\n", path_length, uids.size(), total_paths, time.count());
+  printf("Processing Path Length: %d\n", path_length);
 
   return UidRelSet(path_length, uids, copy_r(r_signs));
 
@@ -188,14 +189,16 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   exec.nthreads = nthreads;
 
   setlocale(LC_ALL, "");
+  // setbuf(stdout, NULL);
 
-  printf("\nstarting join:\n\n");
-  printf("       method : %d\n", exec.method);
-  printf("  path_length : %d\n", path_length);
-  printf("        cases : %d\n", exec.num_cases);
-  printf("     controls : %d\n", exec.num_ctrls);
-  printf("      threads : %d\n", nthreads);
-  printf("   iterations : %d\n", iterations);
+  // printf("\nstarting join:\n\n");
+  // printf("       method : %d\n", exec.method);
+  // printf("  path_length : %d\n", path_length);
+  // printf("        cases : %d\n", exec.num_cases);
+  // printf("     controls : %d\n", exec.num_ctrls);
+  // printf("      threads : %d\n", nthreads);
+  // printf("   iterations : %d\n", iterations);
+  printf("\n");
 
   Timer::print_header();
 
@@ -222,13 +225,14 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
   if(path_length >= 1) {
 
     auto uids1a = assemble_uids(1, r_src_uids1, r_trg_uids1, r_count_locs1, r_signs1);
-    auto uids1b = assemble_uids(1, r_src_uids1_2, r_trg_uids1_2, r_count_locs1_2, r_signs1_2);
 
     paths1 = exec.createPathSet(uids1a.count_total_paths());
     auto zero_1 = exec.createPathSet(data_idx1a.size());
     auto input_1 = parsed_data1->select(data_idx1a);
 
     exec.join(uids1a, *zero_1, *input_1, *paths1);
+
+    auto uids1b = assemble_uids(1, r_src_uids1_2, r_trg_uids1_2, r_count_locs1_2, r_signs1_2);
 
     auto zero_2 = exec.createPathSet(data_idx1b.size());
     auto parsed_data2 = exec.createPathSet(data2.size());
@@ -271,7 +275,7 @@ Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_t
     results["lst5"] = make_score_list(res);
   }
 
-  std::cout << "[success]" << std::endl;
+  printf("[success]\n");
 
   return results;
 }

@@ -1,69 +1,64 @@
-#' This function computes the decorated p-values for each path.
-#'
-#' @description This function computes the decorated p-values for each path.
-#'
-#' @usage getDecoratedPvalues(dataset, BestPaths, pathLength, nCases,
-#'                                     nControls, method, n_permutations = 100, strataF = NA)
-#'
-#' @param dataset Filename of the phenotype data. First column must correspond
-#'                to the gene symbols; all other columns correspond to the patients.
-#'                First column must be named symbols and must contrain strings corresponding
-#'                to the symbols of the genes. All other columns either contain a 0 if the
-#'                gene is not present in the patient, and 1 or 2 if the gene is present
-#'                in the patient.
-#' @param BestPaths A data frame returned from calling \link{ProcessPaths}.
-#' @param pathLength The maximum path length for which the top K paths
-#'                   will be computed. The default value is 5 (The maximum
-#'                   value for \emph{pathLength} is 5).
-#' @param nCases The number of cases (Must be greater than 1).
-#' @param nControls The number of controls (Must be greater than 1).
-#' @param method The method to be invoked. The value 1 calls the unsigned method
-#'               while the value 2 calls the signed method.
-#' @param threshold_percent All genes which occur in less than emph{threshold_percent}
-#'                          of patients are kept for processing.
-#' @param n_permutations The number of permutations to be used in computing the
-#'                   p-values. The default value is 100.
-#' @param strataF Filename for the strata file. \emph{strataF} must be a file
-#'                of two columns, first column named \emph{subjid }contains
-#'                the patient names similar to the dataset columns, and the
-#'                second column named \emph{stratum} must contain the integer
-#'                corresponding to the stratum.
-#'
-#' @return This function returns a list with the following items:
-#'         \item{SignedPaths}{The top K signed paths for each length.}
-#'         \item{Paths}{The top K paths for each length.}
-#'         \item{Subpaths1}{The first subpath.}
-#'         \item{Subpaths1_cases}{The number of cases for Subpaths1.}
-#'         \item{Subpaths1_controls}{The number of controls for Subpaths1.}
-#'         \item{Subpaths2}{The second subpath.}
-#'         \item{Subpaths2_cases}{The number of cases for Subpaths2.}
-#'         \item{Subpaths2_controls}{The number of controls for Subpaths2.}
-#'         \item{Direction}{Direction of splitting along the path.}
-#'         \item{Lengths}{The lengths of each path.}
-#'         \item{Scores}{The scores of each path.}
-#'         \item{Pvalues}{The p-values of each path.}
-#'         \item{DecoratedPvalues}{The decorated p-values for the second subpath.}
-#'         \item{Total_Cases}{The total number of cases for each path.}
-#'         \item{Total_Controls}{The total number of controls for each path.}
-#'
-#' @author Carl Tony Fakhry
-#'
-#' @references Franceschini, A (2013). STRING v9.1: protein-protein interaction networks, with increased coverage
-#'             and integration. In:'Nucleic Acids Res. 2013 Jan;41(Database issue):D808-15. doi: 10.1093/nar/gks1094.
-#'             Epub 2012 Nov 29'.
-#'
-#'@export
-getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControls, method, threshold_percent, n_permutations = 100, strataF = NA){
+# This function computes the decorated p-values for each path.
+#
+# @description This function computes the decorated p-values for each path.
+#
+# @usage getDecoratedPvalues(dataset, BestPaths, pathLength, nCases,
+#                                     nControls, method, n_permutations = 100, strataF = NA)
+#
+# @param dataset Filename of the phenotype data. First column must correspond
+#                to the gene symbols, and all other columns correspond to the patients.
+#                First column must be named \code{GENE.Symbols} and must contain strings
+#                corresponding to the symbols of the genes. All other columns must
+#                contain 0-1 values depending if the patient has a variant in the
+#                corresponding gene (a value of 1 if the variant exists and 0 otherwise).
+# @param BestPaths A data frame returned from calling \link{ProcessPaths}.
+# @param pathLength The maximum path length for which the top K paths
+#                   will be computed. The default value is 5 (The maximum
+#                   value for \emph{pathLength} is 5).
+# @param nCases The number of cases (Must be greater than 1).
+# @param nControls The number of controls (Must be greater than 1).
+# @param method The method to be invoked. The value 1 calls the unsigned method
+#               while the value 2 calls the signed method.
+# @param threshold_percent All genes which occur in less than emph{threshold_percent}
+#                          of patients are kept for processing.
+# @param n_permutations The number of permutations to be used in computing the
+#                   p-values. The default value is 100.
+# @param strataF Filename for the strata file. \emph{strataF} must be a file
+#                of two columns, first column named \emph{subjid }contains
+#                the patient names similar to the dataset columns, and the
+#                second column named \emph{stratum} must contain the integer
+#                corresponding to the stratum.
+#
+# @return This function returns a list with the following items:
+#         \item{SignedPaths}{The top K signed paths for each length.}
+#         \item{Paths}{The top K paths for each length.}
+#         \item{Subpaths1}{The first subpath.}d
+#         \item{Subpaths1_cases}{The number of cases for Subpaths1.}
+#         \item{Subpaths1_controls}{The number of controls for Subpaths1.}
+#         \item{Subpaths2}{The second subpath.}
+#         \item{Subpaths2_cases}{The number of cases for Subpaths2.}
+#         \item{Subpaths2_controls}{The number of controls for Subpaths2.}
+#         \item{Direction}{Direction of splitting along the path.}
+#         \item{Lengths}{The lengths of each path.}
+#         \item{Scores}{The scores of each path.}
+#         \item{Pvalues}{The p-values of each path.}
+#         \item{DecoratedPvalues}{The decorated p-values for the second subpath.}
+#         \item{Total_Cases}{The total number of cases for each path.}
+#         \item{Total_Controls}{The total number of controls for each path.}
+#
+getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControls,
+                                method, threshold_percent, n_permutations, strataF,  ValueTable = NULL){
 
-  # Precompute values table
-  print("Computing Values Table...")
-  ValueTable <- geneticsCRE:::getValuesTable(nCases, nControls)
+  # # Precompute values table
+  # print("Computing Values Table...")
+  if(is.null(ValueTable)){
+    ValueTable <- getValuesTable(nCases, nControls)
+  }
 
   # Preprocessing Phenotype dataset, all genes which occur in more
   # than threshold_percent of patients will be removed from the
   # dataset, also genes which do not occur in any patients will be removed
-  print("Preprocessing Phenotype dataset...")
-  dataset <- geneticsCRE:::PreprocessTable(dataset, threshold_percent, nCases, nControls)
+  dataset <- PreprocessTable(dataset, threshold_percent, nCases, nControls)
   genes <- dataset$genes
   data <- dataset$data
   genes_data <- data.frame(genes = genes, data, stringsAsFactors = F)
@@ -150,7 +145,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
         subpath_neg1[subpath_neg1 != 0] <- 1
         subpath_pos2 <- path_data_pos[j+1,]
         subpath_neg2 <- path_data_neg[j+1,]
-        lst <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
+        lst <- computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
                                                                  path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
         DecoratedBestPaths[total_paths,13] <- lst$decorated_pvalue
         DecoratedBestPaths[total_paths,9] <- "Forward"  # Direction
@@ -173,10 +168,10 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
         subpath_neg1[subpath_neg1 != 0] <- 1
         subpath_pos2 <- path_data_pos[j-1,]
         subpath_neg2 <- path_data_neg[j-1,]
-        lst <- geneticsCRE:::computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
+        lst <- computeDecoratedPvalue(subpath_pos1, subpath_neg1, subpath_pos2, subpath_neg2,
                                                                  path_len, nCases, nControls, method, n_permutations, ValueTable, stratagroups, stratanumbers, strataF, flipped)
         DecoratedBestPaths[total_paths,13] <- lst$decorated_pvalue
-        DecoratedBestPaths[total_paths,9] <- "Backwards"  # Direction
+        DecoratedBestPaths[total_paths,9] <- "Backward"  # Direction
         DecoratedBestPaths[total_paths,8] <- lst$controls2
         DecoratedBestPaths[total_paths,7] <- lst$cases2
         DecoratedBestPaths[total_paths,6] <- paste(genes[j-1])
@@ -192,7 +187,7 @@ getDecoratedPvalues <- function(dataset, BestPaths, pathLength, nCases, nControl
 
   names(DecoratedBestPaths) = c("SignedPaths", "Paths", "Subpaths1", "Subpaths1_Cases", "Subpaths1_Controls", "Subpaths2",
                                 "Subpaths2_Cases", "Subpaths2_Controls", "Direction", "Lengths", "Scores",
-                                "Pvalues", "DecoratedPvalues", "Total_Cases", "Total_Controls")
+                                "Pvalues", "DecoratedPvalues", "Cases", "Controls")
   return(DecoratedBestPaths)
 
 }

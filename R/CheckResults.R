@@ -1,17 +1,16 @@
-#' This function checks the results returned by GetBestPaths
-#' @export
+# This function checks the results returned by PGWAS
 checkBestPaths <- function(dataset, BestPaths, pathLength, threshold_percent, nCases, nControls, method){
 
   # Precompute values table
   print("Computing Values Table...")
-  ValueTable <- geneticsCRE:::getValuesTable(nCases, nControls)
+  ValueTable <- getValuesTable(nCases, nControls)
 
   # Preprocessing Phenotype dataset, all genes which occur in more
   # than threshold_percent of patients will be removed from the
   # dataset, also genes which do not occur in any patients will be removed
   print("Preprocessing Phenotype dataset...")
   threshold_percent <- 1
-  dataset <- geneticsCRE:::PreprocessTable(dataset, threshold_percent, nCases, nControls)
+  dataset <- PreprocessTable(dataset, threshold_percent, nCases, nControls)
   genes <- dataset$genes
   data <- dataset$data
   genes_data <- data.frame(genes = genes, data, stringsAsFactors = F)

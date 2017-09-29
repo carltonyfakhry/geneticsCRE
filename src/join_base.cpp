@@ -1,6 +1,7 @@
 
 #include "gcre.h"
 #include "methods.h"
+#include <Rcpp.h>
 
 // 'size' is the input element count, 'width' is bits needed for each element
 // returns count that fits evenly into current vector size
@@ -27,7 +28,7 @@ static inline void prog_print(mutex& g_mutex, const int prog_size, st_uids_size 
   if(prog_size >= prog_min_size && idx % (prog_size / 10) == 0) {
     lock_guard<mutex> lock(g_mutex);
     printf(" %1.0lf%%", (idx * 100.0) / prog_size);
-    std::cout << std::flush;
+    // Rcpp::Rcout << std::flush;
   }
 }
 
@@ -52,21 +53,21 @@ iterations(pad_vector_size(iters, 32)) {
   for(int k = 0; k < num_cases; k++)
     case_mask[k/64] |= bit_one_ul << k % 64;
 
-  printf("adjusting input to vector width: %d -> %d\n", num_cases + num_ctrls, vector_width(num_cases, num_ctrls));
-  printf("adjusting iterations to vector width: %d -> %d\n", iters_requested, iterations);
-  printf("[init exec] method: '%d' | data: %d x %d (width: %d ul)\n", method, num_cases, num_ctrls, width_ul);
+  // printf("adjusting input to vector width: %d -> %d\n", num_cases + num_ctrls, vector_width(num_cases, num_ctrls));
+  // printf("adjusting iterations to vector width: %d -> %d\n", iters_requested, iterations);
+  // printf("[init exec] method: '%d' | data: %d x %d (width: %d ul)\n", method, num_cases, num_ctrls, width_ul);
 }
 
 // TODO floats for lookup
 void JoinExec::setValueTable(const vec2d_d& table){
 
-  printf("received value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
+  // printf("received value table: %lu x %lu\n", table.size(), table.size() > 0 ? table.front().size() : 0);
 
   // indices can be flipped and counts could include all 0 to all cases/controls (so max index == size)
   size_t table_size = num_cases + num_ctrls + 1;
 
-  if(table.size() < table_size || table.size() == 0 || table.front().size() < table_size)
-    printf("  ** WARN: value table smaller than %lu x %lu, will be padded\n", table_size, table_size);
+  // if(table.size() < table_size || table.size() == 0 || table.front().size() < table_size)
+  //   printf("  ** WARN: value table smaller than %lu x %lu, will be padded\n", table_size, table_size);
 
   value_table = vec2d_d(table_size, vec_d(table_size, -1.0));
 
@@ -83,7 +84,7 @@ void JoinExec::setValueTable(const vec2d_d& table){
 // intermediate mask is inverted, to keep 0-padding of the vector tail from becoming mostly cases
 void JoinExec::setPermutedCases(const vec2d_i& data) {
 
-  printf("loading permuted case masks: %lu x %lu (iterations: %d)\n", data.size(), data.size() > 0 ? data.front().size() : 0, iterations);
+  // printf("loading permuted case masks: %lu x %lu (iterations: %d)\n", data.size(), data.size() > 0 ? data.front().size() : 0, iterations);
 
   if(iters_requested < data.size())
     printf("  ** WARN more permuted cases than iterations, input will be truncated\n");
@@ -163,7 +164,7 @@ template<typename Worker>
 joined_res JoinExec::execute(const Worker& worker, bool show_progress) const {
 
   if(show_progress)
-    printf("\nprogress:");
+    printf("progress:");
 
   // use '0' to identify main thread
   if(max(0, nthreads) == 0) {
@@ -177,7 +178,8 @@ joined_res JoinExec::execute(const Worker& worker, bool show_progress) const {
   }
 
   if(show_progress)
-    printf(" - done!\n");
+    printf(" - done!\n\n");
+    // printf(" - done!\n");
 
   return format_result();
 }
@@ -255,5 +257,7 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
     method->merge_scores();
   };
 
-  return execute(worker, uids.size() >= prog_min_size);
+  // return execute(worker, uids.size() >= prog_min_size);
+  return execute(worker, true);
+
 }

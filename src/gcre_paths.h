@@ -1,4 +1,4 @@
-#ifndef GCRE_PATHS_H
+  #ifndef GCRE_PATHS_H
 #define GCRE_PATHS_H
 
 using namespace std;
@@ -19,14 +19,14 @@ public:
   PathSet(st_pathset_size size, const int width_ul, const uint16_t vlen) : size(size), width_ul(width_ul), vlen(vlen) {
     const size_t min_block_size = 16 * 1024 * 1024;
     const size_t block_size = size * vlen * sizeof(uint64_t);
-    if(block_size > min_block_size)
-      printf("allocate block for path-set (%5d x %d ul) %'15lu bytes: ", size, vlen, block_size);
+    // if(block_size > min_block_size)
+      // printf("allocate block for path-set (%5d x %d ul) %'15lu bytes: ", size, vlen, block_size);
     // block = unique_ptr<uint64_t[]>((uint64_t*) aligned_alloc(gs_align_size, sizeof(uint64_t) * size * vlen));
     block = unique_ptr<uint64_t[]>(new uint64_t[size * vlen]);
     for(int k = 0; k < size * vlen; k++)
       block[k] = bit_zero_ul;
-    if(block_size > min_block_size)
-      printf("[%p]\n", block.get());
+    // if(block_size > min_block_size)
+      // printf("[%p]\n", block.get());
   }
 
   inline const uint64_t* operator[](st_pathset_size idx) const {
@@ -43,7 +43,7 @@ public:
   // positives are loaded into the first half of the record, so m1/m2 loading is the same
   void load(const vec2d_i& data) {
 
-    printf("loading data to path-set (%lu x %lu): ", data.size(), data.size() > 0 ? data.front().size() : 0);
+    // printf("loading data to path-set (%lu x %lu): ", data.size(), data.size() > 0 ? data.front().size() : 0);
 
     check_true(size == data.size());
     long count_in = 0;
@@ -61,7 +61,7 @@ public:
     for(auto k = 0; k < size * vlen; k++)
       count_set += __builtin_popcountl(block[k]);
 
-    printf("%ld (of %ld)\n", count_set, count_in);
+    // printf("%ld (of %ld)\n", count_set, count_in);
     check_true(count_set == count_in);
   }
 

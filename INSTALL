@@ -1,0 +1,9 @@
+In order to get optimal performance, a recent version of Clang (https://clang.llvm.org/)
+is highly recommended. To configure the build environment, create ~/.R/Makevars:
+
+CXX1X=clang++
+CXX=clang++
+CC=clang
+
+CXX1XFLAGS=-O3 -march=native
+CXXFLAGS=$(CXX1XFLAGS)

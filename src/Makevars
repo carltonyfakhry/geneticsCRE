@@ -1,2 +1,4 @@
-PKG_CXXFLAGS = -std=c++11 -mpopcnt
+CXX_STD = CXX11
+#PKG_CXXFLAGS = -std=c++11 -mpopcnt
+PKG_CXXFLAGS = -mpopcnt
 PKG_CXX1XFLAGS = $(PKG_CXXFLAGS)

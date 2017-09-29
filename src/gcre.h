@@ -120,10 +120,11 @@ public:
   static inline Method to_method(string name) {
     if(name == "method1")
       return Method::method1;
-    if(name == "method2")
+    // if(name == "method2")
+    else
       return Method::method2;
-    cout << "unknown method: " << name << endl;
-    exit(1);
+    // cout << "unknown method: " << name << endl;
+    // exit(1);
   }
 
   JoinExec(string method_name, int num_cases, int num_ctrls, int iters);
@@ -136,13 +137,13 @@ public:
   }
 
   void print_vector_info() {
-    printf("\n");
-    printf("########################\n");
-    printf("  instruction set: %s\n", gs_instr_label.c_str());
-    printf("     vector width: %u\n", gs_vec_width);
-    printf("        alignment: %u\n", gs_align_size);
-    printf("########################\n");
-    printf("\n");
+    // printf("\n");
+    // printf("########################\n");
+    // printf("  instruction set: %s\n", gs_instr_label.c_str());
+    // printf("     vector width: %u\n", gs_vec_width);
+    // printf("        alignment: %u\n", gs_align_size);
+    // printf("########################\n");
+    // printf("\n");
   }
 
   void setValueTable(const vec2d_d& table);

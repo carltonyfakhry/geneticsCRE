@@ -1,8 +1,4 @@
-#' This function loads the string-db network.
-#'
-#' @description This functions loads the string-db network.
-#'
-#' @export
+# This function loads the string-db network.
 getStringKB <- function(){
   Entspath <- system.file("extdata", "Ents.dat", package="geneticsCRE")
   Relspath <- system.file("extdata", "Rels.dat", package="geneticsCRE")

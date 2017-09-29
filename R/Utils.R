@@ -26,7 +26,7 @@ getRandIndicesMat <- function(ncol_data, iterations, strataF, nCases, nControls,
   if(length(strataF) == 1 & is.na(strataF)){
 
     for(i in 1:iterations){
-      randomized_cols <- geneticsCRE:::getRandomizedDatCols(ncol_data, strataF, nCases, nControls, NA, NA)
+      randomized_cols <- getRandomizedDatCols(ncol_data, strataF, nCases, nControls, NA, NA)
       randomized_cols <- randomized_cols - 1
       RandIndicesMat[i,] <- randomized_cols
     }
@@ -34,7 +34,7 @@ getRandIndicesMat <- function(ncol_data, iterations, strataF, nCases, nControls,
     }else{
 
       for(i in 1:iterations){
-        randomized_cols <- geneticsCRE:::getRandomizedDatCols(ncol_data, strataF, nCases, nControls, stratagroups, stratanumbers)
+        randomized_cols <- getRandomizedDatCols(ncol_data, strataF, nCases, nControls, stratagroups, stratanumbers)
         randomized_cols <- randomized_cols - 1
         RandIndicesMat[i,] <- randomized_cols
       }
@@ -163,7 +163,7 @@ getValuesTable <- function(nCases, nControls){
 # Preprocess phenotype data
 PreprocessTable <- function(dataset, threshold_percent, nCases, nControls){
 
-  df <- read.table(dataset, sep = "\t", header = T, stringsAsFactors = F)
+  df <- read.table(dataset, header = T, stringsAsFactors = F)
 
   if(names(df)[1] != "symbols"){
     stop("First column must be named symbols and must contain the gene symbols!")
@@ -201,16 +201,16 @@ PreprocessTable <- function(dataset, threshold_percent, nCases, nControls){
 # Check the input parameters
 check_input <- function(nCases, nControls, method, threshold_percent, K, pathLength, iterations, nthreads){
 
-  if(!is.numeric(nCases) | length(nCases) != 1 | floor(nCases) != nCases | nCases < 1){
-    stop("nCases must be an integer greater than 0!")
+  if(!is.numeric(nCases) | length(nCases) != 1 | floor(nCases) != nCases | nCases < 2){
+    stop("nCases must be an integer >= 2!")
   }
 
-  if(!is.numeric(nControls) | length(nControls) != 1 | floor(nControls) != nControls | nControls < 1){
-    stop("nControls must be an integer greater than 0!")
+  if(!is.numeric(nControls) | length(nControls) != 1 | floor(nControls) != nControls | nControls < 2){
+    stop("nControls must be an integer >= 2!")
   }
 
-  if(!is.numeric(K) | length(K) != 1 | floor(K) != K | K < 1){
-    stop("K must be an integer greater than 0!")
+  if(!is.numeric(K) | length(K) != 1 | floor(K) != K | K < 1 | K > 10000){
+    stop("K must be an integer >= 1 and <= 10000!")
   }
 
   # methods can have additional tags to specify an implementation (eg 'method2-lomem') --dmitri
@@ -218,12 +218,12 @@ check_input <- function(nCases, nControls, method, threshold_percent, K, pathLen
     stop("method must be one of: 'method1', 'method2'!")
   }
 
-  if(!is.numeric(threshold_percent) | length(threshold_percent) != 1 | threshold_percent > 1 | threshold_percent < 0){
-    stop("threshold_percent must be a real number greater than or equal to 0 and less than or equal to 1!")
+  if(!is.numeric(threshold_percent) | length(threshold_percent) != 1 | threshold_percent > 1 | threshold_percent <= 0){
+    stop("threshold_percent must be a real number > 0 and <= 1!")
   }
 
   if(!is.numeric(pathLength) | length(pathLength) != 1 | floor(pathLength) != pathLength | pathLength > 5 | pathLength < 1){
-    stop("pathLength must be an integer greater than 0 and less than 6!")
+    stop("pathLength must be an integer >= 1 and <= 5!")
   }
 
   # disabling permutations (==0) is useful for testing -- dmitri

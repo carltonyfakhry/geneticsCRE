@@ -140,7 +140,7 @@ getUidsCountsLocations <- function(Rels1_trgs, Rels2_srcs){
 
   # Get a mapping between uid and where it occurs in Rels2 and how many times it occurs contiguously
   # (p.s it could only occur contiguously since the source column in Rels2 is assumed to be ordered)
-  uids_CountLoc <- geneticsCRE:::getMatchingList(unique_Rels2_srcs, counts_Rels2_srcs, locations_Rels2_srcs)
+  uids_CountLoc <- getMatchingList(unique_Rels2_srcs, counts_Rels2_srcs, locations_Rels2_srcs)
 
   inds <- which(!(unique(Rels1_trgs) %in% Rels2_srcs)) # account for the target nodes in Rels1 which are not present in the source nodes of Rels2
   for(i in unique(Rels1_trgs)[inds]){

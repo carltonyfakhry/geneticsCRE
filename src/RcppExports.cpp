@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // getRels3
 Rcpp::DataFrame getRels3(Rcpp::IntegerVector srcuid, Rcpp::IntegerVector trguid, Rcpp::IntegerVector sign, Rcpp::List uids_CountLoc3);
-RcppExport SEXP geneticsCRE_getRels3(SEXP srcuidSEXP, SEXP trguidSEXP, SEXP signSEXP, SEXP uids_CountLoc3SEXP) {
+RcppExport SEXP _geneticsCRE_getRels3(SEXP srcuidSEXP, SEXP trguidSEXP, SEXP signSEXP, SEXP uids_CountLoc3SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,7 +21,7 @@ END_RCPP
 }
 // getMatchingList
 Rcpp::List getMatchingList(Rcpp::IntegerVector uids, Rcpp::IntegerVector counts, Rcpp::IntegerVector location);
-RcppExport SEXP geneticsCRE_getMatchingList(SEXP uidsSEXP, SEXP countsSEXP, SEXP locationSEXP) {
+RcppExport SEXP _geneticsCRE_getMatchingList(SEXP uidsSEXP, SEXP countsSEXP, SEXP locationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -34,7 +34,7 @@ END_RCPP
 }
 // ProcessPaths
 Rcpp::List ProcessPaths(Rcpp::IntegerVector r_src_uids1, Rcpp::IntegerVector r_trg_uids1, Rcpp::List r_count_locs1, Rcpp::IntegerVector r_signs1, Rcpp::IntegerVector r_src_uids1_2, Rcpp::IntegerVector r_trg_uids1_2, Rcpp::List r_count_locs1_2, Rcpp::IntegerVector r_signs1_2, Rcpp::IntegerVector r_src_uids2, Rcpp::IntegerVector r_trg_uids2, Rcpp::List r_count_locs2, Rcpp::IntegerVector r_signs2, Rcpp::IntegerVector r_src_uids3, Rcpp::IntegerVector r_trg_uids3, Rcpp::List r_count_locs3, Rcpp::IntegerVector r_signs3, Rcpp::IntegerVector r_src_uids4, Rcpp::IntegerVector r_trg_uids4, Rcpp::List r_count_locs4, Rcpp::IntegerVector r_signs4, Rcpp::IntegerVector r_src_uids5, Rcpp::IntegerVector r_trg_uids5, Rcpp::List r_count_locs5, Rcpp::IntegerVector r_signs5, Rcpp::IntegerVector r_data_inds1, Rcpp::IntegerVector r_data_inds1_2, Rcpp::IntegerVector r_data_inds2, Rcpp::IntegerVector r_data_inds3, Rcpp::IntegerMatrix r_data1, Rcpp::IntegerMatrix r_data2, Rcpp::NumericMatrix r_value_table, int num_cases, int num_ctrls, int top_k, int iterations, Rcpp::IntegerMatrix r_perm_cases, std::string method, int path_length, int nthreads);
-RcppExport SEXP geneticsCRE_ProcessPaths(SEXP r_src_uids1SEXP, SEXP r_trg_uids1SEXP, SEXP r_count_locs1SEXP, SEXP r_signs1SEXP, SEXP r_src_uids1_2SEXP, SEXP r_trg_uids1_2SEXP, SEXP r_count_locs1_2SEXP, SEXP r_signs1_2SEXP, SEXP r_src_uids2SEXP, SEXP r_trg_uids2SEXP, SEXP r_count_locs2SEXP, SEXP r_signs2SEXP, SEXP r_src_uids3SEXP, SEXP r_trg_uids3SEXP, SEXP r_count_locs3SEXP, SEXP r_signs3SEXP, SEXP r_src_uids4SEXP, SEXP r_trg_uids4SEXP, SEXP r_count_locs4SEXP, SEXP r_signs4SEXP, SEXP r_src_uids5SEXP, SEXP r_trg_uids5SEXP, SEXP r_count_locs5SEXP, SEXP r_signs5SEXP, SEXP r_data_inds1SEXP, SEXP r_data_inds1_2SEXP, SEXP r_data_inds2SEXP, SEXP r_data_inds3SEXP, SEXP r_data1SEXP, SEXP r_data2SEXP, SEXP r_value_tableSEXP, SEXP num_casesSEXP, SEXP num_ctrlsSEXP, SEXP top_kSEXP, SEXP iterationsSEXP, SEXP r_perm_casesSEXP, SEXP methodSEXP, SEXP path_lengthSEXP, SEXP nthreadsSEXP) {
+RcppExport SEXP _geneticsCRE_ProcessPaths(SEXP r_src_uids1SEXP, SEXP r_trg_uids1SEXP, SEXP r_count_locs1SEXP, SEXP r_signs1SEXP, SEXP r_src_uids1_2SEXP, SEXP r_trg_uids1_2SEXP, SEXP r_count_locs1_2SEXP, SEXP r_signs1_2SEXP, SEXP r_src_uids2SEXP, SEXP r_trg_uids2SEXP, SEXP r_count_locs2SEXP, SEXP r_signs2SEXP, SEXP r_src_uids3SEXP, SEXP r_trg_uids3SEXP, SEXP r_count_locs3SEXP, SEXP r_signs3SEXP, SEXP r_src_uids4SEXP, SEXP r_trg_uids4SEXP, SEXP r_count_locs4SEXP, SEXP r_signs4SEXP, SEXP r_src_uids5SEXP, SEXP r_trg_uids5SEXP, SEXP r_count_locs5SEXP, SEXP r_signs5SEXP, SEXP r_data_inds1SEXP, SEXP r_data_inds1_2SEXP, SEXP r_data_inds2SEXP, SEXP r_data_inds3SEXP, SEXP r_data1SEXP, SEXP r_data2SEXP, SEXP r_value_tableSEXP, SEXP num_casesSEXP, SEXP num_ctrlsSEXP, SEXP top_kSEXP, SEXP iterationsSEXP, SEXP r_perm_casesSEXP, SEXP methodSEXP, SEXP path_lengthSEXP, SEXP nthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -83,9 +83,9 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"geneticsCRE_getRels3", (DL_FUNC) &geneticsCRE_getRels3, 4},
-    {"geneticsCRE_getMatchingList", (DL_FUNC) &geneticsCRE_getMatchingList, 3},
-    {"geneticsCRE_ProcessPaths", (DL_FUNC) &geneticsCRE_ProcessPaths, 39},
+    {"_geneticsCRE_getRels3", (DL_FUNC) &_geneticsCRE_getRels3, 4},
+    {"_geneticsCRE_getMatchingList", (DL_FUNC) &_geneticsCRE_getMatchingList, 3},
+    {"_geneticsCRE_ProcessPaths", (DL_FUNC) &_geneticsCRE_ProcessPaths, 39},
     {NULL, NULL, 0}
 };
 
