@@ -196,7 +196,8 @@ joined_res JoinExec::join(const UidRelSet& uids, const PathSet& paths0, const Pa
   check_equal(uids.size(), paths0.size);
   check_true(paths_res.size == 0 || paths_res.size == uids.count_total_paths());
   for(const auto& uid : uids.uids)
-    check_index(uid.location + uid.count - 1, paths1.size);
+    if(uid.count > 0)
+      check_index(uid.location + uid.count - 1, paths1.size);
 
   // again, funky allocation to get a stack array
   float perm_scores[iterations] ALIGNED;

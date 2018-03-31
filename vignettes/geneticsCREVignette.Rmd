@@ -66,6 +66,7 @@ CRE_Results <- GWASPA(dataset = data_path, nCases = 100, nControls = 100,
                      Signed.GWASPA = TRUE, Decorated.Pvalues = TRUE, threshold = 0.05,
                      K = 10, pathLength = 3, n_permutations = 100, strataF = NA,
                      nthreads = 4)
+head(CRE_Results$GWASPA.Results[,c("SignedPaths", "Paths", "Pvalues")])
 ```
 Moreover, the decorated p-values can be obtained in a similar way as the unsigned case before:
 

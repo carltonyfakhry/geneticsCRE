@@ -261,14 +261,14 @@ GWASPA <- function(dataset, nCases, nControls, Signed.GWASPA = FALSE, Decorated.
     print("Computing GWASPA...")
 
   lsts <- ProcessPaths(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1,
-                                     srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,
-                                     srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2,
-                                     srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3,
-                                     srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4,
-                                     srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5,
-                                     data_inds1, data_inds1_2, data_inds2, data_inds3,
-                                     data, data2, ValueTable, nCases, nControls, K,
-                                     n_permutations, CaseORControl, method, pathLength, nthreads)
+                       srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,
+                       srcuids2, trguids2, uids_CountLoc2, joining_gene_sign2,
+                       srcuids3, trguids3, uids_CountLoc3, joining_gene_sign3,
+                       srcuids4, trguids4, uids_CountLoc4, joining_gene_sign4,
+                       srcuids5, trguids5, uids_CountLoc5, joining_gene_sign5,
+                       data_inds1, data_inds1_2, data_inds2, data_inds3,
+                       data, data2, ValueTable, nCases, nControls, K,
+                       n_permutations, CaseORControl, method, pathLength, nthreads)
 
   for(path_length in 1:pathLength){
 
@@ -321,16 +321,19 @@ GWASPA <- function(dataset, nCases, nControls, Signed.GWASPA = FALSE, Decorated.
 
   # GWASPA.Results <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserCases, UserControls, UserDebug, stringsAsFactors = F)
   GWASPA.Results <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserCases, UserControls, stringsAsFactors = F)
-  GWASPA.Results <- GWASPA.Results[order(GWASPA.Results$UserPvalues),]
+  GWASPA.Results <- GWASPA.Results[order(GWASPA.Results$UserPvalues,-GWASPA.Results$UserScores),]
   names(GWASPA.Results) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "Cases", "Controls")
+  rownames(GWASPA.Results) <- NULL
   lst[["GWASPA.Results"]] <- GWASPA.Results
 
-  if(Decorated.Pvalues){
+  if(Decorated.Pvalues & pathLength != 1){
     Decorated.Pvalues <- getDecoratedPvalues(dataset3, GWASPA.Results, pathLength, nCases, nControls,
                                              method2, threshold, n_permutations, strataF,
                                              ValueTable = ValueTable)
     Decorated.Pvalues <- Decorated.Pvalues[Decorated.Pvalues$Lengths != 1,]
     lst[["Decorated.Pvalues.Results"]] <- Decorated.Pvalues
+  }else if(pathLength == 1 & Decorated.Pvalues){
+    warning("Can only compute the Decorated P-values for pathLength > 1!")
   }
 
   print("Done.")
