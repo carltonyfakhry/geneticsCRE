@@ -2,19 +2,19 @@
 \alias{geneticsCRE-package}
 \docType{package}
 \title{
-geneticsCRE is an R package that performs pathway-based genome-wide association study (PGWAS) to
+geneticsCRE is an R package that performs genome-wide association study pathway analysis (GWASPA) to
         identify statistically significant associations between variants on a gene regulatory pathways
         and a given phenotype
 }
 \description{
-geneticsCRE is an R package that performs pathway-based genome-wide association study (PGWAS) to
+geneticsCRE is an R package that performs genome-wide association study pathway analysis (GWASPA) to
              identify statistically significant associations between variants on a gene regulatory pathways
              and a given phenotype. Unlike Genome-wide association study (GWAS), that seeks to assign
-             statistical significance to associations of variations in single genes to a  phenotype, PGWAS
+             statistical significance to associations of variations in single genes to a  phenotype, GWASPA
              accumulates statistical power by examining rare variant along gene-gene interaction pathways.
-             PGWAS  uses prior causal information a gene regulatory interactions to infer statistically
+             GWASPA  uses prior causal information a gene regulatory interactions to infer statistically
              significant associations between causal pathways and a the phenotype. Given phenotype data with
-             case/control information, geneticsCRE computes PGWAS for all valid pathways as identified by the
+             case/control information, geneticsCRE computes GWASPA for all valid pathways as identified by the
              Homo Sapien STRINGdb causal network. Examples on usage are provided in the vignette.
 }
 \details{

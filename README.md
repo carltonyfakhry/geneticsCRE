@@ -39,7 +39,7 @@ You can then install the R package using the following command:
 devtools::install_github("carltonyfakhry/geneticsCRE", build_vignettes = TRUE, local = FALSE)
 ```
 
-For an introduction to `geneticsCRE` and for an example on how to compute PGWAS over the publicly available network STRINGdb, please see the Vignette for this package using the following:
+For an introduction to `geneticsCRE` and for an example on how to compute GWASPA over the publicly available network STRINGdb, please see the Vignette for this package using the following:
 
 ```r
 browseVignettes("geneticsCRE")

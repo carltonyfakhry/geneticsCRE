@@ -1,12 +1,12 @@
-#' This function performs pathway-based genome-wide association study (PGWAS) to
+#' This function performs genome-wide association study pathway analysis (GWASPA) to
 #' identify statistically significant associations between variants on a gene regulatory pathways
 #' and a given phenotype.
 #'
-#' @description This function performs pathway-based genome-wide association study (PGWAS) to
+#' @description This function performs genome-wide association study pathway analysis (GWASPA) to
 #'              identify statistically significant associations between variants on a gene
 #'              regulatory pathways and a given phenotype.
 #'
-#' @usage PGWAS(dataset, nCases, nControls, Signed.PGWAS = FALSE, Decorated.Pvalues = TRUE,
+#' @usage GWASPA(dataset, nCases, nControls, Signed.GWASPA = FALSE, Decorated.Pvalues = TRUE,
 #'        threshold = 0.05, K = 10, pathLength = 5, n_permutations = 100,
 #'        strataF = NA, nthreads = NA)
 #'
@@ -18,8 +18,8 @@
 #'                in the gene, and 0 otherwise.
 #' @param nCases The number of cases (Must be greater than 1).
 #' @param nControls The number of controls (Must be greater than 1).
-#' @param Signed.PGWAS A boolean parameter indicating whether to compute the
-#'                     signed-PGWAS. The default value is \code{Signed.PGWAS = FALSE}.
+#' @param Signed.GWASPA A boolean parameter indicating whether to compute the
+#'                     signed-GWASPA. The default value is \code{Signed.GWASPA = FALSE}.
 #' @param Decorated.Pvalues A boolean parameter indicating whether to compute
 #'                          decorated P-values. The default value is
 #'                          \code{Decorated.Pvalues = TRUE}.
@@ -46,7 +46,7 @@
 #'                 which case \code{nthreads} only one thread will be used.
 #'
 #' @return This function returns a list  with the following items:
-#'         \item{PGWAS.Results}{The top \code{K} paths for each length sorted in
+#'         \item{GWASPA.Results}{The top \code{K} paths for each length sorted in
 #'          increasing order of the p-values. The results are stored in a data
 #'          frame with the following columns:\cr
 #'          \code{-} \code{SignedPaths  } The top \code{K} signed paths for each length.\cr
@@ -81,7 +81,7 @@
 #'             Epub 2012 Nov 29'.
 #'
 #'@export
-PGWAS <- function(dataset, nCases, nControls, Signed.PGWAS = FALSE, Decorated.Pvalues = TRUE,
+GWASPA <- function(dataset, nCases, nControls, Signed.GWASPA = FALSE, Decorated.Pvalues = TRUE,
                   threshold = 0.05, K = 10, pathLength = 5, n_permutations = 100, strataF = NA, nthreads = NA){
 
   dataset3 = dataset
@@ -95,7 +95,7 @@ PGWAS <- function(dataset, nCases, nControls, Signed.PGWAS = FALSE, Decorated.Pv
   #
   method <- "method1"
   method2 <- 1
-  if(Signed.PGWAS){
+  if(Signed.GWASPA){
     method <- "method2"
     method2 <- 2
   }
@@ -255,10 +255,10 @@ PGWAS <- function(dataset, nCases, nControls, Signed.PGWAS = FALSE, Decorated.Pv
   joining_gene_sign5 <- third_gene_sign
   uids_CountLoc5 <- getUidsCountsLocations(trguids5, Rels3$srcuid)
 
-  if(Signed.PGWAS)
-    print("Computing Signed-PGWAS...")
+  if(Signed.GWASPA)
+    print("Computing Signed-GWASPA...")
   else
-    print("Computing PGWAS...")
+    print("Computing GWASPA...")
 
   lsts <- ProcessPaths(srcuids1, trguids1, uids_CountLoc1, joining_gene_sign1,
                                      srcuids1_2, trguids1_2, uids_CountLoc1_2, joining_gene_sign1_2,
@@ -319,14 +319,14 @@ PGWAS <- function(dataset, nCases, nControls, Signed.PGWAS = FALSE, Decorated.Pv
 
   }
 
-  # PGWAS.Results <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserCases, UserControls, UserDebug, stringsAsFactors = F)
-  PGWAS.Results <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserCases, UserControls, stringsAsFactors = F)
-  PGWAS.Results <- PGWAS.Results[order(PGWAS.Results$UserPvalues),]
-  names(PGWAS.Results) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "Cases", "Controls")
-  lst[["PGWAS.Results"]] <- PGWAS.Results
+  # GWASPA.Results <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserCases, UserControls, UserDebug, stringsAsFactors = F)
+  GWASPA.Results <- data.frame(UserSymbSignPaths, UserSymbPaths, UserLengths, UserScores, UserPvalues, UserCases, UserControls, stringsAsFactors = F)
+  GWASPA.Results <- GWASPA.Results[order(GWASPA.Results$UserPvalues),]
+  names(GWASPA.Results) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "Cases", "Controls")
+  lst[["GWASPA.Results"]] <- GWASPA.Results
 
   if(Decorated.Pvalues){
-    Decorated.Pvalues <- getDecoratedPvalues(dataset3, PGWAS.Results, pathLength, nCases, nControls,
+    Decorated.Pvalues <- getDecoratedPvalues(dataset3, GWASPA.Results, pathLength, nCases, nControls,
                                              method2, threshold, n_permutations, strataF,
                                              ValueTable = ValueTable)
     Decorated.Pvalues <- Decorated.Pvalues[Decorated.Pvalues$Lengths != 1,]

@@ -1,4 +1,4 @@
-# This function checks the results returned by PGWAS
+# This function checks the results returned by GWASPA
 checkBestPaths <- function(dataset, BestPaths, pathLength, threshold_percent, nCases, nControls, method){
 
   # Precompute values table
