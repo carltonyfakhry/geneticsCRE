@@ -64,7 +64,7 @@ Signed-GWASPA is modified version of GWASPA as it takes the signs of the directi
 # Compute Signed-GWASPA
 CRE_Results <- GWASPA(dataset = data_path, nCases = 100, nControls = 100,
                      Signed.GWASPA = TRUE, Decorated.Pvalues = TRUE, threshold = 0.05,
-                     K = 10, pathLength = 3, n_permutations = 100, strataF = NA,
+                     K = 10, pathLength = 5, n_permutations = 100, strataF = NA,
                      nthreads = 4)
 head(CRE_Results$GWASPA.Results[,c("SignedPaths", "Paths", "Pvalues")])
 ```

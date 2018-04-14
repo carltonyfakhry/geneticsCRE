@@ -324,6 +324,7 @@ GWASPA <- function(dataset, nCases, nControls, Signed.GWASPA = FALSE, Decorated.
   GWASPA.Results <- GWASPA.Results[order(GWASPA.Results$UserPvalues,-GWASPA.Results$UserScores),]
   names(GWASPA.Results) <- c("SignedPaths", "Paths", "Lengths", "Scores", "Pvalues", "Cases", "Controls")
   rownames(GWASPA.Results) <- NULL
+  lst <- list()
   lst[["GWASPA.Results"]] <- GWASPA.Results
 
   if(Decorated.Pvalues & pathLength != 1){
