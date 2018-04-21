@@ -19,21 +19,26 @@
 #ifdef COMPILE_CPU
 constexpr int gs_vec_width = 64;
 const std::string gs_instr_label = "x86-64";
+#define gs_align_size 8
 #elif defined __AVX512F__
-constexpr int gs_vec_width = 512;
+constexpr const int gs_vec_width = 512;
 const std::string gs_instr_label = "AVX-512";
+#define gs_align_size 64
 #elif defined __AVX2__
 constexpr int gs_vec_width = 256;
 const std::string gs_instr_label = "AVX2";
+#define gs_align_size 32
 #elif defined __SSE4_2__
 constexpr int gs_vec_width = 256;
 const std::string gs_instr_label = "SSE4";
+#define gs_align_size 32
 #else
 constexpr int gs_vec_width = 128;
 const std::string gs_instr_label = "SSE2";
+#define gs_align_size 16
 #endif
 
-constexpr int gs_align_size = gs_vec_width / 8;
+//constexpr int gs_align_size = gs_vec_width / 8;
 #define ALIGNED __attribute__ ((aligned (gs_align_size)))
 
 #include "gcre_types.h"
