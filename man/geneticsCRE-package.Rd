@@ -3,12 +3,12 @@
 \docType{package}
 \title{
 geneticsCRE is an R package that performs genome-wide association study pathway analysis (GWASPA) to
-        identify statistically significant associations between variants on a gene regulatory pathways
+        identify statistically significant associations between variants on gene regulatory pathways
         and a given phenotype
 }
 \description{
 geneticsCRE is an R package that performs genome-wide association study pathway analysis (GWASPA) to
-             identify statistically significant associations between variants on a gene regulatory pathways
+             identify statistically significant associations between variants on gene regulatory pathways
              and a given phenotype. Unlike Genome-wide association study (GWAS), that seeks to assign
              statistical significance to associations of variations in single genes to a  phenotype, GWASPA
              accumulates statistical power by examining rare variant along gene-gene interaction pathways.

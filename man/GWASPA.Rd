@@ -3,7 +3,7 @@
 \name{GWASPA}
 \alias{GWASPA}
 \title{This function performs genome-wide association study pathway analysis (GWASPA) to
-identify statistically significant associations between variants on a gene regulatory pathways
+identify statistically significant associations between variants on gene regulatory pathways
 and a given phenotype.}
 \usage{
 GWASPA(dataset, nCases, nControls, Signed.GWASPA = FALSE, Decorated.Pvalues = TRUE,
@@ -12,7 +12,7 @@ GWASPA(dataset, nCases, nControls, Signed.GWASPA = FALSE, Decorated.Pvalues = TR
 }
 \arguments{
 \item{dataset}{Filename of the phenotype data. First column must correspond
-to the gene symbols, and all all other columns correspond to the
+to the gene symbols, and all other columns correspond to the
 patients. The First column must be named \code{Gene.Symbols} and
 must contain strings corresponding to the symbols of the genes.
 All other columns either contain a 1 if the patient has a variant
@@ -22,15 +22,15 @@ in the gene, and 0 otherwise.}
 
 \item{nControls}{The number of controls (Must be greater than 1).}
 
-\item{Signed.GWASPA}{A boolean parameter indicating whether to compute the
+\item{Signed.GWASPA}{A boolean parameter indicating whether to compute
 signed-GWASPA. The default value is \code{Signed.GWASPA = FALSE}.}
 
-\item{Decorated.Pvalues}{A boolean parameter indicating whether to compute
+\item{Decorated.Pvalues}{A boolean parameter indicating whether to compute the
 decorated P-values. The default value is
 \code{Decorated.Pvalues = TRUE}.}
 
-\item{threshold}{All variants which occur in more than \code{threshold * 100}
-percentage of patients are kept for processing. The default
+\item{threshold}{All variants which occur in less than \code{threshold * 100}
+number of patients are kept for processing. The default
 value is \code{threshold = 0.05}.}
 
 \item{K}{The top \code{K} paths to be returned of each path length. The default
@@ -54,7 +54,7 @@ corresponding to the stratum.}
 
 \item{nthreads}{The number of threads to be used in the parallel region
 of the code. Default value is \code{nthreads = NA}, in
-which case \code{nthreads} only one thread will be used.}
+which case only one thread will be used.}
 }
 \value{
 This function returns a list  with the following items:
@@ -66,29 +66,29 @@ This function returns a list  with the following items:
          \code{-} \code{Lengths  } The length of each path.\cr
          \code{-} \code{Scores  } The score of each path.\cr
          \code{-} \code{Pvalues  } The p-value of each path.\cr
-         \code{-} \code{Cases  } The number of cases for each path.\cr
-         \code{-} \code{Controls  } The number of controls for each path.\cr}
+         \code{-} \code{Cases  } The number of cases with variants for each path.\cr
+         \code{-} \code{Controls  } The number of controls with variants for each path.\cr}
         \item{Decorated.Pvalues.Results}{If \code{Decorated.Pvalues = TRUE} then the decorated p-values
          of the partitioned paths are computed. The results are stored in a data frame with the following columns:\cr
          \code{-} \code{SignedPaths  } The top \code{K} signed paths for each length.\cr
          \code{-} \code{Paths  } The top \code{K} paths for each length.\cr
          \code{-} \code{Subpaths1  } The first subpath partition.\cr
-         \code{-} \code{Subpaths1.Cases  } The number of cases for \code{Subpaths1}.\cr
-         \code{-} \code{Subpaths1.Controls  } The number of controls for \code{Subpaths1}.\cr
+         \code{-} \code{Subpaths1.Cases  } The number of cases with variants for \code{Subpaths1}.\cr
+         \code{-} \code{Subpaths1.Controls  } The number of controls with variants for \code{Subpaths1}.\cr
          \code{-} \code{Subpaths2  } The second subpath partition.\cr
-         \code{-} \code{Subpaths2.Cases  } The number of cases for \code{Subpaths2}.\cr
-         \code{-} \code{Subpaths2.Controls  } The number of controls for \code{Subpaths2}.\cr
+         \code{-} \code{Subpaths2.Cases  } The number of cases with variants for \code{Subpaths2}.\cr
+         \code{-} \code{Subpaths2.Controls  } The number of controls with variants for \code{Subpaths2}.\cr
          \code{-} \code{Direction  } Direction of splitting along the path.\cr
          \code{-} \code{Lengths  } The length of each path.\cr
          \code{-} \code{Scores  } The score of each path.\cr
          \code{-} \code{Pvalues  } The p-value of each path.\cr
          \code{-} \code{DecoratedPvalues  } The decorated p-value of each path.\cr
-         \code{-} \code{Cases  } The number of cases for each path.\cr
-         \code{-} \code{Controls  } The number of controls for each path.\cr}
+         \code{-} \code{Cases  } The number of cases with variants for each path.\cr
+         \code{-} \code{Controls  } The number of controls with variants for each path.\cr}
 }
 \description{
 This function performs genome-wide association study pathway analysis (GWASPA) to
-             identify statistically significant associations between variants on a gene
+             identify statistically significant associations between variants on gene
              regulatory pathways and a given phenotype.
 }
 \references{

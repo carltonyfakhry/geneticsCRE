@@ -1,5 +1,5 @@
 ## geneticsCRE
-geneticsCRE computes a statistic on causal graphs to identify rare and significant pathways.
+An R package that performs pathway-based genome-wide association study (PGWAS) to identify statistically significant associations between variants on gene regulatory pathways and a given phenotype. Unlike Genome-wide association study (GWAS), that seeks to assign statistical significance to associations of variations in single genes to a phenotype, PGWAS accumulates statistical power by examining rare variants along gene-gene interaction pathways. PGWAS uses prior causal information from gene regulatory interactions to infer statistically significant associations between causal pathways and a phenotype. Given phenotype data with case/control information, geneticsCRE computes PGWAS for all valid pathways as identified by the Homo Sapien STRINGdb causal network. Examples on usage are provided in the vignette.
 
 ### Quickstart
 
